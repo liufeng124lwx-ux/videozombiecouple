@@ -43,9 +43,9 @@ describe("waffoConfig", () => {
     expect(
       waffoConfig({ ...kit.env, WAFFO_PRIVATE_KEY: undefined } as unknown as Bindings),
     ).toBeNull();
-    const products = JSON.stringify({ pack60: PRODUCT_IDS.pack60, gold: "PROD_x", pack200: "bad" });
+    const products = JSON.stringify({ pack1: PRODUCT_IDS.pack1, gold: "PROD_x", pack3: "bad" });
     const parsed = waffoConfig({ ...kit.env, WAFFO_PRODUCTS: products } as unknown as Bindings);
-    expect(parsed?.products).toEqual({ pack60: PRODUCT_IDS.pack60 });
+    expect(parsed?.products).toEqual({ pack1: PRODUCT_IDS.pack1 });
     expect(parsed?.storeIds).toEqual([STORE_ID, "11111111-1111-1111-1111-111111111111"]);
   });
 });
@@ -106,7 +106,7 @@ describe("authenticated checkout (spec 6.4)", () => {
   it("throws a WaffoError when Waffo answers with errors or a non-https URL", async () => {
     const { config: c } = await config();
     const params = {
-      productKey: "pack60",
+      productKey: "pack1",
       userId: "u",
       email: "a@b.co",
       successUrl: "https://videozombiecouple.com/",

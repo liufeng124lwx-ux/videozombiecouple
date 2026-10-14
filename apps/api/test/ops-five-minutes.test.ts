@@ -17,7 +17,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("free-tier cost breaker (spec 4.2)", () => {
-  it("pauses free jobs once today's free spend reaches the cap, and lifts it the next day", async () => {
+  it("pauses free previews once today's free spend reaches the cap, and lifts it the next day", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
     const sent: string[] = [];
@@ -58,13 +58,13 @@ describe("failure-rate alert (spec 8.3)", () => {
     const send = async (_e: Bindings, text: string) => void sent.push(text);
     for (let i = 0; i < OPS.failureMinAttempts; i++)
       row(h, {
-        capability: "unblur.pro",
+        capability: "shot",
         attempts: [{ state: i < 3 ? "failed" : "succeeded", costUsd: 0 }],
       });
-    row(h, { capability: "unblur.std", attempts: [{ state: "failed", costUsd: 0 }] });
+    row(h, { capability: "keyframe", attempts: [{ state: "failed", costUsd: 0 }] });
     await checkFailures(h.env as unknown as Bindings, NOON, send);
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toContain("unblur.pro");
+    expect(sent[0]).toContain("shot");
   });
 });
 
@@ -74,9 +74,9 @@ describe("failure-rate alert ignores calls still in flight", () => {
     const sent: string[] = [];
     const send = async (_e: Bindings, text: string) => void sent.push(text);
     for (let i = 0; i < OPS.failureMinAttempts; i++)
-      row(h, { capability: "unblur.pro", attempts: [{ state: "failed", costUsd: 0 }] });
+      row(h, { capability: "shot", attempts: [{ state: "failed", costUsd: 0 }] });
     for (let i = 0; i < 20; i++)
-      row(h, { capability: "unblur.pro", attempts: [{ state: "pending", costUsd: 0 }] });
+      row(h, { capability: "shot", attempts: [{ state: "pending", costUsd: 0 }] });
     await checkFailures(h.env as unknown as Bindings, NOON, send);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toContain(`${OPS.failureMinAttempts} of ${OPS.failureMinAttempts} calls`);
@@ -90,10 +90,10 @@ describe("failure-rate alert ignores the kie key's daily cap", () => {
     const send = async (_e: Bindings, text: string) => void sent.push(text);
     for (let i = 0; i < OPS.failureMinAttempts; i++)
       row(h, {
-        capability: "unblur.pro",
+        capability: "shot",
         attempts: [{ state: "failed", costUsd: 0, failKind: "key_daily_cap" }],
       });
-    row(h, { capability: "unblur.pro", attempts: [{ state: "succeeded", costUsd: 0 }] });
+    row(h, { capability: "shot", attempts: [{ state: "succeeded", costUsd: 0 }] });
     await checkFailures(h.env as unknown as Bindings, NOON, send);
     expect(sent).toEqual([]);
   });
@@ -130,7 +130,7 @@ describe("cron entry (spec 8.2)", () => {
 });
 
 describe("spend by when calls finish (cost guardrails spec 5)", () => {
-  it("counts a call in the day it finished, not the day its job was created", async () => {
+  it("counts a call in the day it finished, not the day its story was created", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
     const today = NOON - (NOON % 86_400_000);

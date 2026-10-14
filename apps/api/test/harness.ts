@@ -216,23 +216,18 @@ export function jpeg(width: number, height: number): Uint8Array {
   return new Uint8Array([0xff, 0xd8, ...app0, ...sof0, 0xff, 0xd9]);
 }
 
-/** A valid POST /v1/jobs body for an upload. */
-export function jobBody(uploadKey: string, overrides: Record<string, unknown> = {}) {
+/** A valid POST /v1/stories body for two uploads. */
+export function storyBody(
+  survivorKey: string,
+  infectedKey: string,
+  overrides: Record<string, unknown> = {},
+) {
   return {
-    uploadKey,
-    capability: "unblur.std",
-    mode: "auto",
-    modeSource: "auto",
-    cropBox: { x: 0, y: 0.0625, w: 1, h: 0.875 },
-    diagnosis: {
-      sharpness: 31,
-      blur: "motion",
-      angleDeg: 160,
-      faces: [],
-      textDensity: 0.02,
-      oldPhoto: false,
-    },
-    idempotencyKey: `idem-${uploadKey.slice(3, 29)}`,
+    survivorKey,
+    infectedKey,
+    kind: "human",
+    scene: "cabin-wheat",
+    idempotencyKey: `idem-${survivorKey.slice(3, 29)}`,
     ...overrides,
   };
 }
@@ -465,6 +460,27 @@ export async function setup(extra: Record<string, unknown> = {}) {
   /** A charge hold that touches nothing, for runner tests that do not look at billing. */
   const noCharge: ChargeHold = { kind: "none" };
 
+  /** Runs the fake clock until the story's runner reports `status` (fake composer unless set). */
+  async function untilStory(id: string, status: string, maxMinutes = 240) {
+    env.FAKE_COMPOSER ??= "1";
+    const runner = runners.instance(id);
+    for (let i = 0; i < maxMinutes * 6; i++) {
+      const view = (await runner.view()) as { status: string } | null;
+      if (view?.status === status) return view;
+      await advance(10_000);
+    }
+    throw new Error(`story ${id} never reached ${status}: ${JSON.stringify(await runner.view())}`);
+  }
+
+  /** A story whose free preview is done and is waiting for the paid video. */
+  async function readyStory(overrides: Partial<StorySpec> = {}) {
+    env.FAKE_COMPOSER ??= "1";
+    const made = await story(overrides);
+    await made.runner.start(made.spec, noCharge);
+    await untilStory(made.spec.id, "preview_ready");
+    return made;
+  }
+
   /** A finished browser upload: asks for a key like the page does, then PUTs a JPEG. */
   async function upload(
     options: { visitor?: string; ip?: string; width?: number; height?: number } = {},
@@ -493,6 +509,8 @@ export async function setup(extra: Record<string, unknown> = {}) {
     signIn,
     story,
     noCharge,
+    untilStory,
+    readyStory,
     upload,
     namespaces,
     limiters,

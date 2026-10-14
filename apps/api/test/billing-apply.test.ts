@@ -30,12 +30,12 @@ async function account() {
   return { h, userId, apply, balance, sub };
 }
 
-const packPaid = (userId: string | null, productKey = "pack200"): BillingEvent => ({
+const packPaid = (userId: string | null, productKey = "pack3"): BillingEvent => ({
   kind: "order_paid",
   orderId: PACK,
   userId,
   productKey,
-  amount: 14.99,
+  amount: 11.99,
   currency: "USD",
   clientId: null,
   at: T0,
@@ -80,11 +80,11 @@ describe("orders (spec 6.4)", () => {
     const { h, userId, apply, balance } = await account();
     await apply(packPaid(userId));
     await apply(packPaid(userId));
-    expect((await balance()).total).toBe(200);
+    expect((await balance()).total).toBe(30);
     expect(h.db.prepare("SELECT product_key, status, amount FROM orders").get()).toEqual({
-      product_key: "pack200",
+      product_key: "pack3",
       status: "paid",
-      amount: 14.99,
+      amount: 11.99,
     });
   });
 
@@ -188,19 +188,19 @@ describe("refunds and chargebacks (spec 6.6)", () => {
   it("takes back a fully refunded pack", async () => {
     const { h, userId, apply, balance } = await account();
     await apply(packPaid(userId));
-    await apply(refund(true, 14.99));
+    await apply(refund(true, 11.99));
     expect((await balance()).total).toBe(0);
     expect(h.db.prepare("SELECT status, refunded_amount FROM orders").get()).toEqual({
       status: "refunded",
-      refunded_amount: 14.99,
+      refunded_amount: 11.99,
     });
   });
 
   it("takes back a share for a partial refund", async () => {
     const { h, userId, apply, balance } = await account();
     await apply(packPaid(userId));
-    await apply(refund(false, 7.495));
-    expect((await balance()).total).toBe(100);
+    await apply(refund(false, 5.995));
+    expect((await balance()).total).toBe(15);
     expect(h.db.prepare("SELECT status FROM orders").get()).toEqual({
       status: "partially_refunded",
     });
@@ -211,12 +211,12 @@ describe("refunds and chargebacks (spec 6.6)", () => {
     const { h, userId, apply, balance } = await account();
     await apply(packPaid(userId));
     const w = h.wallets.instance(userId);
-    await w.reserve(userId, "spent", 180, "spent");
-    await w.commitReservation("spent", 180, "spent");
-    await apply(refund(true, 14.99));
+    await w.reserve(userId, "spent", 27, "spent");
+    await w.commitReservation("spent", 27, "spent");
+    await apply(refund(true, 11.99));
     expect((await balance()).total).toBe(0);
     expect(h.db.prepare("SELECT refund_debt FROM users WHERE id=?").get(userId)).toEqual({
-      refund_debt: 180,
+      refund_debt: 27,
     });
   });
 
@@ -229,7 +229,7 @@ describe("refunds and chargebacks (spec 6.6)", () => {
 
   it("waits for the order before refunding", async () => {
     const { apply } = await account();
-    await expect(apply(refund(true, 14.99))).rejects.toThrow(/unknown order/);
+    await expect(apply(refund(true, 11.99))).rejects.toThrow(/unknown order/);
   });
 
   it("pauses paid features during a chargeback and restores everything if won", async () => {
@@ -246,7 +246,7 @@ describe("refunds and chargebacks (spec 6.6)", () => {
     expect(paused()).toBe(T0 + DAY);
     await apply({ kind: "dispute_closed", orderId: PACK, won: true, at: T0 + 9 * DAY });
     expect(paused()).toBeNull();
-    expect((await balance()).total).toBe(200);
+    expect((await balance()).total).toBe(30);
     expect(h.db.prepare("SELECT status FROM orders").get()).toEqual({ status: "paid" });
   });
 
@@ -270,8 +270,8 @@ describe("take-backs are capped by what the order granted", () => {
     kind: "order_paid",
     orderId: OTHER,
     userId,
-    productKey: "pack200",
-    amount: 14.99,
+    productKey: "pack3",
+    amount: 11.99,
     currency: "USD",
     clientId: null,
     at: T0,
@@ -288,26 +288,26 @@ describe("take-backs are capped by what the order granted", () => {
     const { userId, apply, balance } = await account();
     await apply(packPaid(userId));
     await apply(otherPack(userId));
-    await apply(refundA(true, 14.99));
-    await apply(refundA(true, 14.99));
-    expect((await balance()).total).toBe(200);
+    await apply(refundA(true, 11.99));
+    await apply(refundA(true, 11.99));
+    expect((await balance()).total).toBe(30);
   });
 
   it("does not take more when a refunded order is later disputed, or disputed twice", async () => {
     const { userId, apply, balance } = await account();
     await apply(packPaid(userId));
     await apply(otherPack(userId));
-    await apply(refundA(true, 14.99));
+    await apply(refundA(true, 11.99));
     await apply({ kind: "dispute_opened", orderId: PACK, at: T0 + 2 * DAY });
     await apply({ kind: "dispute_opened", orderId: PACK, at: T0 + 3 * DAY });
-    expect((await balance()).total).toBe(200);
+    expect((await balance()).total).toBe(30);
   });
 
   it("uses the refunded amount even when the payload says nothing about the original charge", async () => {
     const { userId, apply, balance } = await account();
     await apply(packPaid(userId));
-    await apply(refundA(true, 7.495));
-    expect((await balance()).total).toBe(100);
+    await apply(refundA(true, 5.995));
+    expect((await balance()).total).toBe(15);
   });
 });
 

@@ -59,8 +59,8 @@ describe("webhook signature alerts (spec 8.3)", () => {
     const event = waffoEvent("order.completed", {
       orderId: `ORD_${"s".repeat(22)}`,
       merchantProvidedBuyerIdentity: userId,
-      productMetadata: { productKey: "pack200" },
-      chargedAmount: "14.99",
+      productMetadata: { productKey: "pack3" },
+      chargedAmount: "11.99",
     });
     const deliver = async (header: string) =>
       (
@@ -90,8 +90,8 @@ describe("order reconciliation (spec 8.2)", () => {
     const event = waffoEvent("order.completed", {
       orderId,
       merchantProvidedBuyerIdentity: "u1",
-      productMetadata: { productKey: "pack200" },
-      chargedAmount: "14.99",
+      productMetadata: { productKey: "pack3" },
+      chargedAmount: "11.99",
     });
     h.db
       .prepare(
@@ -111,7 +111,7 @@ describe("order reconciliation (spec 8.2)", () => {
     expect(sent[0]).toContain(orderId);
     h.db
       .prepare(
-        "INSERT INTO orders(id,provider,provider_order_id,user_id,product_key,status,created_at) VALUES('o1','waffo',?,'u1','pack200','paid',?)",
+        "INSERT INTO orders(id,provider,provider_order_id,user_id,product_key,status,created_at) VALUES('o1','waffo',?,'u1','pack3','paid',?)",
       )
       .run(orderId, NOON);
     vi.setSystemTime(NOON + 2 * 3_600_000);

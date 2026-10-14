@@ -50,31 +50,31 @@ describe("POST /v1/billing/checkout (spec 6.4)", () => {
     const { userId, post, checkoutApi } = await member();
     const call = checkoutApi();
     const response = await post("/v1/billing/checkout", {
-      productKey: "pack200",
-      returnPath: "/unblur-photo?job=1",
+      productKey: "pack3",
+      returnPath: "/?story=1",
       clientId: "123.456",
     });
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ url: "https://checkout.waffo.ai/store/x/cs#token=tok" });
     expect(call(SESSION)?.body).toMatchObject({
-      productId: PRODUCT_IDS.pack200,
+      productId: PRODUCT_IDS.pack3,
       buyerEmail: "ann@example.com",
-      successUrl: "https://videozombiecouple.com/unblur-photo?job=1&paid=1",
-      metadata: { userId, productKey: "pack200", clientId: "123.456" },
+      successUrl: "https://videozombiecouple.com/?story=1&paid=1",
+      metadata: { userId, productKey: "pack3", clientId: "123.456" },
     });
   });
 
   it("needs a session, a known product and configured payments", async () => {
     const { h, post } = await member();
     expect(
-      (await h.call("/v1/billing/checkout", { method: "POST", body: { productKey: "pack60" } }))
+      (await h.call("/v1/billing/checkout", { method: "POST", body: { productKey: "pack1" } }))
         .status,
     ).toBe(401);
     expect((await post("/v1/billing/checkout", { productKey: "gold" })).status).toBe(400);
     const off = await member(false);
-    expect(
-      (await off.post("/v1/billing/checkout", { productKey: "pack60" })).body.error?.code,
-    ).toBe("PAYMENTS_UNAVAILABLE");
+    expect((await off.post("/v1/billing/checkout", { productKey: "pack1" })).body.error?.code).toBe(
+      "PAYMENTS_UNAVAILABLE",
+    );
   });
 
   it("refuses a second subscription but still sells packs", async () => {
@@ -84,13 +84,13 @@ describe("POST /v1/billing/checkout (spec 6.4)", () => {
     expect(
       (await post("/v1/billing/checkout", { productKey: "plus_month" })).body.error?.code,
     ).toBe("SUBSCRIPTION_ACTIVE");
-    expect((await post("/v1/billing/checkout", { productKey: "pack60" })).status).toBe(200);
+    expect((await post("/v1/billing/checkout", { productKey: "pack1" })).status).toBe(200);
   });
 
   it("refuses while a chargeback has paid features paused", async () => {
     const { h, userId, post } = await member();
     h.db.prepare("UPDATE users SET paid_paused_at=? WHERE id=?").run(NOW, userId);
-    expect((await post("/v1/billing/checkout", { productKey: "pack60" })).status).toBe(403);
+    expect((await post("/v1/billing/checkout", { productKey: "pack1" })).status).toBe(403);
   });
 
   it("answers 503 when Waffo fails", async () => {
@@ -99,7 +99,7 @@ describe("POST /v1/billing/checkout (spec 6.4)", () => {
       [TOKEN]: { errors: [{ message: "down" }] },
       [SESSION]: { errors: [{ message: "down" }] },
     });
-    expect((await post("/v1/billing/checkout", { productKey: "pack60" })).status).toBe(503);
+    expect((await post("/v1/billing/checkout", { productKey: "pack1" })).status).toBe(503);
   });
 });
 

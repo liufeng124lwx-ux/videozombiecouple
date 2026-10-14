@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { forgetFlags } from "../src/middleware/flags.ts";
 import { ipSegment } from "../src/middleware/identity.ts";
 import { callbackToken, hashIdentity, safeEqual } from "../src/services/crypto.ts";
-import { HMAC_KEY, IP, jobBody, setup, VISITOR } from "./harness.ts";
+import { HMAC_KEY, IP, setup, storyBody, VISITOR } from "./harness.ts";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -86,27 +86,32 @@ describe("flags", () => {
   it("pauses the API except account routes when the global switch is on", async () => {
     const h = await setup();
     h.kv.store.set("flags", JSON.stringify({ paused: true }));
-    expect((await h.call("/v1/jobs", { method: "POST", body: {} })).body.error?.code).toBe(
+    expect((await h.call("/v1/stories", { method: "POST", body: {} })).body.error?.code).toBe(
       "PAUSED",
     );
     expect((await h.call("/v1/me")).status).toBe(200);
   });
 
-  it("still serves job status while paused, but takes no new jobs or retries", async () => {
+  it("still serves story status while paused, but takes no new stories or renders", async () => {
     const h = await setup();
     await h.pass();
-    const created = await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
-    expect(created.status).toBe(201);
-    const jobId = created.body.jobId as string;
-    const next = jobBody(await h.upload());
+    const { userId, session } = await h.signIn();
+    const { spec } = await h.readyStory({ owner: `u:${userId}`, userId });
+    const next = storyBody(await h.upload(), await h.upload());
     h.kv.store.set("flags", JSON.stringify({ paused: true }));
     forgetFlags(h.kv.KV);
-    expect((await h.call(`/v1/jobs/${jobId}`)).status).toBe(200);
+    expect((await h.call(`/v1/stories/${spec.id}`, { session })).status).toBe(200);
     expect(
-      (await h.call(`/v1/jobs/${jobId}/retry`, { method: "POST", body: {} })).body.error?.code,
+      (
+        await h.call(`/v1/stories/${spec.id}/render`, {
+          method: "POST",
+          body: { idempotencyKey: `render-${spec.id}` },
+          session,
+        })
+      ).body.error?.code,
     ).toBe("PAUSED");
-    expect((await h.call("/v1/jobs", { method: "POST", body: next })).body.error?.code).toBe(
-      "PAUSED",
-    );
+    expect(
+      (await h.call("/v1/stories", { method: "POST", body: next, session })).body.error?.code,
+    ).toBe("PAUSED");
   });
 });

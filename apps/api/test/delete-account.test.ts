@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jobBody, setup } from "./harness.ts";
+import { setup } from "./harness.ts";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -22,6 +22,11 @@ async function signUpByCode(h: Awaited<ReturnType<typeof setup>>, email: string)
   return /upx_sess=([a-f0-9]{64})/.exec(response.headers.getSetCookie().join(";"))?.[1] as string;
 }
 
+const userOf = (h: Awaited<ReturnType<typeof setup>>, email: string) => {
+  const { id } = h.db.prepare("SELECT id FROM users WHERE email=?").get(email) as { id: string };
+  return { owner: `u:${id}`, userId: id };
+};
+
 describe("delete account (spec 5.5)", () => {
   it("needs the word DELETE and a session", async () => {
     const h = await setup();
@@ -34,19 +39,13 @@ describe("delete account (spec 5.5)", () => {
     );
   });
 
-  it("removes files, anonymises jobs, forfeits credits and ends every session", async () => {
+  it("removes files, anonymises stories, forfeits credits and ends every session", async () => {
     const h = await setup();
     await h.pass();
     const session = await signUpByCode(h, "ann@example.com");
-    const userId = (h.db.prepare("SELECT id FROM users").get() as { id: string }).id;
-    const created = await h.call("/v1/jobs", {
-      method: "POST",
-      body: jobBody(await h.upload()),
-      session,
-    });
-    await h.advance(60_000);
-    const jobId = created.body.jobId as string;
-    expect([...h.r2.objects.keys()].some((k) => k.includes(jobId))).toBe(true);
+    const { userId, owner } = userOf(h, "ann@example.com");
+    const { spec } = await h.readyStory({ owner, userId, names: "Ann & Bo" });
+    expect([...h.r2.objects.keys()].some((k) => k.startsWith(`kf/${spec.id}/`))).toBe(true);
 
     const response = await h.call("/v1/account/delete", {
       method: "POST",
@@ -56,14 +55,17 @@ describe("delete account (spec 5.5)", () => {
     expect(response.status).toBe(200);
     expect(response.headers.getSetCookie().some((v) => v.startsWith("upx_sess=;"))).toBe(true);
 
-    expect([...h.r2.objects.keys()].some((k) => k.includes(jobId))).toBe(false);
     expect(h.r2.objects.size).toBe(0);
     expect(
-      h.db.prepare("SELECT owner, visitor_hash, fp_hash FROM jobs WHERE id=?").get(jobId),
+      h.db
+        .prepare("SELECT owner, user_id, visitor_hash, fp_hash, names FROM stories WHERE id=?")
+        .get(spec.id),
     ).toEqual({
       owner: "deleted",
+      user_id: "deleted",
       visitor_hash: "",
       fp_hash: null,
+      names: null,
     });
     const user = h.db
       .prepare("SELECT email, password_hash, google_sub, deleted_at FROM users")
@@ -96,47 +98,54 @@ describe("delete account (spec 5.5)", () => {
   });
 });
 
-// Final review: deletion did not stop running jobs, could trip the idempotency index, and ended
+// Final review: deletion did not stop running stories, could trip the idempotency index, and ended
 // sessions last.
 describe("delete account edge cases", () => {
-  it("stops jobs still running: no files come back and no credits return after the forfeit", async () => {
+  it("stops stories still running: no files come back and no credits return after the forfeit", async () => {
     const h = await setup();
     await h.pass();
     const session = await signUpByCode(h, "ann@example.com");
-    const userId = (h.db.prepare("SELECT id FROM users").get() as { id: string }).id;
-    const free = await h.call("/v1/jobs", {
+    const { userId, owner } = userOf(h, "ann@example.com");
+    const wallet = h.wallets.instance(userId);
+    await wallet.grant(userId, {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: null,
+      reason: "test",
+    });
+    const video = await h.readyStory({ owner, userId });
+    const rendered = await h.call(`/v1/stories/${video.spec.id}/render`, {
       method: "POST",
-      body: jobBody(await h.upload()),
+      body: { idempotencyKey: `render-${video.spec.id}` },
       session,
     });
-    const pro = await h.call("/v1/jobs", {
-      method: "POST",
-      body: jobBody(await h.upload(), { capability: "unblur.pro" }),
-      session,
-    });
+    expect(rendered.status).toBe(202);
+    const preview = await h.story({ owner, userId });
+    await preview.runner.start(preview.spec, h.noCharge);
     await h.call("/v1/account/delete", { method: "POST", body: { confirm: "DELETE" }, session });
     await h.advance(200_000);
     expect(h.r2.objects.size).toBe(0);
-    for (const id of [free.body.jobId as string, pro.body.jobId as string])
-      expect(h.db.prepare("SELECT status FROM jobs WHERE id=?").get(id)).toEqual({
-        status: "failed",
-      });
+    const statusOf = (id: string) => h.db.prepare("SELECT status FROM stories WHERE id=?").get(id);
+    expect(statusOf(video.spec.id)).toEqual({ status: "failed" });
+    expect(statusOf(preview.spec.id)).toEqual({ status: "preview_failed" });
     const types = h.db
       .prepare("SELECT type FROM credit_ledger WHERE user_id=? AND delta<>0 ORDER BY id")
       .all(userId)
       .map((row) => (row as { type: string }).type);
     expect(types.slice(-1)).toEqual(["expire"]);
-    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(0);
+    expect((await wallet.balance(userId)).total).toBe(0);
   });
 
-  it("deletes two accounts whose jobs used the same idempotency key", async () => {
+  it("deletes two accounts whose stories used the same idempotency key", async () => {
     const h = await setup();
     await h.pass();
-    const body = (key: string) => ({ ...jobBody(key), idempotencyKey: "same-key-from-a-client" });
     for (const email of ["a@example.com", "b@example.com"]) {
       const session = await signUpByCode(h, email);
-      await h.call("/v1/jobs", { method: "POST", body: body(await h.upload()), session });
-      await h.advance(60_000);
+      const { spec } = await h.story(userOf(h, email));
+      h.db
+        .prepare("UPDATE stories SET idempotency_key='same-key-from-a-client' WHERE id=?")
+        .run(spec.id);
       const response = await h.call("/v1/account/delete", {
         method: "POST",
         body: { confirm: "DELETE" },
@@ -150,8 +159,7 @@ describe("delete account edge cases", () => {
     const h = await setup();
     await h.pass();
     const session = await signUpByCode(h, "ann@example.com");
-    await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()), session });
-    await h.advance(60_000);
+    await h.story(userOf(h, "ann@example.com"));
     (h.env.BUCKET as { delete: (key: string) => Promise<void> }).delete = async () => {
       throw new Error("R2 unavailable");
     };

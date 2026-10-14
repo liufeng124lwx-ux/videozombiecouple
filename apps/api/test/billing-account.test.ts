@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyEvent } from "../src/billing/apply.ts";
 import type { Bindings } from "../src/types.ts";
-import { jobBody, setup } from "./harness.ts";
+import { setup, storyBody } from "./harness.ts";
 
 const NOW = Date.UTC(2026, 9, 9, 12);
 
@@ -33,21 +33,22 @@ async function subscriber() {
 }
 
 describe("chargeback pause (spec 6.6)", () => {
-  it("refuses credit jobs while paused but keeps the free photos", async () => {
+  it("refuses the paid video while paused but keeps the free preview", async () => {
     const { h, userId, session } = await subscriber();
     h.db.prepare("UPDATE users SET paid_paused_at=? WHERE id=?").run(NOW, userId);
-    const pro = await h.call("/v1/jobs", {
+    const { spec } = await h.readyStory({ owner: `u:${userId}`, userId });
+    const video = await h.call(`/v1/stories/${spec.id}/render`, {
       method: "POST",
-      body: jobBody(await h.upload(), { capability: "unblur.pro" }),
+      body: { idempotencyKey: `render-${spec.id}` },
       session,
     });
-    expect(pro.body.error?.code).toBe("FORBIDDEN");
-    const free = await h.call("/v1/jobs", {
+    expect(video.body.error?.code).toBe("FORBIDDEN");
+    const preview = await h.call("/v1/stories", {
       method: "POST",
-      body: jobBody(await h.upload()),
+      body: storyBody(await h.upload(), await h.upload()),
       session,
     });
-    expect(free.status).toBe(201);
+    expect(preview.status).toBe(201);
   });
 });
 

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { RETENTION } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
 import { waffoConfig } from "../src/billing/waffo.ts";
 import type { Bindings } from "../src/types.ts";
@@ -69,11 +70,12 @@ describe("deployable configs (spec 1.4)", () => {
     const age = (prefix: string) =>
       rules.find((r: Config) => r.conditions?.prefix === prefix)?.deleteObjectsTransition?.condition
         ?.maxAge;
-    expect(age("in/")).toBe(86_400);
-    expect(age("out/")).toBe(86_400);
-    // keep/ and share/ live 7 days; the cron deletes them on time, this is a day later.
-    expect(age("keep/")).toBe(8 * 86_400);
-    expect(age("share/")).toBe(8 * 86_400);
+    // Spec 3.4: uploads a day, work files (photos, keyframes, shots) 3 days, videos a day after
+    // the cron would have deleted them.
+    expect(age("in/")).toBe(RETENTION.inputHours * 3_600);
+    for (const prefix of ["keep/", "kf/", "shot/"])
+      expect(age(prefix)).toBe(RETENTION.workDays * 86_400);
+    expect(age("out/")).toBe((RETENTION.outputDays + 1) * 86_400);
     expect(rules.some((r: Config) => r.conditions?.prefix?.startsWith("samples"))).toBe(false);
     expect(rules.every((r: Config) => r.enabled === true)).toBe(true);
   });

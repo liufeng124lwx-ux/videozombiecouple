@@ -15,7 +15,7 @@ describe("route sync on deploy (spec 4.5)", () => {
     // A route the catalog no longer has.
     h.db
       .prepare(
-        "INSERT INTO provider_routes SELECT 'gone', capability, mode, rank, parallel, provider, model, params, timeout_ms, pad_aspect, credits_tier, aspects, cost_usd, label, enabled, updated_at FROM provider_routes WHERE id=?",
+        "INSERT INTO provider_routes SELECT 'gone', capability, mode, rank, parallel, provider, model, params, timeout_ms, pad_aspect, credits_tier, aspects, cost_usd, label, enabled, updated_at, durations FROM provider_routes WHERE id=?",
       )
       .run(second.id);
     const changed = seeds.map((r) =>
@@ -37,6 +37,12 @@ describe("route sync on deploy (spec 4.5)", () => {
       enabled: second.enabled,
       rank: second.rank,
     });
+    // Video routes keep their clip length limits through the sync.
+    for (const seed of seeds.filter((r) => r.capability === "shot"))
+      expect(routes.find((r) => r.id === seed.id)).toMatchObject({
+        minSec: seed.minSec,
+        maxSec: seed.maxSec,
+      });
   });
 
   it("writes the seeds into an empty table", async () => {

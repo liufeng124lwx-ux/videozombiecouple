@@ -5,7 +5,21 @@ import type { Bindings } from "../src/types.ts";
 import { setup } from "./harness.ts";
 
 const NOON = Date.UTC(2026, 9, 9, 12);
-const SEEDREAM = "seedream/5-flash-image-to-image";
+const SHOT_MODELS = ["bytedance/seedance-2-mini", "kling-3.0/video", "wan/2-7-image-to-video"];
+/** Every shot model refuses its first call: the kie key hit its daily cap. */
+const CAPPED: Record<string, FakeStep[]> = Object.fromEntries(
+  SHOT_MODELS.map((m) => [
+    m,
+    [{ kind: "submit_error", code: 433, msg: "apiKey has exceeded the daily limit" }],
+  ]),
+);
+const HOLD = { kind: "credits", userId: "u1", reservationId: "r1", reserved: 10 } as const;
+
+/** The steps StoryRunner wrote to D1, with their attempts. */
+const stepsOf = (h: Awaited<ReturnType<typeof setup>>, id: string) =>
+  JSON.parse(
+    (h.db.prepare("SELECT steps FROM stories WHERE id=?").get(id) as { steps: string }).steps,
+  ) as { id: string; attempts: { failKind: string | null }[] }[];
 const flags = (h: Awaited<ReturnType<typeof setup>>) => JSON.parse(h.kv.store.get("flags") ?? "{}");
 
 beforeEach(() => {
@@ -64,20 +78,22 @@ describe("kie key daily cap (cost guardrails spec 6)", () => {
     expect(flags(h)).toMatchObject({ paused: true, pausedBy: "admin" });
   });
 
-  it("ends the job without trying the fallback route, refunded, and pauses the site", async () => {
-    const script: Record<string, FakeStep[]> = {
-      [SEEDREAM]: [{ kind: "submit_error", code: 433, msg: "apiKey has exceeded the daily limit" }],
-    };
-    const h = await setup({ FAKE_SCRIPT: JSON.stringify(script) });
-    const { spec, runner } = await h.job({
-      charge: { kind: "credits", userId: "u1", reservationId: "r1", reserved: 1 },
-    });
-    await runner.start(spec);
+  it("ends the video without trying the fallback route, refunded, and pauses the site", async () => {
+    const h = await setup({ FAKE_SCRIPT: JSON.stringify(CAPPED) });
+    const { spec, runner } = await h.readyStory();
+    expect(await runner.render(HOLD)).toEqual({ ok: true });
     await h.advance(60_000);
-    const view = await runner.view();
-    expect(view).toMatchObject({ status: "failed", errorCode: "PAUSED", chargedTier: null });
-    // Only the first route was tried: no fallback attempt, so exactly one submit.
-    expect(view?.attempts).toHaveLength(1);
+    expect(await runner.view()).toMatchObject({
+      status: "failed",
+      errorCode: "PAUSED",
+      video: null,
+    });
+    // The capped step tried only its first route: no fallback attempt, so exactly one submit.
+    const capped = stepsOf(h, spec.id).filter((s) =>
+      s.attempts.some((a) => a.failKind === "key_daily_cap"),
+    );
+    expect(capped.length).toBeGreaterThan(0);
+    for (const step of capped) expect(step.attempts).toHaveLength(1);
     expect(h.wallet.calls).toEqual([["release", "u1", "r1", spec.id]]);
     expect(flags(h)).toMatchObject({ paused: true, pausedBy: "kie-cap" });
   });
@@ -95,26 +111,21 @@ describe("kie key daily cap (cost guardrails spec 6)", () => {
     expect(flags(h)).toEqual({ paused: true });
   });
 
-  it("still ends and refunds the job when pausing the site fails", async () => {
-    const script: Record<string, FakeStep[]> = {
-      [SEEDREAM]: [{ kind: "submit_error", code: 433, msg: "apiKey has exceeded the daily limit" }],
-    };
-    const h = await setup({ FAKE_SCRIPT: JSON.stringify(script) });
+  it("still ends and refunds the video when pausing the site fails", async () => {
+    const h = await setup({ FAKE_SCRIPT: JSON.stringify(CAPPED) });
+    const { spec, runner } = await h.readyStory();
     const put = h.kv.KV.put.bind(h.kv.KV);
     vi.spyOn(h.kv.KV, "put").mockImplementation(async (key, value, options) => {
       if (key === "flags") throw new Error("kv down");
       return put(key, value, options);
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const { spec, runner } = await h.job({
-      charge: { kind: "credits", userId: "u1", reservationId: "r1", reserved: 1 },
-    });
-    await runner.start(spec);
+    await runner.render(HOLD);
     await h.advance(60_000);
     expect(await runner.view()).toMatchObject({
       status: "failed",
       errorCode: "PAUSED",
-      chargedTier: null,
+      video: null,
     });
     expect(h.wallet.calls).toEqual([["release", "u1", "r1", spec.id]]);
   });

@@ -5,9 +5,9 @@ import type { Bindings } from "../src/types.ts";
 import { setup } from "./harness.ts";
 
 const ALERT = {
-  key: "health:unblur.std",
+  key: "health:keyframe",
   title: "Health check failed",
-  detail: "unblur.std: timeout",
+  detail: "keyframe: timeout",
 };
 
 describe("ops alerts (spec 8.3)", () => {
@@ -34,7 +34,7 @@ describe("ops alerts (spec 8.3)", () => {
     });
     const fetch = vi.fn(async () => new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetch);
-    await deliver(h.env as unknown as Bindings, "Health check failed\nunblur.std");
+    await deliver(h.env as unknown as Bindings, "Health check failed\nkeyframe");
     expect(fetch).toHaveBeenCalledWith(
       "https://api.telegram.org/botbot-token/sendMessage",
       expect.objectContaining({ method: "POST" }),

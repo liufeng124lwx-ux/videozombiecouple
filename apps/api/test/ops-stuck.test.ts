@@ -1,8 +1,9 @@
 import { ROUTES } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkStuck, stuckAfterMs } from "../src/ops/stuck.ts";
+import { previewCounters, reserveQuota } from "../src/services/quota.ts";
 import type { Bindings } from "../src/types.ts";
-import { jobBody, setup } from "./harness.ts";
+import { setup } from "./harness.ts";
 
 const START = Date.UTC(2026, 9, 9, 12);
 
@@ -12,52 +13,64 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-/** Every Standard route's calls stay pending forever. */
-const NEVER = JSON.stringify(
-  Object.fromEntries(
-    ROUTES.filter((r) => r.capability === "unblur.std").map((r) => [
-      r.model,
-      [{ kind: "never" }, { kind: "never" }, { kind: "never" }],
-    ]),
-  ),
-);
+/** Every route of the capability keeps its calls pending forever. */
+const never = (capability: "keyframe" | "shot") =>
+  JSON.stringify(
+    Object.fromEntries(
+      ROUTES.filter((r) => r.capability === capability).map((r) => [
+        r.model,
+        Array(12).fill({ kind: "never" }),
+      ]),
+    ),
+  );
 
 const status = (h: Awaited<ReturnType<typeof setup>>, id: string) =>
-  h.db.prepare("SELECT status, error_code FROM jobs WHERE id=?").get(id) as {
+  h.db.prepare("SELECT status, error_code FROM stories WHERE id=?").get(id) as {
     status: string;
     error_code: string | null;
   };
 
-describe("stuck jobs (spec 8.2)", () => {
-  it("allows for the primary and every fallback before calling a job stuck", () => {
-    expect(stuckAfterMs("unblur.pro")).toBeGreaterThan(stuckAfterMs("unblur.std"));
-    expect(stuckAfterMs("unblur.std")).toBeGreaterThanOrEqual(2 * 90_000);
+describe("stuck stories (spec 8.2)", () => {
+  it("allows for every route of every step before calling a story stuck", () => {
+    const timeouts = (capability: "keyframe" | "shot") =>
+      ROUTES.filter((r) => r.capability === capability).reduce((t, r) => t + r.timeoutMs, 0);
+    expect(stuckAfterMs("rendering")).toBeGreaterThan(stuckAfterMs("previewing"));
+    expect(stuckAfterMs("previewing")).toBeGreaterThanOrEqual(2 * timeouts("keyframe"));
+    expect(stuckAfterMs("rendering")).toBeGreaterThanOrEqual(
+      2 * (timeouts("keyframe") + timeouts("shot")),
+    );
   });
 
-  it("wakes a stuck job first, and gives up on it (with a refund) the round after", async () => {
-    const h = await setup({ FAKE_SCRIPT: NEVER });
+  it("wakes a stuck preview first, and gives up on it (with its quota back) the round after", async () => {
+    const h = await setup({ FAKE_SCRIPT: never("keyframe") });
     const env = h.env as unknown as Bindings;
-    const { spec, runner } = await h.job();
-    await runner.start(spec);
+    const { spec, runner } = await h.story();
+    const counters = previewCounters(spec.userId, "ip");
+    expect(await reserveQuota(env, counters, spec.id)).toBe(true);
+    await runner.start(spec, {
+      kind: "quota",
+      nonce: spec.id,
+      counters: counters.map((c) => c.name),
+    });
     // Its calls never finish, and its alarm got lost.
     const entry = h.runners.entries.get(spec.id);
     entry?.store.clearAlarm();
-    const late = START + stuckAfterMs("unblur.std") + 1_000;
+    const late = START + stuckAfterMs("previewing") + 1_000;
     vi.setSystemTime(late);
     await checkStuck(env, late, async () => {});
     expect(entry?.store.alarmAt()).not.toBeNull();
     vi.setSystemTime(late + 300_000);
     entry?.store.clearAlarm();
     await checkStuck(env, late + 300_000, async () => {});
-    expect(status(h, spec.id)).toMatchObject({ status: "failed", error_code: "TIMEOUT" });
+    expect(status(h, spec.id)).toMatchObject({ status: "preview_failed", error_code: "TIMEOUT" });
+    expect(await h.limiters.instance(counters[0]?.name ?? "").used()).toBe(0);
   });
 
-  it("fails a job that never started, and says so", async () => {
+  it("fails a story whose runner never started, and says so", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
-    const { spec } = await h.job();
-    h.db.prepare("UPDATE jobs SET status='queued' WHERE id=?").run(spec.id);
-    const late = START + stuckAfterMs("unblur.std") + 1_000;
+    const { spec } = await h.story();
+    const late = START + stuckAfterMs("previewing") + 1_000;
     const sent: string[] = [];
     await checkStuck(env, late, async (_e, text) => void sent.push(text));
     await checkStuck(env, late + 300_000, async (_e, text) => void sent.push(text));
@@ -65,20 +78,16 @@ describe("stuck jobs (spec 8.2)", () => {
     expect(sent.some((s) => s.includes(spec.id))).toBe(true);
   });
 
-  it("leaves jobs that are still inside their time alone", async () => {
+  it("leaves stories that are still inside their time alone", async () => {
     const h = await setup();
-    const { spec } = await h.job();
-    h.db.prepare("UPDATE jobs SET status='queued' WHERE id=?").run(spec.id);
+    const { spec } = await h.story();
     await checkStuck(h.env as unknown as Bindings, START + 60_000, async () => {});
     await checkStuck(h.env as unknown as Bindings, START + 360_000, async () => {});
-    expect(status(h, spec.id).status).toBe("queued");
+    expect(status(h, spec.id).status).toBe("previewing");
   });
 
-  it("gives a paid job's credits back when it gives up, even if the wallet fails at that moment", async () => {
-    const all = Object.fromEntries(
-      ROUTES.map((r) => [r.model, [{ kind: "never" }, { kind: "never" }, { kind: "never" }]]),
-    );
-    const h = await setup({ FAKE_SCRIPT: JSON.stringify(all) });
+  it("gives a paid video's credits back when it gives up, even if the wallet fails at that moment", async () => {
+    const h = await setup({ FAKE_SCRIPT: never("shot") });
     const env = h.env as unknown as Bindings;
     await h.pass();
     const { userId, session } = await h.signIn();
@@ -90,23 +99,25 @@ describe("stuck jobs (spec 8.2)", () => {
       sourceRef: null,
       reason: "test",
     });
-    const created = await h.call("/v1/jobs", {
+    const { spec } = await h.readyStory({ owner: `u:${userId}`, userId });
+    const rendered = await h.call(`/v1/stories/${spec.id}/render`, {
       method: "POST",
-      body: jobBody(await h.upload(), { capability: "unblur.pro" }),
+      body: { idempotencyKey: `render-${spec.id}` },
       session,
     });
-    const jobId = created.body.jobId as string;
-    expect((await wallet.balance(userId)).total).toBe(7);
-    const entry = h.runners.entries.get(jobId);
+    expect(rendered.status).toBe(202);
+    expect((await wallet.balance(userId)).total).toBe(0);
+    const entry = h.runners.entries.get(spec.id);
     entry?.store.clearAlarm();
-    const late = START + stuckAfterMs("unblur.pro") + 1_000;
+    const late = Date.now() + stuckAfterMs("rendering") + 1_000;
     vi.setSystemTime(late);
     await checkStuck(env, late, async () => {});
     entry?.store.clearAlarm();
     vi.setSystemTime(late + 300_000);
     h.wallet.releaseFailures = 1;
+    vi.spyOn(console, "error").mockImplementation(() => {});
     await checkStuck(env, late + 300_000, async () => {});
-    expect(status(h, jobId)).toMatchObject({ status: "failed", error_code: "TIMEOUT" });
+    expect(status(h, spec.id)).toMatchObject({ status: "failed", error_code: "TIMEOUT" });
     await h.advance(10 * 60_000);
     expect((await wallet.balance(userId)).total).toBe(10);
   });

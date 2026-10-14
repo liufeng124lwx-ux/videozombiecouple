@@ -3,11 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { settle } from "../src/services/settle.ts";
 import { dailyCreditCap } from "../src/services/spend-cap.ts";
 import type { Bindings } from "../src/types.ts";
-import { jobBody, setup } from "./harness.ts";
+import { setup } from "./harness.ts";
 
 const NOON = Date.UTC(2026, 9, 9, 12);
 const DAY = 86_400_000;
-const NBP = "nano-banana-pro";
+const DOWN = { kind: "fail", failMsg: "internal error" };
+const SHOTS_DOWN = JSON.stringify(
+  Object.fromEntries(
+    ["bytedance/seedance-2-mini", "kling-3.0/video", "wan/2-7-image-to-video"].map((m) => [
+      m,
+      Array(8).fill(DOWN),
+    ]),
+  ),
+);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -28,10 +36,16 @@ async function member(credits: number, extra: Record<string, unknown> = {}) {
       sourceRef: null,
       reason: "test",
     });
-  const create = async (overrides: Record<string, unknown> = {}) =>
-    h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload(), overrides), session });
+  /** A story with its preview done, then POST /render on it. */
+  const ready = async () => (await h.readyStory({ owner: `u:${userId}`, userId })).spec.id;
+  const render = (id: string) =>
+    h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      body: { idempotencyKey: `render-${id}` },
+      session,
+    });
   const balance = async () => (await wallet.balance(userId)).total;
-  return { h, userId, session, create, balance };
+  return { h, userId, session, ready, render, balance };
 }
 
 describe("per-account daily credits (cost guardrails spec 4)", () => {
@@ -41,7 +55,7 @@ describe("per-account daily credits (cost guardrails spec 4)", () => {
     expect(await dailyCreditCap(env, userId, NOON)).toBe(SPEND_CAPS.newPayerDailyCredits);
     h.db
       .prepare(
-        "INSERT INTO orders(id,provider,provider_order_id,user_id,product_key,status,created_at) VALUES('o1','waffo','p1',?,'pack60','paid',?)",
+        "INSERT INTO orders(id,provider,provider_order_id,user_id,product_key,status,created_at) VALUES('o1','waffo','p1',?,'pack1','paid',?)",
       )
       .run(userId, NOON - 8 * DAY);
     expect(await dailyCreditCap(env, userId, NOON)).toBe(SPEND_CAPS.dailyCredits);
@@ -50,37 +64,31 @@ describe("per-account daily credits (cost guardrails spec 4)", () => {
   });
 
   it("refuses with DAILY_LIMIT past the cap and lets parallel requests through only up to the cap", async () => {
-    const { h, userId, create } = await member(100);
-    h.db.prepare("UPDATE users SET daily_credit_cap=6 WHERE id=?").run(userId);
-    // use up the 4 free photos first so the next jobs pay credits
-    for (let i = 0; i < 4; i++) await create();
-    const pro = { capability: "unblur.pro" };
-    const results = await Promise.all([create(pro), create(pro), create(pro)]);
-    expect(results.filter((r) => r.status === 201)).toHaveLength(2);
-    expect(results.find((r) => r.status !== 201)?.body.error?.code).toBe("DAILY_LIMIT");
+    const { h, userId, ready, render } = await member(100);
+    h.db.prepare("UPDATE users SET daily_credit_cap=20 WHERE id=?").run(userId);
+    const ids = [await ready(), await ready(), await ready()];
+    const results = await Promise.all(ids.map(render));
+    expect(results.filter((r) => r.status === 202)).toHaveLength(2);
+    expect(results.find((r) => r.status !== 202)?.body.error?.code).toBe("DAILY_LIMIT");
   });
 
-  it("gives the allowance back when a paid job fails, so the same day can submit again", async () => {
-    const { h, userId, create, balance } = await member(100, {
-      FAKE_SCRIPT: JSON.stringify({
-        [NBP]: [{ kind: "submit_error", code: 422, msg: "image could not be processed" }],
-      }),
-    });
-    h.db.prepare("UPDATE users SET daily_credit_cap=6 WHERE id=?").run(userId);
-    for (let i = 0; i < 4; i++) await create();
-    const pro = { capability: "unblur.4k" };
-    // The fake provider refuses the input, so the first job fails and its 6 credits are released;
-    // a second 4K job only fits under the cap of 6 if that allowance came back.
-    expect((await create(pro)).status).toBe(201);
-    await h.advance(200_000);
+  it("gives the allowance back when a paid video fails, so the same day can render again", async () => {
+    const { h, userId, ready, render, balance } = await member(100, { FAKE_SCRIPT: SHOTS_DOWN });
+    h.db.prepare("UPDATE users SET daily_credit_cap=10 WHERE id=?").run(userId);
+    const first = await ready();
+    const second = await ready();
+    // Every shot route fails, so the video fails and its 10 credits are released; a second video
+    // only fits under the cap of 10 if that allowance came back.
+    expect((await render(first)).status).toBe(202);
+    await h.untilStory(first, "failed");
     expect(await balance()).toBe(100);
-    expect((await create(pro)).status).toBe(201);
+    expect((await render(second)).status).toBe(202);
   });
 
   it("gives the allowance back when the wallet fails while reserving", async () => {
-    const { h, userId, create } = await member(100);
-    h.db.prepare("UPDATE users SET daily_credit_cap=6 WHERE id=?").run(userId);
-    for (let i = 0; i < 4; i++) await create();
+    const { h, userId, ready, render } = await member(100);
+    h.db.prepare("UPDATE users SET daily_credit_cap=10 WHERE id=?").run(userId);
+    const id = await ready();
     const binding = h.env.WALLET as { get: (id: string) => Record<string, unknown> };
     const get = binding.get;
     binding.get = (id: string) => ({
@@ -90,11 +98,10 @@ describe("per-account daily credits (cost guardrails spec 4)", () => {
       },
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const pro = { capability: "unblur.4k" };
-    expect((await create(pro)).status).toBeGreaterThanOrEqual(500);
+    expect((await render(id)).status).toBeGreaterThanOrEqual(500);
     binding.get = get;
-    // 4K costs the whole cap of 6: it only fits if the failed request gave its allowance back.
-    expect((await create(pro)).status).toBe(201);
+    // A video costs the whole cap of 10: it only fits if the failed request gave its allowance back.
+    expect((await render(id)).status).toBe(202);
   });
 
   it("settles an old credit hold that has no spendCounter", async () => {

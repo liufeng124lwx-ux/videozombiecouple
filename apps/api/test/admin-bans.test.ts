@@ -68,12 +68,12 @@ describe("admin bans (spec 7.1, 8.1)", () => {
     expect(h.db.prepare("SELECT COUNT(*) AS n FROM bans").get()).toEqual({ n: 0 });
   });
 
-  it("bans the visitor behind a job from its stored hash, since raw ids are never kept", async () => {
+  it("bans the visitor behind a story from its stored hash, since raw ids are never kept", async () => {
     const h = await setup(ADMIN_ENV);
     const kit = await adminKit(h.env);
     const visitorHash = await hashIdentity(`visitor:${VISITOR}`, HMAC_KEY);
-    const { spec } = await h.job();
-    h.db.prepare("UPDATE jobs SET visitor_hash=? WHERE id=?").run(visitorHash, spec.id);
+    const { spec } = await h.story();
+    h.db.prepare("UPDATE stories SET visitor_hash=? WHERE id=?").run(visitorHash, spec.id);
     const page = await (await kit.get(`/admin/jobs/${spec.id}`)).text();
     expect(page).toContain(`value="${visitorHash}"`);
     const response = await kit.post("/admin/bans", {

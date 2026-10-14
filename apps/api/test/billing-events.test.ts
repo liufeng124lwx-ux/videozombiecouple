@@ -45,9 +45,9 @@ describe("fromWaffo (spec 6.1)", () => {
       {
         orderId: ORD,
         merchantProvidedBuyerIdentity: "user-1",
-        productMetadata: { productKey: "pack200" },
+        productMetadata: { productKey: "pack3" },
         orderMetadata: { clientId: "123.456" },
-        chargedAmount: "14.99",
+        chargedAmount: "11.99",
       },
       { timestamp: AT },
     );
@@ -55,8 +55,8 @@ describe("fromWaffo (spec 6.1)", () => {
       kind: "order_paid",
       orderId: ORD,
       userId: "user-1",
-      productKey: "pack200",
-      amount: 14.99,
+      productKey: "pack3",
+      amount: 11.99,
       currency: "USD",
       clientId: "123.456",
       at: Date.parse(AT),
@@ -129,10 +129,10 @@ describe("fromWaffo (spec 6.1)", () => {
         waffoEvent("refund.succeeded", {
           orderId: ORD,
           refundedAmount,
-          originalChargedAmount: "14.99",
+          originalChargedAmount: "11.99",
         }),
       );
-    expect(refund("14.99")).toMatchObject({ kind: "refund_succeeded", amount: 14.99, full: true });
+    expect(refund("11.99")).toMatchObject({ kind: "refund_succeeded", amount: 11.99, full: true });
     expect(refund("7.50")).toMatchObject({ amount: 7.5, full: false });
     expect(fromWaffo(waffoEvent("refund.succeeded", { orderId: ORD }))).toMatchObject({
       full: true,

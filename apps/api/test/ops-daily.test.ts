@@ -155,26 +155,34 @@ describe("kie balance reconciliation (cost guardrails spec 5)", () => {
 });
 
 describe("privacy (spec 8.2)", () => {
-  it("strips identity from jobs older than 90 days", async () => {
+  it("strips identity and names from stories older than 90 days", async () => {
     const h = await setup();
-    const { spec } = await h.job({ createdAt: NOON - OPS.anonymizeAfterDays * DAY - 1 });
-    const fresh = await h.job();
+    const { spec } = await h.story({
+      createdAt: NOON - OPS.anonymizeAfterDays * DAY - 1,
+      names: "Tom & Amy",
+      date: "2019",
+    });
+    const fresh = await h.story({ names: "Ann & Bo" });
     await anonymizeOld(h.env as unknown as Bindings, NOON);
     const row = (id: string) =>
       h.db
         .prepare(
-          "SELECT owner, idempotency_key, visitor_hash, ip_hash, fp_hash, diagnosis FROM jobs WHERE id=?",
+          "SELECT owner, user_id, idempotency_key, visitor_hash, ip_hash, fp_hash, names, date, kind, scene FROM stories WHERE id=?",
         )
         .get(id);
     expect(row(spec.id)).toEqual({
       owner: "anon",
+      user_id: "anon",
       idempotency_key: spec.id,
       visitor_hash: "anon",
       ip_hash: "anon",
       fp_hash: null,
-      diagnosis: "{}",
+      names: null,
+      date: null,
+      kind: "human",
+      scene: "cabin-wheat",
     });
-    expect(row(fresh.spec.id)).toMatchObject({ visitor_hash: "visitor-hash" });
+    expect(row(fresh.spec.id)).toMatchObject({ visitor_hash: "visitor-hash", names: "Ann & Bo" });
   });
 });
 

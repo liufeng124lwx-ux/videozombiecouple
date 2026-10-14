@@ -1,3 +1,4 @@
+import { BONUSES } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isSuspicious, noteRejections } from "../src/services/suspicion.ts";
 import type { Bindings } from "../src/types.ts";
@@ -23,14 +24,25 @@ async function signUp(
   const code = /\b(\d{6})\b/.exec(h.mail[h.mail.length - 1]?.subject ?? "")?.[1];
   await h.call("/v1/auth/code", { method: "POST", body: { email, code }, headers, ip: from.ip });
   const user = h.db.prepare("SELECT id FROM users WHERE email=?").get(email) as { id: string };
-  return (await h.wallets.instance(user.id).balance(user.id)).total;
+  return bonuses(h, user.id);
 }
 
+/** Sign-up bonus grants the account has received (0 or 1). */
+const bonuses = (h: Awaited<ReturnType<typeof setup>>, userId: string) =>
+  (
+    h.db
+      .prepare("SELECT COUNT(*) AS n FROM credit_buckets WHERE user_id=? AND source_ref='signup'")
+      .get(userId) as { n: number }
+  ).n;
+
 describe("sign-up bonus (spec 5.4)", () => {
-  it("gives a new account 5 credits once", async () => {
+  it("gives a new account its bonus once, worth BONUSES.signup (no free credits now)", async () => {
     const h = await setup();
-    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(5);
-    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(5);
+    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(1);
+    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(1);
+    const user = h.db.prepare("SELECT id FROM users").get() as { id: string };
+    expect(BONUSES.signup).toBe(0);
+    expect((await h.wallets.instance(user.id).balance(user.id)).total).toBe(BONUSES.signup);
   });
 
   it("gives one bonus per device every 30 days", async () => {
@@ -41,7 +53,7 @@ describe("sign-up bonus (spec 5.4)", () => {
     );
     vi.setSystemTime(NOON + 31 * 86_400_000);
     expect(await signUp(h, "c@example.com", { device: "device-aaaaaaaa", ip: "203.0.113.9" })).toBe(
-      5,
+      1,
     );
   });
 
@@ -67,25 +79,21 @@ describe("suspicious marks (spec 7.3)", () => {
     for (let i = 0; i < n; i++)
       h.db
         .prepare(
-          "INSERT INTO jobs(id,owner,visitor_hash,fp_hash,ip_hash,capability,mode,mode_source,tier,prompt_version,input_key,crop_box,diagnosis,status,charge,priority,idempotency_key,error_code,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,scene,prompt_version,survivor_key,infected_key,status,idempotency_key,error_code,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         )
         .run(
           `rej${owner}${i}`,
           owner,
+          owner,
           "v",
           fp,
           "ip",
-          "unblur.std",
-          "auto",
-          "auto",
-          "std",
+          "human",
+          "cabin-wheat",
           "p",
-          `in/${i}.jpg`,
-          "{}",
-          "{}",
-          "failed",
-          "{}",
-          "free",
+          `keep/${i}/survivor.jpg`,
+          `keep/${i}/infected.jpg`,
+          "preview_failed",
           `rej-${owner}-${i}`,
           "CONTENT_REJECTED",
           NOON - 3_600_000 + i,
@@ -102,7 +110,7 @@ describe("suspicious marks (spec 7.3)", () => {
     expect(await noteRejections(env, who)).toBe(false);
     expect(await isSuspicious(env, who)).toBe(false);
     rejected(h, 1, `${who.owner}x`, "fp1");
-    h.db.prepare("UPDATE jobs SET owner=? WHERE owner=?").run(who.owner, `${who.owner}x`);
+    h.db.prepare("UPDATE stories SET owner=? WHERE owner=?").run(who.owner, `${who.owner}x`);
     expect(await noteRejections(env, who)).toBe(true);
     expect(await isSuspicious(env, who)).toBe(true);
     expect(await isSuspicious(env, { owner: "g:other", userId: null, fpHash: "fp1" })).toBe(true);

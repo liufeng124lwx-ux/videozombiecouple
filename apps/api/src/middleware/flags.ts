@@ -61,9 +61,11 @@ export async function readFlags(kv: KVNamespace): Promise<Flags> {
   return flags;
 }
 
-/** Job status stays readable while paused: in-flight jobs (maybe charged) still show their result. */
+/** Story status stays readable while paused: in-flight stories (maybe charged) still show their result. */
 function isJobRead(c: { req: { method: string; path: string } }): boolean {
-  return (c.req.method === "GET" || c.req.method === "HEAD") && c.req.path.startsWith("/v1/jobs/");
+  return (
+    (c.req.method === "GET" || c.req.method === "HEAD") && c.req.path.startsWith("/v1/stories/")
+  );
 }
 
 export const flags = () =>

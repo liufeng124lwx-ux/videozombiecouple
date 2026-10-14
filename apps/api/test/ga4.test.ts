@@ -19,8 +19,8 @@ const pack = (userId: string, clientId: string | null): BillingEvent => ({
   kind: "order_paid",
   orderId: `ORD_${"p".repeat(22)}`,
   userId,
-  productKey: "pack200",
-  amount: 14.99,
+  productKey: "pack3",
+  amount: 11.99,
   currency: "USD",
   clientId,
   at: NOW,
@@ -53,9 +53,9 @@ describe("GA4 purchase (spec 9)", () => {
               name: "purchase",
               params: {
                 transaction_id: `ORD_${"p".repeat(22)}`,
-                value: 14.99,
+                value: 11.99,
                 currency: "USD",
-                items: [{ item_id: "pack200" }],
+                items: [{ item_id: "pack3" }],
               },
             },
           ],
@@ -77,6 +77,6 @@ describe("GA4 purchase (spec 9)", () => {
     const { h, userId, fetchMock, apply } = await shop();
     fetchMock.mockRejectedValueOnce(new Error("network"));
     await apply(pack(userId, "123.456"));
-    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(200);
+    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(30);
   });
 });

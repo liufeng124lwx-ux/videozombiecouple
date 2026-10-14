@@ -15,7 +15,7 @@ describe("app", () => {
   it("rejects /v1 calls without our Origin", async () => {
     for (const origin of [undefined, "https://evil.example"]) {
       const response = await app.request(
-        "/v1/jobs",
+        "/v1/stories",
         { method: "POST", headers: origin ? { origin } : {} },
         env,
       );
@@ -25,7 +25,7 @@ describe("app", () => {
 
   it("answers CORS preflight for our Origin", async () => {
     const response = await app.request(
-      "/v1/jobs",
+      "/v1/stories",
       { method: "OPTIONS", headers: { origin: ORIGIN } },
       env,
     );

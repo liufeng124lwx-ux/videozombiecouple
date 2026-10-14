@@ -1,4 +1,4 @@
-import { UPLOAD_KEY_PATTERN } from "@vzc/contracts";
+import { UploadKeySchema } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashIdentity } from "../src/services/crypto.ts";
 import { ulid } from "../src/services/ids.ts";
@@ -20,7 +20,7 @@ describe("ulid", () => {
     const b = ulid(2_000);
     expect(a).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     expect(a < b).toBe(true);
-    expect(`in/${a}.jpg`).toMatch(UPLOAD_KEY_PATTERN);
+    expect(UploadKeySchema.safeParse(`in/${a}.jpg`).success).toBe(true);
   });
 });
 
@@ -103,7 +103,7 @@ describe("POST /v1/uploads", () => {
     });
     expect(response.status).toBe(201);
     const key = response.body.key as string;
-    expect(key).toMatch(UPLOAD_KEY_PATTERN);
+    expect(UploadKeySchema.safeParse(key).success).toBe(true);
     expect(response.body).toMatchObject({
       method: "PUT",
       headers: { "content-type": "image/jpeg" },

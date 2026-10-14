@@ -2,7 +2,7 @@ import { ROUTES } from "@vzc/catalog";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadRoutes } from "../src/services/routes-store.ts";
 import { ADMIN_ENV, adminKit } from "./admin-kit.ts";
-import { jobBody, setup } from "./harness.ts";
+import { setup, storyBody } from "./harness.ts";
 import { row } from "./rows.ts";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -18,7 +18,7 @@ describe("admin switches (spec 8.1, 4.2)", () => {
       freePaused: "on",
       bannerText: "Maintenance <tonight>",
       bannerHref: "/pricing",
-      offline: "unblur.4k",
+      offline: "shot",
     });
     expect(response.status).toBe(303);
     expect(flags(h)).toMatchObject({
@@ -27,7 +27,7 @@ describe("admin switches (spec 8.1, 4.2)", () => {
       freePaused: true,
       freePausedBy: "admin",
       banner: { text: "Maintenance <tonight>", href: "/pricing" },
-      offline: ["unblur.4k"],
+      offline: ["shot"],
     });
     const page = await (await kit.get("/admin")).text();
     expect(page).toContain("Maintenance &lt;tonight&gt;");
@@ -42,8 +42,8 @@ describe("admin switches (spec 8.1, 4.2)", () => {
     const h = await setup(ADMIN_ENV);
     const kit = await adminKit(h.env);
     h.kv.store.set("flags", JSON.stringify({ freePaused: true, freePausedBy: "ops" }));
-    await kit.post("/admin/flags", { freePaused: "on", offline: ["unblur.4k", "unblur.pro"] });
-    expect(flags(h)).toMatchObject({ freePausedBy: "ops", offline: ["unblur.4k", "unblur.pro"] });
+    await kit.post("/admin/flags", { freePaused: "on", offline: ["shot", "keyframe"] });
+    expect(flags(h)).toMatchObject({ freePausedBy: "ops", offline: ["shot", "keyframe"] });
     await kit.post("/admin/flags", {});
     expect(flags(h)).toMatchObject({ freePaused: false, freePausedBy: null, offline: [] });
   });
@@ -209,16 +209,32 @@ describe("admin switches (spec 8.1, 4.2)", () => {
     expect(flags(h)).toMatchObject({ paused: true, pausedBy: "admin", pausedAt: 7 });
   });
 
-  it("stops new jobs for a capability taken offline, and only those", async () => {
+  it("stops new work for a capability taken offline, and only that", async () => {
     const h = await setup(ADMIN_ENV);
     const kit = await adminKit(h.env);
-    await kit.post("/admin/flags", { offline: "unblur.std" });
     await h.pass();
-    const refused = await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
-    expect(refused.body.error?.code).toBe("PROVIDER_DOWN");
+    const { userId, session } = await h.signIn();
+    const create = async () =>
+      h.call("/v1/stories", {
+        method: "POST",
+        body: storyBody(await h.upload(), await h.upload()),
+        session,
+      });
+    await kit.post("/admin/flags", { offline: "keyframe" });
+    expect((await create()).body.error?.code).toBe("PROVIDER_DOWN");
+    await kit.post("/admin/flags", { offline: "shot" });
+    expect((await create()).status).toBe(201);
+    const { spec } = await h.readyStory({ owner: `u:${userId}`, userId });
+    const render = () =>
+      h.call(`/v1/stories/${spec.id}/render`, {
+        method: "POST",
+        body: { idempotencyKey: `render-${spec.id}` },
+        session,
+      });
+    expect((await render()).body.error?.code).toBe("PROVIDER_DOWN");
     await kit.post("/admin/flags", {});
-    const ok = await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
-    expect(ok.status).toBe(201);
+    // No longer offline: the render gets as far as the wallet (no credits here).
+    expect((await render()).body.error?.code).toBe("CREDITS_LOW");
   });
 
   it("switches a route off and edits its rank and timeout", async () => {

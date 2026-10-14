@@ -30,15 +30,15 @@ async function shop(extra: Record<string, unknown> = {}) {
     waffoEvent("order.completed", {
       orderId: PACK,
       merchantProvidedBuyerIdentity: userId,
-      productMetadata: { productKey: "pack200" },
-      chargedAmount: "14.99",
+      productMetadata: { productKey: "pack3" },
+      chargedAmount: "11.99",
       ...overrides,
     });
   const refunded = () =>
     waffoEvent("refund.succeeded", {
       orderId: PACK,
-      refundedAmount: "14.99",
-      originalChargedAmount: "14.99",
+      refundedAmount: "11.99",
+      originalChargedAmount: "11.99",
     });
   const balance = async () => (await h.wallets.instance(userId).balance(userId)).total;
   return { h, kit, userId, deliver, paid, refunded, balance };
@@ -49,7 +49,7 @@ describe("POST /webhooks/waffo (spec 6.2)", () => {
     const { h, deliver, paid, balance } = await shop();
     const event = paid();
     expect(await deliver(event)).toBe(200);
-    expect(await balance()).toBe(200);
+    expect(await balance()).toBe(30);
     expect(
       h.db.prepare("SELECT type, processed_at, error FROM billing_events WHERE id=?").get(event.id),
     ).toEqual({
@@ -64,7 +64,7 @@ describe("POST /webhooks/waffo (spec 6.2)", () => {
     const event = paid();
     await deliver(event);
     expect(await deliver(event)).toBe(200);
-    expect(await balance()).toBe(200);
+    expect(await balance()).toBe(30);
   });
 
   // Review focus 1: the same delivery arrives twice while the first is still being handled.
@@ -74,7 +74,7 @@ describe("POST /webhooks/waffo (spec 6.2)", () => {
     // The second copy gets 409 (Waffo retries it) or, if the first already finished, 200.
     const statuses = await Promise.all([deliver(order), deliver(order)]);
     expect(statuses.every((status) => status === 200 || status === 409)).toBe(true);
-    expect(await balance()).toBe(200);
+    expect(await balance()).toBe(30);
     const refund = refunded();
     await Promise.all([deliver(refund), deliver(refund)]);
     expect(await balance()).toBe(0);
@@ -157,7 +157,7 @@ describe("replayPending with deliveries that keep failing", () => {
       .run(event.id, "waffo", event.eventType, "test", JSON.stringify(event), NOW);
     vi.setSystemTime(NOW + 2 * 60_000);
     expect(await replayPending(env)).toEqual({ done: 1, failed: 0 });
-    expect(await balance()).toBe(200);
+    expect(await balance()).toBe(30);
     expect(await deliver(paid())).toBe(200);
   });
 

@@ -19,8 +19,8 @@ describe("webhook replay (spec 6.2)", () => {
     const event = waffoEvent("order.completed", {
       orderId: `ORD_${"y".repeat(22)}`,
       merchantProvidedBuyerIdentity: userId,
-      productMetadata: { productKey: "pack200" },
-      chargedAmount: "14.99",
+      productMetadata: { productKey: "pack3" },
+      chargedAmount: "11.99",
     });
     h.db
       .prepare(
@@ -29,6 +29,6 @@ describe("webhook replay (spec 6.2)", () => {
       .run(event.id, "waffo", event.eventType, "test", JSON.stringify(event), NOON - 3_600_000);
     const ran = await runCron(CRONS.hourly, h.env as unknown as Bindings, NOON, async () => {});
     expect(ran).toContain("webhook-replay");
-    expect((await h.wallets.instance(userId).balance(userId)).total).toBeGreaterThan(0);
+    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(30);
   });
 });

@@ -1,14 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RateLimiter } from "../src/durable-objects/rate-limiter.ts";
-import { jobBody, namespace, setup } from "./harness.ts";
+import { namespace, setup } from "./harness.ts";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(Date.UTC(2026, 9, 9, 12));
 });
 afterEach(() => vi.useRealTimers());
-
-const OTHER = "ffffffffffffffffffffffffffffffff";
 
 async function signInByCode(h: Awaited<ReturnType<typeof setup>>, email = "ann@example.com") {
   await h.call("/v1/auth/email", { method: "POST", body: { email } });
@@ -29,39 +27,18 @@ describe("RateLimiter.absorb", () => {
 });
 
 describe("guest to account merge (spec 5.1)", () => {
-  it("counts the guest's free photos today against the account", async () => {
+  // Previews need an account, so a guest has nothing to bring; signing in again hands out nothing.
+  it("gives the account its own previews however often the browser signs in", async () => {
     const h = await setup();
     await h.pass();
-    for (let i = 0; i < 2; i++)
-      await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
-    const session = await signInByCode(h);
-    expect((await h.call("/v1/quota", { session })).body).toMatchObject({ remaining: 2, limit: 4 });
-  });
-
-  // Review focus 3: signing in again must not hand out more free photos.
-  it("merges only once however often the browser signs in", async () => {
-    const h = await setup();
-    await h.pass();
-    await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
+    expect((await h.call("/v1/quota")).body).toMatchObject({ loginRequired: true });
     const first = await signInByCode(h);
+    expect((await h.call("/v1/quota", { session: first })).body).toMatchObject({
+      remaining: 3,
+      limit: 3,
+    });
     await h.call("/v1/auth/logout", { method: "POST", session: first });
     const second = await signInByCode(h);
     expect((await h.call("/v1/quota", { session: second })).body).toMatchObject({ remaining: 3 });
-  });
-
-  it("hands unfinished guest jobs to the account and keeps finished ones visible here", async () => {
-    const h = await setup();
-    await h.pass();
-    const done = await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
-    await h.advance(60_000);
-    const running = await h.call("/v1/jobs", { method: "POST", body: jobBody(await h.upload()) });
-    const session = await signInByCode(h);
-    const owner = (id: string) =>
-      (h.db.prepare("SELECT owner FROM jobs WHERE id=?").get(id) as { owner: string }).owner;
-    expect(owner(running.body.jobId as string)).toMatch(/^u:/);
-    expect(owner(done.body.jobId as string)).toMatch(/^g:/);
-    expect((await h.call(`/v1/jobs/${done.body.jobId}`, { session })).status).toBe(200);
-    expect((await h.call(`/v1/jobs/${running.body.jobId}`, { session })).status).toBe(200);
-    expect((await h.call(`/v1/jobs/${done.body.jobId}`, { visitor: OTHER })).status).toBe(404);
   });
 });

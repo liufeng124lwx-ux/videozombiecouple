@@ -3,7 +3,7 @@ import { ROUTES } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recordAttempt } from "../src/services/analytics.ts";
 import { providerKit } from "../src/services/provider-kit.ts";
-import { guestCounters, quotaStatus, reserveQuota } from "../src/services/quota.ts";
+import { previewCounters, quotaStatus, reserveQuota } from "../src/services/quota.ts";
 import { loadRoutes } from "../src/services/routes-store.ts";
 import { settle } from "../src/services/settle.ts";
 import type { Bindings } from "../src/types.ts";
@@ -21,25 +21,26 @@ afterEach(() => {
 const insertRoute = (db: DatabaseSync) =>
   db
     .prepare(
-      "INSERT INTO provider_routes(id,capability,mode,rank,parallel,provider,model,params,timeout_ms,pad_aspect,credits_tier,aspects,cost_usd,label,enabled,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO provider_routes(id,capability,mode,rank,parallel,provider,model,params,timeout_ms,pad_aspect,credits_tier,aspects,cost_usd,label,enabled,updated_at,durations) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     )
     .run(
-      "unblur.std:seedream-2k:1",
-      "unblur.std",
+      "shot:wan-2-7:1",
+      "shot",
       null,
       1,
       0,
       "kie",
-      "seedream/5-flash-image-to-image",
-      JSON.stringify({ size: "2K", output_format: "png" }),
-      90_000,
-      1,
-      "std",
-      JSON.stringify(["1:1", "4:3"]),
-      0.0162,
-      "Seedream",
+      "wan/2-7-image-to-video",
+      JSON.stringify({ resolution: "720p" }),
+      300_000,
+      0,
+      "video",
+      JSON.stringify(["9:16"]),
+      0.35,
+      "Wan",
       0,
       Date.now(),
+      JSON.stringify({ minSec: 2, maxSec: 15 }),
     );
 
 describe("loadRoutes", () => {
@@ -59,12 +60,13 @@ describe("loadRoutes", () => {
     const routes = await loadRoutes(h.env.DB as D1Database);
     expect(routes).toEqual([
       expect.objectContaining({
-        id: "unblur.std:seedream-2k:1",
+        id: "shot:wan-2-7:1",
         mode: null,
         parallel: false,
-        params: { size: "2K", output_format: "png" },
-        aspects: ["1:1", "4:3"],
-        padAspect: true,
+        params: { resolution: "720p" },
+        aspects: ["9:16"],
+        minSec: 2,
+        maxSec: 15,
         enabled: false,
       }),
     ]);
@@ -104,29 +106,29 @@ describe("providerKit", () => {
 });
 
 describe("settle", () => {
-  it("commits the guest's quota when a result was delivered and returns it otherwise", async () => {
+  it("commits the preview quota when a preview was delivered and returns it otherwise", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
-    const counters = guestCounters({ visitorHash: "v", fpHash: null, ipSegmentHash: "i" });
+    const counters = previewCounters("u1", "i");
     const names = counters.map((c) => c.name);
     await reserveQuota(env, counters, "ok");
     await reserveQuota(env, counters, "bad");
-    await settle(env, "ok", { kind: "quota", nonce: "ok", counters: names }, "std");
+    await settle(env, "ok", { kind: "quota", nonce: "ok", counters: names }, 0);
     await settle(env, "bad", { kind: "quota", nonce: "bad", counters: names }, null);
-    expect((await quotaStatus(env, counters)).remaining).toBe(1);
+    expect((await quotaStatus(env, counters)).remaining).toBe(2);
   });
 
-  it("charges the delivered tier's credits, never more than reserved", async () => {
+  it("charges the delivered credits, never more than reserved", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
-    const hold = { kind: "credits", userId: "u1", reservationId: "r1", reserved: 3 } as const;
-    await settle(env, "j1", hold, "std");
-    await settle(env, "j2", { ...hold, reservationId: "r2" }, "pro");
-    await settle(env, "j3", { ...hold, reservationId: "r3" }, null);
+    const hold = { kind: "credits", userId: "u1", reservationId: "r1", reserved: 10 } as const;
+    await settle(env, "s1", hold, 4);
+    await settle(env, "s2", { ...hold, reservationId: "r2" }, 30);
+    await settle(env, "s3", { ...hold, reservationId: "r3" }, null);
     expect(h.wallet.calls).toEqual([
-      ["commit", "u1", "r1", 1, "j1"],
-      ["commit", "u1", "r2", 3, "j2"],
-      ["release", "u1", "r3", "j3"],
+      ["commit", "u1", "r1", 4, "s1"],
+      ["commit", "u1", "r2", 10, "s2"],
+      ["release", "u1", "r3", "s3"],
     ]);
   });
 });
@@ -135,8 +137,8 @@ describe("recordAttempt", () => {
   it("writes one Analytics Engine data point per model call", async () => {
     const h = await setup();
     recordAttempt(h.env as unknown as Bindings, {
-      capability: "unblur.std",
-      model: "seedream/5-flash-image-to-image",
+      capability: "keyframe",
+      model: "nano-banana-pro",
       outcome: "failed",
       failKind: "timeout",
       freeRetry: false,
@@ -145,8 +147,8 @@ describe("recordAttempt", () => {
     });
     expect(h.analytics).toEqual([
       {
-        indexes: ["unblur.std"],
-        blobs: ["unblur.std", "seedream/5-flash-image-to-image", "failed", "timeout", "paid"],
+        indexes: ["keyframe"],
+        blobs: ["keyframe", "nano-banana-pro", "failed", "timeout", "paid"],
         doubles: [0, 90_000],
       },
     ]);
