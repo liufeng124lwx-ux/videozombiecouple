@@ -11,7 +11,8 @@ import { createHash, createSign } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { PACKS, PLAN_IDS, PLANS } from "../packages/catalog/src/plans.ts";
+import { SALE_PRODUCTS } from "../packages/catalog/src/plans.ts";
+import { TIERS } from "../packages/catalog/src/tiers.ts";
 
 const mode = process.argv[2];
 if (mode !== "test" && mode !== "prod")
@@ -57,36 +58,19 @@ type Item = {
   usd: number;
   period?: "monthly" | "yearly";
 };
-const items: Item[] = [
-  ...PLAN_IDS.flatMap((id): Item[] => {
-    const plan = PLANS[id];
-    const credits = `${plan.monthlyCredits.toLocaleString("en-US")} credits every month`;
-    return [
-      {
-        key: plan.month.productKey,
-        name: `VideoZombieCouple ${plan.label} (monthly)`,
-        description: credits,
-        usd: plan.month.usd,
-        period: "monthly",
-      },
-      {
-        key: plan.year.productKey,
-        name: `VideoZombieCouple ${plan.label} (yearly)`,
-        description: `${credits}, billed yearly`,
-        usd: plan.year.usd,
-        period: "yearly",
-      },
-    ];
-  }),
-  ...PACKS.map(
-    (pack): Item => ({
-      key: pack.productKey,
-      name: `VideoZombieCouple ${pack.credits} credits`,
-      description: `${pack.credits} credits that never expire`,
-      usd: pack.usd,
-    }),
-  ),
-];
+// Spec §7: one-time video packs only (10 credits = 1 video).
+const items: Item[] = SALE_PRODUCTS.flatMap((product): Item[] => {
+  if (product.kind !== "pack") return [];
+  const videos = product.credits / TIERS.video.credits;
+  return [
+    {
+      key: product.key,
+      name: `VideoZombieCouple ${videos} video${videos === 1 ? "" : "s"}`,
+      description: `${videos} zombie love story video${videos === 1 ? "" : "s"}, credits never expire`,
+      usd: product.usd,
+    },
+  ];
+});
 
 async function call(path: string, body: unknown): Promise<Record<string, unknown>> {
   const text = JSON.stringify(body);

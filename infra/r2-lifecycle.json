@@ -14,20 +14,7 @@
       }
     },
     {
-      "id": "results-1d",
-      "enabled": true,
-      "conditions": {
-        "prefix": "out/"
-      },
-      "deleteObjectsTransition": {
-        "condition": {
-          "type": "Age",
-          "maxAge": 86400
-        }
-      }
-    },
-    {
-      "id": "credit-jobs-8d",
+      "id": "photos-3d",
       "enabled": true,
       "conditions": {
         "prefix": "keep/"
@@ -35,20 +22,46 @@
       "deleteObjectsTransition": {
         "condition": {
           "type": "Age",
-          "maxAge": 691200
+          "maxAge": 259200
         }
       }
     },
     {
-      "id": "shares-8d",
+      "id": "keyframes-3d",
       "enabled": true,
       "conditions": {
-        "prefix": "share/"
+        "prefix": "kf/"
       },
       "deleteObjectsTransition": {
         "condition": {
           "type": "Age",
-          "maxAge": 691200
+          "maxAge": 259200
+        }
+      }
+    },
+    {
+      "id": "shots-3d",
+      "enabled": true,
+      "conditions": {
+        "prefix": "shot/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 259200
+        }
+      }
+    },
+    {
+      "id": "videos-15d",
+      "enabled": true,
+      "conditions": {
+        "prefix": "out/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 1296000
         }
       }
     },

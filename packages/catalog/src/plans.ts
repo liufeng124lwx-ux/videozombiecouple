@@ -65,28 +65,29 @@ export type Product =
   | { kind: "pack"; key: string; credits: number; usd: number };
 
 /** Everything a checkout can sell, keyed like the Waffo products' `productKey` metadata. */
-/** Everything a checkout can sell, keyed like the Waffo products' `productKey` metadata. */
+/**
+ * Every product the billing code knows, keyed like the Waffo products' `productKey` metadata.
+ * Plans stay known (old events still parse) but are only sold when SELL_PLANS is on.
+ */
 export const PRODUCTS: readonly Product[] = [
-  ...(SELL_PLANS
-    ? PLAN_IDS.flatMap((id): Product[] => [
-        {
-          kind: "plan",
-          key: PLANS[id].month.productKey,
-          plan: id,
-          interval: "month",
-          monthlyCredits: PLANS[id].monthlyCredits,
-          usd: PLANS[id].month.usd,
-        },
-        {
-          kind: "plan",
-          key: PLANS[id].year.productKey,
-          plan: id,
-          interval: "year",
-          monthlyCredits: PLANS[id].monthlyCredits,
-          usd: PLANS[id].year.usd,
-        },
-      ])
-    : []),
+  ...PLAN_IDS.flatMap((id): Product[] => [
+    {
+      kind: "plan",
+      key: PLANS[id].month.productKey,
+      plan: id,
+      interval: "month",
+      monthlyCredits: PLANS[id].monthlyCredits,
+      usd: PLANS[id].month.usd,
+    },
+    {
+      kind: "plan",
+      key: PLANS[id].year.productKey,
+      plan: id,
+      interval: "year",
+      monthlyCredits: PLANS[id].monthlyCredits,
+      usd: PLANS[id].year.usd,
+    },
+  ]),
   ...PACKS.map(
     (pack): Product => ({
       kind: "pack",
@@ -96,6 +97,11 @@ export const PRODUCTS: readonly Product[] = [
     }),
   ),
 ];
+
+/** What the pricing page and scripts/waffo-setup.ts offer (spec §7: video packs only). */
+export const SALE_PRODUCTS: readonly Product[] = PRODUCTS.filter(
+  (p) => SELL_PLANS || p.kind === "pack",
+);
 
 export function productByKey(key: string): Product | null {
   return PRODUCTS.find((product) => product.key === key) ?? null;

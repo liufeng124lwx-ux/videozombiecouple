@@ -5,7 +5,7 @@ import {
   KINDS,
   keyframePrompt,
   PACKS,
-  PRODUCTS,
+  SALE_PRODUCTS,
   SCENE_IDS,
   SCENES,
   STORYBOARD,
@@ -53,7 +53,7 @@ describe("story catalog", () => {
       ["pack3", 30, 11.99],
       ["pack10", 100, 29.99],
     ]);
-    expect(PRODUCTS.every((p) => p.kind === "pack")).toBe(true);
+    expect(SALE_PRODUCTS.every((p) => p.kind === "pack")).toBe(true);
     expect(CANDIDATES_PER_FRAME).toBe(2);
   });
 });

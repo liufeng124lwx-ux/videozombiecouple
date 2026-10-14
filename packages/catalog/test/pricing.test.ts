@@ -6,6 +6,7 @@ import {
   pricingGuard,
   productByKey,
   ROUTES,
+  SALE_PRODUCTS,
   storyCostUsd,
 } from "../src/index.ts";
 
@@ -20,9 +21,10 @@ describe("pricing (spec §7)", () => {
   });
 
   it("sells packs only, findable by product key", () => {
-    expect(PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack10"]);
+    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack10"]);
     expect(productByKey("pack3")).toMatchObject({ kind: "pack", credits: 30, usd: 11.99 });
-    expect(productByKey("starter_month")).toBeNull();
+    // Plans stay known to the billing code but are not for sale.
+    expect(PRODUCTS.some((p) => p.kind === "plan")).toBe(true);
   });
 
   it("counts four keyframe candidates for a preview and B plus four shots for a video", () => {
