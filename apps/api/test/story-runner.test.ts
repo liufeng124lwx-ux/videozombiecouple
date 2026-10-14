@@ -172,6 +172,23 @@ describe("StoryRunner", () => {
     expect(h.wallet.calls).toContainEqual(["commit", "test", spec.id, 10, spec.id]);
   });
 
+  it("emails the owner once when the film is ready, not again after a title change", async () => {
+    const h = await setup();
+    scripted(h);
+    h.db
+      .prepare("INSERT INTO users(id,email,created_at) VALUES(?,?,?)")
+      .run("test", "ann@example.com", Date.now());
+    const { spec, runner } = await readyStory(h);
+    await runner.render(await creditHold(h, spec.id));
+    await untilStatus(h, runner, "done");
+    expect(h.mail.filter((m) => m.to === "ann@example.com")).toHaveLength(1);
+    expect(h.mail[0]?.text).toContain(`/story?id=${spec.id}`);
+    await runner.recompose("A", "B");
+    await h.advance(MIN);
+    await untilStatus(h, runner, "done");
+    expect(h.mail).toHaveLength(1);
+  });
+
   it("a shot that exhausts its routes fails the video and releases the credits", async () => {
     const down = { kind: "fail", failMsg: "internal error" };
     const h = await setup({

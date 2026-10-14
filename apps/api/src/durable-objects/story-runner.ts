@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import {
   CAPABILITIES,
+  CAPTION_SEC,
   type CapabilityId,
   REQUIRED_FACES,
   RETENTION,
@@ -21,6 +22,7 @@ import { pauseForKieCap } from "../ops/kie-cap.ts";
 import { recordAttempt } from "../services/analytics.ts";
 import { type ComposerApi, composerFor } from "../services/composer.ts";
 import { callbackToken } from "../services/crypto.ts";
+import { sendMail } from "../services/mail.ts";
 import { type ProviderKit, providerKit } from "../services/provider-kit.ts";
 import { presign } from "../services/r2-presign.ts";
 import { loadRoutes } from "../services/routes-store.ts";
@@ -637,6 +639,33 @@ export class StoryRunner extends DurableObject<Bindings> {
       state.finishedAt = Date.now();
     }
     await this.#settleOpen(state, true);
+    if (state.status === "done" && !state.notified) await this.#notify(state);
+  }
+
+  /** Spec §4.1 step 4: tell the owner the film is ready (best effort, once). */
+  async #notify(state: StoryState): Promise<void> {
+    state.notified = true;
+    try {
+      const user = await this.env.DB.prepare(
+        "SELECT email FROM users WHERE id=? AND deleted_at IS NULL",
+      )
+        .bind(state.spec.userId)
+        .first<{ email: string }>();
+      if (!user) return;
+      await sendMail(this.env, {
+        to: user.email,
+        subject: "Your zombie love story is ready",
+        intro: `Your ${STORYBOARD.reduce((t, s) => t + s.targetSec, 0) + CAPTION_SEC}-second film is ready to watch and download. The file is kept for ${RETENTION.outputDays} days.`,
+        link: {
+          href: `${this.env.ALLOWED_ORIGIN}/story?id=${state.spec.id}`,
+          label: "Watch your film",
+        },
+      });
+    } catch (error) {
+      console.error(
+        JSON.stringify({ level: "error", storyId: state.spec.id, notify: message(error) }),
+      );
+    }
   }
 
   #errorCode(state: StoryState, phase: Phase): ErrorCode {

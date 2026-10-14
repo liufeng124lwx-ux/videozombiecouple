@@ -95,4 +95,6 @@ export type StoryState = {
   syncedSig: string;
   /** Settlement calls that threw; drives the retry backoff. */
   settleFailures?: number;
+  /** The "your film is ready" email went out (once per story). */
+  notified?: boolean;
 };
