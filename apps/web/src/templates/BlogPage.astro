@@ -1,0 +1,43 @@
+---
+import { type CollectionEntry, render } from "astro:content";
+import { isLive, type LocaleId, pageById, pagePath } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import AdSlot from "../components/AdSlot.astro";
+import F from "../components/F.astro";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+  entry: CollectionEntry<"pages">;
+}
+const { locale, h1, entry } = Astro.props;
+const { Content } = await render(entry);
+const published = entry.data.published;
+// Every post ends by pointing to the tool on the home page.
+const home = pageById("home");
+const toolLink =
+  home && isLive(home, locale)
+    ? { href: `${pagePath(home, locale)}#make`, label: home.locales[locale]?.h1 ?? "" }
+    : null;
+const date = (d: Date) =>
+  d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+---
+<article class="wrap prose">
+  <h1>{h1}</h1>
+  {published && <p class="updated">{t("blog.published", { date: date(published) }, locale)}</p>}
+  <Content components={{ F, AdSlot }} />
+  {
+    toolLink && (
+      <p>
+        <a class="btn btn-primary btn-lg" href={toolLink.href}>
+          {t("blog.try", { tool: toolLink.label }, locale)}
+        </a>
+      </p>
+    )
+  }
+</article>

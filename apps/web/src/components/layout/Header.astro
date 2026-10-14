@@ -1,0 +1,30 @@
+---
+import { isLive, type LocaleId, PAGES, type PageConfig, pagePath } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import AccountChip from "../auth/AccountChip.tsx";
+import SignInHost from "../auth/SignInHost.tsx";
+import AnnouncementBar from "../site/AnnouncementBar.tsx";
+import Wordmark from "./Wordmark.astro";
+
+interface Props {
+  locale: LocaleId;
+  page: PageConfig | null;
+}
+const { locale } = Astro.props;
+const pricing = PAGES.find((p) => p.id === "pricing");
+const pricingHref = pricing && isLive(pricing, locale) ? pagePath(pricing, locale) : "/pricing";
+---
+<AnnouncementBar client:idle />
+<header class="hdr">
+  <div class="wrap">
+    <Wordmark href="/" />
+    <nav class="nav" aria-label={t("nav.main", {}, locale)}>
+      <a href={pricingHref}>{t("nav.pricing", {}, locale)}</a>
+    </nav>
+    <div class="right">
+      <AccountChip client:load />
+      <a class="btn btn-sm hdr-cta" href="/#make">{t("nav.make", {}, locale)}</a>
+    </div>
+  </div>
+</header>
+<SignInHost client:idle />

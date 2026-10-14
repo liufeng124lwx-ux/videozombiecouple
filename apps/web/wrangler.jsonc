@@ -1,0 +1,13 @@
+// Staging site: the static build served by Workers static assets. Plan 7 adds the production
+// config and the deploy pipeline. Build with staging PUBLIC_* values before deploying.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vzc-web-staging",
+  "compatibility_date": "2026-10-04",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "staging.videozombiecouple.com", "custom_domain": true }]
+}

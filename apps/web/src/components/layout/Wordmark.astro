@@ -1,0 +1,11 @@
+---
+/** The wordmark: condensed caps with the grade-wipe line between the two halves of the story. */
+interface Props {
+  href?: string;
+}
+const { href } = Astro.props;
+const Tag = href ? "a" : "span";
+---
+<Tag class="wordmark" href={href} aria-label="VideoZombieCouple home">
+  <span class="cold">Zombie</span><span class="cut" aria-hidden="true"></span><span class="warm">Couple</span>
+</Tag>

@@ -1,0 +1,46 @@
+---
+import "../styles/pricing.css";
+import { type CollectionEntry, render } from "astro:content";
+import { fact, type LocaleId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import F from "../components/F.astro";
+import Faq from "../components/Faq.astro";
+import CheckoutReturn from "../components/pricing/CheckoutReturn.tsx";
+import PackRows from "../components/pricing/PackRows.tsx";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+  entry: CollectionEntry<"pages">;
+}
+const { locale, h1, entry } = Astro.props;
+const { Content } = await render(entry);
+---
+<section class="wrap pricing-top">
+  <p class="scene">INT. BOX OFFICE — NIGHT</p>
+  <h1>{h1}</h1>
+  <p class="lede">{t("pricing.lede", { daily: fact("preview.daily") }, locale)}</p>
+</section>
+<CheckoutReturn client:load />
+<section class="wrap pricing-grid">
+  <div class="included">
+    <h2 class="scene">{t("pricing.included", {}, locale)}</h2>
+    <ul>
+      <li>{t("pricing.inc.film", { seconds: fact("video.seconds"), w: fact("video.width"), h: fact("video.height") }, locale)}</li>
+      <li>{t("pricing.inc.preview", { daily: fact("preview.daily") }, locale)}</li>
+      <li>{t("pricing.inc.title", {}, locale)}</li>
+      <li>{t("pricing.inc.refund", {}, locale)}</li>
+      <li>{t("pricing.inc.keep", { days: fact("retention.videoDays") }, locale)}</li>
+    </ul>
+  </div>
+  <PackRows client:load returnPath="/pricing" />
+</section>
+<section class="section">
+  <div class="wrap">
+    <h2>{t("pricing.faq.title", {}, locale)}</h2>
+    <Faq items={entry.data.faq ?? []} />
+    <div class="prose pricing-notes">
+      <Content components={{ F }} />
+    </div>
+  </div>
+</section>

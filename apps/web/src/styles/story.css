@@ -1,0 +1,354 @@
+/* The story tool (design lock "Tool states"): single column, thin lines, ember only on the action. */
+.make {
+  padding: 40px 0 64px;
+  scroll-margin-top: 72px;
+}
+.tool {
+  max-width: 880px;
+  margin: 0 auto;
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  padding: 20px;
+}
+@media (min-width: 720px) {
+  .tool {
+    padding: 32px;
+  }
+}
+.tool h3 {
+  font: 800 28px / 0.95 var(--font-display);
+  font-stretch: 62%;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.tool-setup {
+  display: grid;
+  gap: 24px;
+}
+.kind-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+/* Photo slots: call-sheet labels, 3:4 frames */
+.slots {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) auto minmax(0, 240px);
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+.slot-label {
+  margin-bottom: 8px;
+}
+.slot-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  border: 1px dashed var(--text-3);
+  background: var(--bg);
+  cursor: pointer;
+  overflow: hidden;
+}
+.slot.filled .slot-frame {
+  border-style: solid;
+  border-color: var(--hairline);
+}
+.slot.warn .slot-frame {
+  border-color: var(--glow-2);
+}
+.slot-frame:hover {
+  border-color: var(--text-2);
+}
+.slot-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slot-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 14px;
+  padding: 12px;
+  text-align: center;
+}
+.slot-plus {
+  font: 300 36px / 1 var(--font-ui);
+  color: var(--text);
+}
+.slot-busy {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 8px;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  font: 400 11px / 1.3 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.slot-status {
+  margin-top: 8px;
+  color: var(--text-2);
+}
+.slot-status.warn {
+  color: var(--glow-1);
+}
+.slot-status .link {
+  font-size: 14px;
+}
+.swap {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--hairline);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+.swap:disabled {
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+.tips {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px 16px;
+  color: var(--text-2);
+}
+
+/* Scenes: 9:16 radio tiles, each a still grade wipe */
+.scenes {
+  border: 0;
+}
+.scenes legend {
+  margin-bottom: 10px;
+}
+.scene-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 180px));
+  gap: 10px;
+}
+.scene-tile {
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.scene-tile .wipe {
+  aspect-ratio: 3 / 4;
+}
+.scene-tile.on {
+  border-color: var(--ember);
+  box-shadow: inset 0 0 0 1px var(--ember);
+}
+.scene-tile.soon {
+  cursor: not-allowed;
+}
+.scene-tile.soon .scene-blank,
+.scene-tile.soon .wipe {
+  opacity: 0.45;
+}
+.scene-blank {
+  display: block;
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(90deg, #16202b 50%, #24180f 50%);
+}
+.scene-name {
+  display: block;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.scene-tile .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--bg);
+}
+
+/* End title */
+.titlecard summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.titlecard summary::before {
+  content: "+ ";
+  color: var(--text-2);
+}
+.titlecard[open] summary::before {
+  content: "– ";
+}
+.titlecard-body {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+}
+@media (min-width: 720px) {
+  .titlecard-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.titlecard-fields {
+  display: grid;
+  gap: 12px;
+}
+.titlecard-preview,
+.closing-card {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 160px;
+  padding: 24px;
+  background: var(--bg-warm);
+  border: 1px solid #2a1d12;
+}
+.tc-line {
+  font: italic 500 26px / 1.15 var(--font-title);
+  color: var(--glow-1);
+}
+.tc-names {
+  font: italic 500 18px / 1.2 var(--font-title);
+  color: #c9a27a;
+}
+
+/* The action bar closes the form; on phones it spans the card's full width. */
+.tool-bar {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding-top: 4px;
+}
+
+/* Waiting: two frames sharpening, a thin gold progress line */
+.waiting {
+  display: grid;
+  gap: 14px;
+}
+.waiting-frames {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 420px;
+}
+.waiting-frames .frame {
+  aspect-ratio: 9 / 16;
+  background: linear-gradient(160deg, #1c2a38, #0d131a);
+  animation: develop 2.4s ease-in-out infinite alternate;
+}
+.waiting-frames .frame.warm {
+  background: linear-gradient(160deg, #3a2614, #140d08);
+  animation-delay: 0.6s;
+}
+@keyframes develop {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .waiting-frames .frame {
+    animation: none;
+  }
+}
+.progress-line {
+  height: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+.progress-line i {
+  display: block;
+  height: 100%;
+  background: var(--ember);
+  transform-origin: left;
+  transition: transform 0.6s ease;
+}
+
+/* Preview ready: the user's own grade wipe */
+.tool-ready {
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 720px) {
+  .tool-ready {
+    grid-template-columns: minmax(0, 360px) 1fr;
+    align-items: start;
+  }
+}
+.frame-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.ready-side .actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+.pay {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+/* Rendering */
+.tool-render {
+  display: grid;
+  gap: 16px;
+  max-width: 420px;
+}
+.timeline {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Done */
+.tool-done {
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 720px) {
+  .tool-done {
+    grid-template-columns: minmax(0, 360px) 1fr;
+    align-items: start;
+  }
+}
+.player video {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  background: #000;
+}
+.done-side {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.retitle {
+  display: grid;
+  gap: 10px;
+}
+.tool-failed {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.turnstile:empty {
+  display: none;
+}
+.story-page {
+  padding-top: 48px;
+}
+.story-page h1 {
+  font-size: clamp(40px, 8vw, 80px);
+  margin: 8px 0 8px;
+}

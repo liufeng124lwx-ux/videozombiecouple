@@ -1,0 +1,25 @@
+---
+import "../styles/story.css";
+import "../styles/pricing.css";
+import type { LocaleId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import StoryTool from "../components/story/StoryTool.tsx";
+import { sampleImage } from "../lib/sample-images.ts";
+import { HERO_PAIR, sampleFile } from "../lib/samples.ts";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+}
+const { locale, h1 } = Astro.props;
+const a = await sampleImage(sampleFile(HERO_PAIR, "A"), "200px", [360]);
+const c = await sampleImage(sampleFile(HERO_PAIR, "C"), "200px", [360]);
+---
+<section class="wrap story-page">
+  <p class="scene">INT. SCREENING ROOM — NIGHT</p>
+  <h1>{h1}</h1>
+  <div class="make">
+    <StoryTool client:load mode="story" posters={{ "cabin-wheat": { cold: a.src, warm: c.src } }} />
+  </div>
+  <p class="small muted"><a href="/">{t("story.done.another", {}, locale)}</a></p>
+</section>

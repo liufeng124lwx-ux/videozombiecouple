@@ -1,0 +1,25 @@
+---
+import "../styles/account.css";
+import type { LocaleId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import AccountPanel from "../components/account/AccountPanel.tsx";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+}
+const { locale, h1 } = Astro.props;
+---
+<div class="wrap account">
+  <aside>
+    <h1>{h1}</h1>
+    <nav aria-label={t("account.nav.label", {}, locale)}>
+      <a href="#credits">{t("account.nav.credits", {}, locale)}</a>
+      <a href="#stories">{t("account.nav.stories", {}, locale)}</a>
+      <a href="#activity">{t("account.nav.activity", {}, locale)}</a>
+      <a href="#signin">{t("account.nav.signin", {}, locale)}</a>
+      <a href="#delete">{t("account.nav.delete", {}, locale)}</a>
+    </nav>
+  </aside>
+  <AccountPanel client:load />
+</div>

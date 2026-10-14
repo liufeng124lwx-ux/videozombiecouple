@@ -1,0 +1,28 @@
+---
+import { t } from "@vzc/i18n";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { storyLinks } from "../lib/nav.ts";
+
+const links = storyLinks("en");
+---
+<BaseLayout
+  title={t("notFound.title")}
+  description={t("notFound.description")}
+  path="/404"
+  locale="en"
+  noindex={true}
+  page={null}
+>
+  <section class="wrap prose not-found">
+    <p class="scene">INT. EMPTY ROOM — NIGHT</p>
+    <h1>{t("notFound.heading")}</h1>
+    <p>{t("notFound.text")}</p>
+    <ul>
+      {links.map((link) => (
+        <li>
+          <a href={link.href}>{link.label} →</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>

@@ -1,0 +1,9 @@
+---
+import { fact } from "@vzc/catalog";
+
+interface Props {
+  k: string;
+}
+const { k } = Astro.props;
+---
+{fact(k)}

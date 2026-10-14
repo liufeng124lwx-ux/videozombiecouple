@@ -32,3 +32,10 @@ def test_a_clip_that_ends_on_a_keyframe_keeps_its_end():
     joined = " ".join(build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4"))
     assert "-sseof -3 -t 3 -i s3.mp4" in joined
     assert "-sseof" not in joined.split("-i s3.mp4")[0].split("-i s2.mp4")[0]
+
+
+def test_a_small_mark_sits_in_the_corner_of_the_film():
+    cmd = build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4", mark_png="mark.png")
+    joined = " ".join(cmd)
+    assert "-i mark.png" in joined
+    assert "overlay=W-w-24:H-h-28" in joined

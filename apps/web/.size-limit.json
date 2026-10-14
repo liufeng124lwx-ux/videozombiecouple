@@ -1,0 +1,92 @@
+[
+  {
+    "name": "first screen: tool area and hero",
+    "path": "dist/_astro/ToolPage.astro_astro_type_script_index_0_lang.*.js",
+    "limit": "8 kB",
+    "gzip": true
+  },
+  {
+    "name": "error catcher (every page)",
+    "path": "dist/_astro/BaseLayout.astro_astro_type_script_index_0_lang.*.js",
+    "limit": "1 kB",
+    "gzip": true
+  },
+  {
+    "name": "local tools: ImageTool (first screen of local tool pages)",
+    "path": "dist/_astro/ImageTool.*.js",
+    "limit": "12 kB",
+    "gzip": true
+  },
+  {
+    "name": "local tools: JPEG encoder (loads after a file is picked)",
+    "path": "dist/_astro/mozjpeg_enc-*.wasm",
+    "limit": "66 kB",
+    "gzip": true
+  },
+  {
+    "name": "local tools: PNG optimiser (loads after a file is picked)",
+    "path": "dist/_astro/squoosh_oxipng_bg-*.wasm",
+    "limit": "84 kB",
+    "gzip": true
+  },
+  {
+    "name": "local tools: WebP encoder, SIMD build (loads after a file is picked)",
+    "path": "dist/_astro/webp_enc_simd-*.wasm",
+    "limit": "140 kB",
+    "gzip": true
+  },
+  {
+    "name": "local tools: AVIF encoder, single-threaded (loads after a file is picked)",
+    "path": "dist/_astro/avif_enc-*.wasm",
+    "limit": "1250 kB",
+    "gzip": true
+  },
+  {
+    "name": "editor: EditorDrop (first screen of editor pages)",
+    "path": "dist/_astro/EditorDrop.*.js",
+    "limit": "8 kB",
+    "gzip": true
+  },
+  {
+    "name": "editor: PhotoEditor (loads after a photo is picked)",
+    "path": "dist/_astro/PhotoEditor.*.js",
+    "limit": "30 kB",
+    "gzip": true
+  },
+  {
+    "name": "editor: Worker (loads after a photo is picked)",
+    "path": "dist/_astro/editor.worker-*.js",
+    "limit": "15 kB",
+    "gzip": true
+  },
+  {
+    "name": "workspace",
+    "path": "dist/_astro/mount.*.js",
+    "limit": "80 kB",
+    "gzip": true
+  },
+  {
+    "name": "diagnosis worker",
+    "path": "dist/_astro/diagnosis.worker-*.js",
+    "limit": "15 kB",
+    "gzip": true
+  },
+  {
+    "name": "refine worker",
+    "path": "dist/_astro/refine.worker-*.js",
+    "limit": "15 kB",
+    "gzip": true
+  },
+  {
+    "name": "face detection (loads after a photo is picked)",
+    "path": "dist/_astro/vision_bundle*.js",
+    "limit": "60 kB",
+    "gzip": true
+  },
+  {
+    "name": "Sentry SDK (loads only after an error)",
+    "path": "dist/_astro/sentry-sdk.*.js",
+    "limit": "35 kB",
+    "gzip": true
+  }
+]

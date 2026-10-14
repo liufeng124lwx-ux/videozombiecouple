@@ -1,0 +1,27 @@
+---
+import { type CollectionEntry, render } from "astro:content";
+import type { LocaleId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import F from "../components/F.astro";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+  entry: CollectionEntry<"pages">;
+}
+const { locale, h1, entry } = Astro.props;
+const { Content } = await render(entry);
+const updated = entry.data.updated;
+const date = (d: Date) =>
+  d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+---
+<article class="wrap prose">
+  <h1>{h1}</h1>
+  {updated && <p class="updated">{t("legal.updated", { date: date(updated) }, locale)}</p>}
+  <Content components={{ F }} />
+</article>

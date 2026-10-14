@@ -1,0 +1,137 @@
+/* Pricing: packs as ticket stubs (design lock §3.8), thin lines, one ember action. */
+.pricing-top {
+  padding-top: 56px;
+  padding-bottom: 32px;
+}
+.pricing-top .lede {
+  margin-top: 16px;
+}
+.pricing-grid {
+  display: grid;
+  gap: 40px;
+  padding-bottom: 72px;
+}
+@media (min-width: 900px) {
+  .pricing-grid {
+    grid-template-columns: 1fr 1.2fr;
+    align-items: start;
+  }
+}
+.included ul {
+  list-style: none;
+  margin-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+.included li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-2);
+}
+.packs {
+  display: grid;
+  gap: 16px;
+}
+.pack-rows {
+  border: 0;
+  display: grid;
+  gap: 10px;
+}
+.pack-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "radio videos price"
+    "radio each tag";
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 2px;
+  padding: 16px 18px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  cursor: pointer;
+  /* ticket stub: notches on both sides */
+  -webkit-mask:
+    radial-gradient(circle 8px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 8px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle 8px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 8px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+}
+.pack-row.on {
+  border-color: var(--ember);
+  box-shadow: inset 0 0 0 1px var(--ember);
+}
+.pack-row input {
+  grid-area: radio;
+  accent-color: var(--ember);
+  width: 18px;
+  height: 18px;
+}
+.pack-videos {
+  grid-area: videos;
+  font: 800 24px / 1 var(--font-display);
+  font-stretch: 62%;
+  text-transform: uppercase;
+}
+.pack-each {
+  grid-area: each;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.pack-price {
+  grid-area: price;
+  font: 700 22px / 1 var(--font-ui);
+  text-align: right;
+}
+.pack-row .badge,
+.pack-save {
+  grid-area: tag;
+  justify-self: end;
+}
+.pack-save {
+  font: 400 11px / 1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.packs .buy .btn {
+  width: 100%;
+}
+.faq {
+  margin-top: 24px;
+  border-top: 1px solid var(--hairline);
+  max-width: 52em;
+}
+.faq details {
+  border-bottom: 1px solid var(--hairline);
+}
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 18px 32px 18px 0;
+  font-weight: 600;
+  position: relative;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: "+";
+  position: absolute;
+  right: 4px;
+  top: 16px;
+  font: 400 20px / 1 var(--font-mono);
+  color: var(--text-2);
+}
+.faq details[open] summary::after {
+  content: "–";
+}
+.faq details p {
+  padding: 0 0 18px;
+  color: var(--text-2);
+  max-width: 44em;
+}
+.pricing-notes {
+  margin-top: 40px;
+}

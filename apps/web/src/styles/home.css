@@ -1,0 +1,280 @@
+/* Home and landing (design lock §3): a film poster that warms as you scroll. */
+.hero {
+  padding: 40px 0 24px;
+  background: radial-gradient(120% 70% at 85% 10%, #172434 0%, transparent 60%), var(--bg);
+}
+.hero-grid {
+  display: grid;
+  gap: 32px;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 56px;
+  }
+  .hero {
+    padding: 72px 0 40px;
+  }
+}
+.hero-copy .scene {
+  margin-bottom: 14px;
+}
+.hero-copy .lede {
+  margin-top: 18px;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+.trust {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 22px;
+  font: 400 12px / 1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.trust li::before {
+  content: "· ";
+  color: var(--ember);
+}
+.hero-poster {
+  max-width: 420px;
+  width: 82%;
+  margin: 0 auto;
+}
+.hero-poster figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 10px;
+}
+.hero-poster figcaption span:nth-child(2) {
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* Beats: a sideways filmstrip, cold to warm */
+.beats-section h2 {
+  margin: 8px 0 28px;
+}
+.filmstrip {
+  list-style: none;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 62vw);
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 0 var(--gutter) 8px;
+  scroll-padding-inline: var(--gutter);
+  max-width: var(--max);
+  margin: 0 auto;
+}
+@media (min-width: 900px) {
+  .filmstrip {
+    grid-auto-columns: 1fr;
+    overflow: visible;
+  }
+}
+.beat {
+  scroll-snap-align: start;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.beat img {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  width: 100%;
+}
+.beat-3 img {
+  box-shadow: 0 0 0 1px #3a2614;
+}
+.beat h3 {
+  margin-top: 4px;
+}
+
+/* Will it look like us */
+.likeness .lede {
+  margin: 12px 0 28px;
+}
+.likeness-rows {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.likeness-row {
+  display: grid;
+  grid-template-columns: 0.9fr auto 1fr 1fr;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+.likeness-row .sources {
+  display: grid;
+  gap: 6px;
+}
+.likeness-row .sources img {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  width: 100%;
+  filter: saturate(0.9);
+}
+.likeness-row .frame {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* Example film */
+.film-grid {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .film-grid {
+    grid-template-columns: 1fr 360px;
+  }
+}
+.film-grid .lede {
+  margin-top: 14px;
+}
+.film-player {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  justify-self: center;
+}
+
+/* Tips, steps, compare: lines, not cards (A24) */
+.tips-grid {
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 900px) {
+  .tips-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+.lines {
+  list-style: none;
+  margin-top: 10px;
+  border-top: 1px solid var(--hairline);
+}
+.lines li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-2);
+}
+.lines li::before {
+  content: "✓ ";
+  color: var(--ok);
+}
+.lines.avoid li::before {
+  content: "✕ ";
+  color: var(--error);
+}
+.steps {
+  list-style: none;
+  margin-top: 24px;
+  border-top: 1px solid var(--hairline);
+}
+.steps li {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.step-n {
+  font-size: 14px;
+  color: var(--ember);
+}
+.steps p {
+  margin-top: 4px;
+  max-width: 40em;
+}
+.compare .lede {
+  margin: 12px 0 24px;
+}
+.compare-table {
+  border-top: 1px solid var(--hairline);
+}
+.compare-row {
+  display: grid;
+  gap: 6px 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-2);
+}
+@media (min-width: 900px) {
+  .compare-row {
+    grid-template-columns: 1fr 1.4fr 1.4fr;
+  }
+}
+.compare-row span:first-child {
+  color: var(--text);
+  font-weight: 600;
+}
+.compare-row.head {
+  font: 400 12px / 1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+.compare-row.head span:first-child {
+  color: var(--text-3);
+  font-weight: 400;
+}
+@media (max-width: 899px) {
+  .compare-row.head {
+    display: none;
+  }
+}
+.compare-row.ours span:first-child {
+  color: var(--ember);
+}
+
+/* The page warms toward the end (cold → warm, like the film) */
+.pricing-band {
+  background: linear-gradient(180deg, var(--bg) 0%, #0f0f12 100%);
+}
+.pet-band {
+  background: #100e0f;
+}
+.faq-section {
+  background: #110e0c;
+}
+.long-read h2 {
+  font-size: clamp(28px, 5vw, 44px);
+}
+.closing {
+  background: radial-gradient(90% 70% at 50% 20%, #3a230f 0%, transparent 70%), var(--bg-warm);
+  padding: 88px 0;
+}
+.closing-card {
+  max-width: 640px;
+  border: 0;
+  background: transparent;
+}
+.closing-card .tc-line {
+  font-size: clamp(34px, 6vw, 56px);
+}
+.closing-card .lede {
+  margin: 18px auto 26px;
+  color: #c9b49b;
+}
+.closing-card .btn {
+  justify-self: center;
+}

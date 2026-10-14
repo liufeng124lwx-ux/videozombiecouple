@@ -1,0 +1,8 @@
+---
+/** Spec 2.6: ad slots only mid-article or in a sidebar, and off unless PUBLIC_ADS_ENABLED=true. */
+interface Props {
+  name: string;
+}
+const enabled = import.meta.env.PUBLIC_ADS_ENABLED === "true";
+---
+{enabled && <div class="ad-slot" data-ad-slot={Astro.props.name} aria-hidden="true" />}

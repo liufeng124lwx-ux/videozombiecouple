@@ -1,0 +1,297 @@
+---
+import "../styles/story.css";
+import "../styles/home.css";
+import "../styles/pricing.css";
+import { type CollectionEntry, render } from "astro:content";
+import { fact, type LocaleId, type PageConfig } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import F from "../components/F.astro";
+import Faq from "../components/Faq.astro";
+import GradeWipe from "../components/GradeWipe.tsx";
+import PackRows from "../components/pricing/PackRows.tsx";
+import StoryTool from "../components/story/StoryTool.tsx";
+import { sampleImage } from "../lib/sample-images.ts";
+import { HERO_PAIR, SAMPLE_PAIRS, sampleAlt, sampleFile } from "../lib/samples.ts";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+  page: PageConfig;
+  entry: CollectionEntry<"pages">;
+  /** home: every section · landing: the trend page, fewer sections. */
+  variant: "home" | "landing";
+}
+const { locale, h1, page, entry, variant } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+const hero = SAMPLE_PAIRS.find((p) => p.id === HERO_PAIR) ?? SAMPLE_PAIRS[0];
+if (!hero) throw new Error("no sample pair");
+
+const HERO_SIZES = "(min-width: 900px) 420px, 82vw";
+const heroA = await sampleImage(sampleFile(hero.id, "A"), HERO_SIZES);
+const heroC = await sampleImage(sampleFile(hero.id, "C"), HERO_SIZES);
+const BEAT_SIZES = "(min-width: 900px) 300px, 62vw";
+const beats = await Promise.all(
+  (["A", "B", "C"] as const).map((f) => sampleImage(sampleFile(hero.id, f), BEAT_SIZES)),
+);
+const likenessPairs = SAMPLE_PAIRS.filter((p) => p.id !== hero.id).slice(0, 3);
+const ROW_SIZES = "(min-width: 900px) 220px, 30vw";
+const likeness = await Promise.all(
+  likenessPairs.map(async (pair) => ({
+    pair,
+    survivor: await sampleImage(sampleFile(pair.id, "survivor"), ROW_SIZES, [240, 360]),
+    infected: await sampleImage(sampleFile(pair.id, "infected"), ROW_SIZES, [240, 360]),
+    a: await sampleImage(sampleFile(pair.id, "A"), ROW_SIZES, [240, 360]),
+    c: await sampleImage(sampleFile(pair.id, "C"), ROW_SIZES, [240, 360]),
+  })),
+);
+const filmPair = SAMPLE_PAIRS.find((p) => p.film);
+const filmPoster = filmPair?.film
+  ? await sampleImage(`${filmPair.film.poster}.jpg`, "(min-width: 900px) 360px, 82vw")
+  : null;
+const posters = { "cabin-wheat": { cold: heroA.src, warm: heroC.src } };
+const preset = page.preset ?? {};
+---
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      {d.scene && <p class="scene">{d.scene}</p>}
+      <h1>{h1}</h1>
+      {d.lede && <p class="lede">{d.lede}</p>}
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="#make">{t("home.cta", {}, locale)}</a>
+        <a class="btn btn-lg" href="#film">{t("home.watch", {}, locale)}</a>
+      </div>
+      {
+        d.trust && (
+          <ul class="trust">
+            {d.trust.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+    <figure class="hero-poster">
+      <GradeWipe
+        client:idle
+        mode="auto"
+        priority
+        cold={{ ...heroA, alt: sampleAlt(hero, "A") }}
+        warm={{ ...heroC, alt: sampleAlt(hero, "C") }}
+      />
+      <figcaption class="scene">
+        <span>{t("story.frame.standoff", {}, locale)}</span><span>{t("story.sample", {}, locale)}</span><span>{t("story.frame.memory", {}, locale)}</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="make" id="make" aria-label={t("home.makeLabel", {}, locale)}>
+  <div class="wrap">
+    <StoryTool client:load posters={posters} preset={preset} />
+  </div>
+</section>
+
+{
+  d.beats && (
+    <section class="section beats-section">
+      <div class="wrap">
+        <p class="scene">{t("home.beats.kicker", {}, locale)}</p>
+        <h2>{t("home.beats.title", { seconds: fact("video.seconds") }, locale)}</h2>
+      </div>
+      <ol class="filmstrip">
+        {d.beats.map((beat, i) => (
+          <li class={`beat beat-${i + 1}`}>
+            <img
+              src={beats[i]?.src}
+              srcset={beats[i]?.srcset}
+              sizes={BEAT_SIZES}
+              width="720"
+              height="1280"
+              alt={sampleAlt(hero, (["A", "B", "C"] as const)[i] ?? "A")}
+              loading="lazy"
+              decoding="async"
+            />
+            <p class="scene">{`SC. ${i + 1}`}</p>
+            <h3>{beat.title}</h3>
+            <p class="small muted">{beat.text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+{
+  variant === "home" && d.likeness && (
+    <section class="section likeness">
+      <div class="wrap">
+        <h2>{d.likeness.title}</h2>
+        <p class="lede">{d.likeness.text}</p>
+        <div class="likeness-rows">
+          {likeness.map((row) => (
+            <div class="likeness-row">
+              <div class="sources">
+                <img src={row.survivor.src} srcset={row.survivor.srcset} sizes={ROW_SIZES} alt={sampleAlt(row.pair, "survivor")} width="720" height="960" loading="lazy" decoding="async" />
+                <img src={row.infected.src} srcset={row.infected.srcset} sizes={ROW_SIZES} alt={sampleAlt(row.pair, "infected")} width="720" height="960" loading="lazy" decoding="async" />
+              </div>
+              <span class="arrow scene" aria-hidden="true">→</span>
+              <img class="frame" src={row.a.src} srcset={row.a.srcset} sizes={ROW_SIZES} alt={sampleAlt(row.pair, "A")} width="720" height="1280" loading="lazy" decoding="async" />
+              <img class="frame warm" src={row.c.src} srcset={row.c.srcset} sizes={ROW_SIZES} alt={sampleAlt(row.pair, "C")} width="720" height="1280" loading="lazy" decoding="async" />
+            </div>
+          ))}
+        </div>
+        <p class="fine">{t("story.sample", {}, locale)}</p>
+      </div>
+    </section>
+  )
+}
+
+{
+  filmPair?.film && filmPoster && (
+    <section class="section film" id="film">
+      <div class="wrap film-grid">
+        <div>
+          <p class="scene">{t("home.film.kicker", {}, locale)}</p>
+          <h2>{t("home.film.title", {}, locale)}</h2>
+          <p class="lede">{t("home.film.text", { seconds: fact("video.seconds") }, locale)}</p>
+        </div>
+        <video
+          class="film-player"
+          src={filmPair.film.src}
+          poster={filmPoster.src}
+          controls
+          playsinline
+          preload="none"
+          width="720"
+          height="1280"
+        />
+      </div>
+    </section>
+  )
+}
+
+{
+  variant === "home" && d.tips && (
+    <section class="section tips-section">
+      <div class="wrap tips-grid">
+        <div>
+          <h2>{t("home.tips.title", {}, locale)}</h2>
+        </div>
+        <div>
+          <p class="scene">{t("home.tips.good", {}, locale)}</p>
+          <ul class="lines">{d.tips.good.map((x) => <li>{x}</li>)}</ul>
+        </div>
+        <div>
+          <p class="scene">{t("home.tips.avoid", {}, locale)}</p>
+          <ul class="lines avoid">{d.tips.avoid.map((x) => <li>{x}</li>)}</ul>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+{
+  d.steps && (
+    <section class="section steps-section">
+      <div class="wrap">
+        <h2>{t("home.steps.title", {}, locale)}</h2>
+        <ol class="steps">
+          {d.steps.map((step, i) => (
+            <li>
+              <span class="step-n scene">{`0${i + 1}`}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p class="muted">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
+{
+  variant === "home" && (
+    <section class="section pricing-band">
+      <div class="wrap pricing-grid">
+        <div>
+          <p class="scene">INT. BOX OFFICE — NIGHT</p>
+          <h2>{t("home.pricing.title", {}, locale)}</h2>
+          <p class="lede">{t("home.pricing.text", { daily: fact("preview.daily") }, locale)}</p>
+          <a href="/pricing">{t("home.pricing.more", {}, locale)}</a>
+        </div>
+        <PackRows client:visible returnPath="/#make" />
+      </div>
+    </section>
+  )
+}
+
+{
+  d.compare && (
+    <section class="section compare">
+      <div class="wrap">
+        <h2>{d.compare.title}</h2>
+        {d.compare.intro && <p class="lede">{d.compare.intro}</p>}
+        <div class="compare-table" role="table">
+          <div class="compare-row head" role="row">
+            <span role="columnheader">{t("home.compare.way", {}, locale)}</span>
+            <span role="columnheader">{t("home.compare.how", {}, locale)}</span>
+            <span role="columnheader">{t("home.compare.catch", {}, locale)}</span>
+          </div>
+          {d.compare.rows.map((row, i) => (
+            <div class={`compare-row${i === d.compare!.rows.length - 1 ? " ours" : ""}`} role="row">
+              <span role="cell">{row.way}</span>
+              <span role="cell">{row.how}</span>
+              <span role="cell">{row.catch}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+{
+  variant === "home" && d.pet && (
+    <section class="section pet-band">
+      <div class="wrap">
+        <p class="scene">EXT. BACKYARD — DUSK</p>
+        <h2>{d.pet.title}</h2>
+        <p class="lede">{d.pet.text}</p>
+      </div>
+    </section>
+  )
+}
+
+<section class="section">
+  <div class="wrap prose long-read">
+    <Content components={{ F }} />
+  </div>
+</section>
+
+{
+  d.faq && d.faq.length > 0 && (
+    <section class="section faq-section">
+      <div class="wrap">
+        <h2>{t("home.faq.title", {}, locale)}</h2>
+        <Faq items={d.faq} />
+      </div>
+    </section>
+  )
+}
+
+{
+  d.closing && (
+    <section class="closing">
+      <div class="wrap closing-card">
+        <p class="tc-line">{d.closing.title}</p>
+        <p class="tc-names">{t("story.title.namesPlaceholder", {}, locale)} · {t("home.closing.since", {}, locale)}</p>
+        <p class="lede">{d.closing.text}</p>
+        <a class="btn btn-primary btn-lg" href="#make">{t("home.cta", {}, locale)}</a>
+      </div>
+    </section>
+  )
+}

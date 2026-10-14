@@ -33,3 +33,12 @@ describe("i18n (spec 2.3)", () => {
     expect(hasMessages("en")).toBe(true);
   });
 });
+
+describe("en.ts source", () => {
+  it("defines every key once (a later duplicate silently wins)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(new URL("../src/en.ts", import.meta.url), "utf8");
+    const keys = [...source.matchAll(/^ {2}"([^"]+)":/gm)].map((m) => m[1]);
+    expect(keys.filter((k, i) => keys.indexOf(k) !== i)).toEqual([]);
+  });
+});

@@ -1,0 +1,16 @@
+// Production site: the `build:production` output. www.videozombiecouple.com is attached so a Cloudflare
+// redirect rule can send it to the apex (docs/launch-checklist.md). Deployed by deploy.yml.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vzc-web",
+  "compatibility_date": "2026-10-04",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    { "pattern": "videozombiecouple.com", "custom_domain": true },
+    { "pattern": "www.videozombiecouple.com", "custom_domain": true }
+  ]
+}

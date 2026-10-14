@@ -1,0 +1,24 @@
+VideoZombieCouple uses these open-source components in your browser.
+
+libheif-js 1.23.2 (libheif) — LGPL-3.0
+  Loaded as its own file, only to open HEIC photos your browser can't. The file is the
+  published libheif-js bundle, minified by our build and otherwise unmodified.
+  Full license text: /vendor/libheif/LICENSE.txt
+  Source: https://github.com/catdad-experiments/libheif-js
+          https://github.com/strukturag/libheif
+  License: https://www.gnu.org/licenses/lgpl-3.0.html
+  You may replace the file with your own build of the same version.
+
+MediaPipe Tasks Vision 1.0.1 — Apache-2.0
+  Source: https://github.com/google-ai-edge/mediapipe
+  License: https://www.apache.org/licenses/LICENSE-2.0
+
+BlazeFace short-range face detection model — Apache-2.0
+  Source: https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite
+
+jSquash 1.6.0 / 1.5.0 / 2.1.1 / 2.3.0 / 2.1.1 (@jsquash/jpeg, webp, avif, oxipng, resize) — Apache-2.0
+  Image encoders (MozJPEG, libwebp, libavif, OxiPNG) and resize, compiled to WebAssembly from the
+  Squoosh project. Loaded only after you pick a file in a local tool.
+  Source: https://github.com/jamsinclair/jSquash
+          https://github.com/GoogleChromeLabs/squoosh
+  License: https://www.apache.org/licenses/LICENSE-2.0

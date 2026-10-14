@@ -1,0 +1,214 @@
+import { fact, type Kind, SCENE_IDS, SCENES, type SceneId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import type { JSX } from "preact";
+import type { Photo, Slot } from "../../lib/story/machine.ts";
+import GradeWipe from "../GradeWipe.tsx";
+
+export type ScenePoster = { cold: string; warm: string };
+
+/** A 3:4 photo slot labelled like a call sheet (design lock: THE SURVIVOR / THE ONE WHO TURNS). */
+export function PhotoSlot(props: {
+  slot: Slot;
+  kind: Kind;
+  photo: Photo | null;
+  checking: boolean;
+  disabled: boolean;
+  onFile: (slot: Slot, file: File) => void;
+}) {
+  const { slot, kind, photo, checking } = props;
+  const label =
+    slot === "survivor"
+      ? t("story.slot.survivor")
+      : kind === "pet"
+        ? t("story.slot.pet")
+        : t("story.slot.infected");
+  const id = `photo-${slot}`;
+  const face = photo?.face;
+  const warn = face === "none" || face === "many" || face === "small";
+  const pick = (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    if (file) props.onFile(slot, file);
+    e.currentTarget.value = "";
+  };
+  return (
+    <div class={`slot${photo ? " filled" : ""}${warn ? " warn" : ""}`}>
+      <p class="scene slot-label">{label}</p>
+      <label class="slot-frame" for={id}>
+        {photo ? (
+          <img src={photo.url} alt={label} />
+        ) : (
+          <span class="slot-empty">
+            <span class="slot-plus" aria-hidden="true">
+              +
+            </span>
+            {t("story.slot.add")}
+          </span>
+        )}
+        {checking && <span class="slot-busy">{t("story.slot.checking")}</span>}
+      </label>
+      <input
+        id={id}
+        class="visually-hidden"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        disabled={props.disabled}
+        onChange={pick}
+      />
+      {photo && !checking && (
+        <p class={`slot-status small${warn ? " warn" : ""}`}>
+          {warn ? (
+            t(`story.face.${face}` as "story.face.none")
+          ) : (
+            <span class="check">{t(`story.face.${face ?? "ok"}` as "story.face.ok")}</span>
+          )}
+          {" · "}
+          <label class="link" for={id}>
+            {t("story.slot.replace")}
+          </label>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Three 9:16 scene tiles; each is a grade wipe (cold half, warm half). */
+export function ScenePicker(props: {
+  scene: SceneId;
+  posters: Partial<Record<SceneId, ScenePoster>>;
+  disabled: boolean;
+  onPick: (scene: SceneId) => void;
+}) {
+  return (
+    <fieldset class="scenes">
+      <legend class="scene">{t("story.scene.label")}</legend>
+      <div class="scene-tiles" role="radiogroup">
+        {SCENE_IDS.map((id) => {
+          const scene = SCENES[id];
+          const poster = props.posters[id];
+          const on = props.scene === id;
+          return (
+            <button
+              type="button"
+              key={id}
+              role="radio"
+              aria-checked={on}
+              class={`scene-tile${on ? " on" : ""}${scene.live ? "" : " soon"}`}
+              disabled={props.disabled || !scene.live}
+              onClick={() => props.onPick(id)}
+            >
+              {poster ? (
+                <GradeWipe
+                  mode="still"
+                  value={50}
+                  cold={{ src: poster.cold, alt: "" }}
+                  warm={{ src: poster.warm, alt: "" }}
+                />
+              ) : (
+                <span class="scene-blank" aria-hidden="true" />
+              )}
+              <span class="scene-name">{scene.label}</span>
+              {!scene.live && <span class="badge">{t("story.scene.soon")}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+/** The optional end title, with a live preview of the card in the film. */
+export function TitleCardFields(props: {
+  names: string;
+  date: string;
+  onChange: (names: string, date: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <details class="titlecard" open={!!(props.names || props.date)}>
+      <summary>{t("story.title.add")}</summary>
+      <div class="titlecard-body">
+        <div class="titlecard-fields">
+          <label class="field">
+            <span class="scene">{t("story.title.names")}</span>
+            <input
+              type="text"
+              maxLength={40}
+              value={props.names}
+              placeholder={t("story.title.namesPlaceholder")}
+              disabled={props.disabled}
+              onInput={(e) => props.onChange(e.currentTarget.value, props.date)}
+            />
+          </label>
+          <label class="field">
+            <span class="scene">{t("story.title.date")}</span>
+            <input
+              type="text"
+              maxLength={20}
+              value={props.date}
+              placeholder={t("story.title.datePlaceholder")}
+              disabled={props.disabled}
+              onInput={(e) => props.onChange(props.names, e.currentTarget.value)}
+            />
+          </label>
+        </div>
+        <div class="titlecard-preview" aria-hidden="true">
+          <p class="tc-line">{t("story.title.line")}</p>
+          <p class="tc-names">
+            {[props.names || t("story.title.namesPlaceholder"), props.date]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+/** Two empty frames sharpening while the keyframes are made (TikTok "blurred to sharp"). */
+export function WaitingFrames(props: {
+  stages: string[];
+  done: number;
+  total: number;
+  etaMs: number | null;
+}) {
+  const share = props.total > 0 ? Math.round((props.done / props.total) * 100) : 0;
+  const stage =
+    props.stages[
+      Math.min(props.stages.length - 1, Math.floor((share / 100) * props.stages.length))
+    ];
+  return (
+    <div class="waiting">
+      <div class="waiting-frames" aria-hidden="true">
+        <span class="frame cold" />
+        <span class="frame warm" />
+      </div>
+      <div
+        class="progress-line"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={share}
+      >
+        <i style={{ transform: `scaleX(${Math.max(0.04, share / 100)})` }} />
+      </div>
+      <p class="scene">{`SC. ${Math.max(1, props.stages.indexOf(stage ?? "") + 1)} — ${stage ?? ""}`}</p>
+      <p class="small muted">
+        {props.etaMs !== null && props.etaMs > 0
+          ? props.etaMs > 60_000
+            ? t("story.eta", { min: Math.ceil(props.etaMs / 60_000) })
+            : t("story.etaSoon")
+          : t("story.etaSoon")}{" "}
+        · {t("story.leave")}
+      </p>
+    </div>
+  );
+}
+
+export function previewsLeftLabel(n: number | null): string | null {
+  if (n === null) return null;
+  return t("story.cta.previewsLeft", { n });
+}
+
+export function fromPrice(): string {
+  return fact("price.fromPerVideo");
+}

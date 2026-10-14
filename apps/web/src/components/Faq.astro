@@ -1,0 +1,17 @@
+---
+/** FAQ as a line-divided accordion (A24 lists); the same items feed the FAQPage JSON-LD. */
+interface Props {
+  items: { q: string; a: string }[];
+}
+const { items } = Astro.props;
+---
+<div class="faq">
+  {
+    items.map((item) => (
+      <details>
+        <summary>{item.q}</summary>
+        <p>{item.a}</p>
+      </details>
+    ))
+  }
+</div>

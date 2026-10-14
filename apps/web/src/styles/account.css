@@ -1,0 +1,165 @@
+/* Account (design S15 on the cold-night lock): thin lines between sections, no cards, no shadows. */
+.account {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 48px;
+  padding-top: 48px;
+  padding-bottom: 72px;
+}
+.account aside h1 {
+  font-size: clamp(40px, 6vw, 64px);
+}
+.account aside nav {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+  font: 400 12px / 1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.account aside nav a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+.account aside nav a:hover {
+  color: var(--text);
+}
+.account-grid {
+  display: grid;
+}
+.account-section {
+  display: grid;
+  gap: 12px;
+  padding: 28px 0;
+  border-top: 1px solid var(--hairline);
+}
+.account-section:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+.account-section h2.scene {
+  font: 400 12px / 1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.account-section h2:not(.scene) {
+  font-size: clamp(28px, 5vw, 44px);
+}
+.account .big {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 8vw, 72px);
+  font-weight: 800;
+  font-stretch: 62%;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+.field.inline input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-input);
+  background: var(--bg);
+  color: var(--text);
+}
+.stories {
+  display: grid;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+.stories a {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text);
+  text-decoration: none;
+}
+.stories a:hover .story-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.story-name {
+  font-weight: 600;
+}
+.story-status.is-done,
+.story-status.is-preview_ready {
+  color: var(--text);
+}
+.story-status.is-failed,
+.story-status.is-preview_failed {
+  color: var(--error);
+}
+.story-status.is-expired {
+  color: var(--text-3);
+}
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.ledger th,
+.ledger td {
+  padding: 10px 8px 10px 0;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+}
+.ledger th {
+  color: var(--text-2);
+  font: 400 12px / 1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ledger td.plus {
+  color: var(--ok);
+  font-weight: 600;
+}
+.ledger td.minus {
+  font-weight: 600;
+}
+.pager {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.btn-danger.solid {
+  background: var(--error);
+  color: var(--bg);
+}
+.btn-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.bullets {
+  display: grid;
+  gap: 6px;
+  padding-left: 20px;
+}
+@media (max-width: 760px) {
+  .account {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding-top: 24px;
+  }
+  .account aside nav {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+  .stories a {
+    grid-template-columns: 1fr auto;
+  }
+  .stories a > :last-child {
+    grid-column: 1 / -1;
+  }
+}

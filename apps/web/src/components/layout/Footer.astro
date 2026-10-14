@@ -1,0 +1,30 @@
+---
+import type { LocaleId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import { companyLinks, storyLinks } from "../../lib/nav.ts";
+import Wordmark from "./Wordmark.astro";
+
+interface Props {
+  locale: LocaleId;
+}
+const { locale } = Astro.props;
+---
+<footer class="site-footer">
+  <div class="wrap cols">
+    <div class="brand">
+      <Wordmark />
+      <p class="fine">{t("footer.tagline", {}, locale)}</p>
+      <p class="fine copyright">{t("footer.copyright", { year: new Date().getFullYear() }, locale)}</p>
+    </div>
+    <div>
+      <p class="scene">{t("footer.make", {}, locale)}</p>
+      {storyLinks(locale).map((l) => <a href={l.href}>{l.label}</a>)}
+    </div>
+    <div>
+      <p class="scene">{t("footer.company", {}, locale)}</p>
+      {companyLinks(locale).map((l) => <a href={l.href}>{l.label}</a>)}
+      <a href="/third-party-licenses.txt">{t("footer.licenses", {}, locale)}</a>
+      <button type="button" class="footer-link" data-cookie-settings>{t("footer.cookies", {}, locale)}</button>
+    </div>
+  </div>
+</footer>

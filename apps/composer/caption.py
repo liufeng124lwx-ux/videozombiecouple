@@ -33,3 +33,15 @@ def render_caption(line1: str, line2: str | None, out: str) -> str:
         draw.text((WIDTH / 2, y + 78), line2, font=f2, fill=DIM, anchor="mm")
     img.save(out, "PNG")
     return out
+
+
+def render_mark(out: str) -> str:
+    """The small corner mark (spec §4.2 S5): the site's name, quiet enough not to spoil the film."""
+    font = ImageFont.truetype(str(FONTS / "CourierPrime-Regular.ttf"), 18)
+    text = "videozombiecouple.com"
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    w = int(probe.textlength(text, font=font)) + 4
+    img = Image.new("RGBA", (w, 26), (0, 0, 0, 0))
+    ImageDraw.Draw(img).text((2, 2), text, font=font, fill=(255, 255, 255, 120))
+    img.save(out, "PNG")
+    return out

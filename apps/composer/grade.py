@@ -34,7 +34,9 @@ def total_seconds(parts: list[Part]) -> float:
     return sum(p.seconds for p in parts) + CAPTION_SEC
 
 
-def build_compose_cmd(parts: list[Part], music: str, caption_png: str, out: str) -> list[str]:
+def build_compose_cmd(
+    parts: list[Part], music: str, caption_png: str, out: str, mark_png: str | None = None
+) -> list[str]:
     total = total_seconds(parts)
     cmd = ["ffmpeg", "-y", "-loglevel", "error"]
     for p in parts:
@@ -43,6 +45,8 @@ def build_compose_cmd(parts: list[Part], music: str, caption_png: str, out: str)
         cmd += ["-t", fmt(p.seconds), "-i", p.path]
     cmd += ["-loop", "1", "-t", fmt(CAPTION_SEC), "-i", caption_png]
     cmd += ["-i", music]
+    if mark_png:
+        cmd += ["-i", mark_png]
     frame = f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,crop={WIDTH}:{HEIGHT},fps={FPS},setsar=1"
     chains = []
     for i, p in enumerate(parts):
@@ -51,7 +55,11 @@ def build_compose_cmd(parts: list[Part], music: str, caption_png: str, out: str)
     chains.append(f"[{cap}:v]{frame},fade=t=in:st=0:d=0.4,format=yuv420p[vc]")
     labels = "".join(f"[v{i}]" for i in range(len(parts))) + "[vc]"
     chains.append(f"{labels}concat=n={len(parts) + 1}:v=1:a=0[cat]")
-    chains.append("[cat]noise=alls=6:allf=t[vout]")
+    if mark_png:
+        chains.append("[cat]noise=alls=6:allf=t[grain]")
+        chains.append(f"[grain][{cap + 2}:v]overlay=W-w-24:H-h-28[vout]")
+    else:
+        chains.append("[cat]noise=alls=6:allf=t[vout]")
     chains.append(
         f"[{cap + 1}:a]atrim=0:{fmt(total)},asetpts=PTS-STARTPTS,"
         f"afade=t=out:st={fmt(total - FADE_OUT_SEC)}:d={fmt(FADE_OUT_SEC)}[aout]"

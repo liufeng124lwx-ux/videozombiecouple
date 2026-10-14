@@ -1,0 +1,72 @@
+/* Buttons: sharp (2px), no shadows. Ember fill is the primary action only; everything else is an
+   outline (A24). One primary per view. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 24px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text);
+  font: 600 16px / 1 var(--font-ui);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--text-2);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  color: var(--text-3);
+  border-color: var(--hairline);
+  background: transparent;
+}
+.btn-primary {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: var(--on-ember);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--ember-hover);
+  border-color: var(--ember-hover);
+  color: var(--on-ember);
+}
+.btn-ghost {
+  border-color: transparent;
+}
+.btn-danger {
+  border-color: var(--error);
+  color: var(--error);
+}
+.btn-sm {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.btn-lg {
+  height: 58px;
+  padding: 0 30px;
+  font-size: 17px;
+}
+.btn-block {
+  width: 100%;
+}
+.btn .meta {
+  font-weight: 400;
+  opacity: 0.75;
+}

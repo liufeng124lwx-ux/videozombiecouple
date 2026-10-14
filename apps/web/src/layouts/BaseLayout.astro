@@ -1,0 +1,83 @@
+---
+import "@fontsource-variable/archivo/standard.css";
+import "@fontsource/courier-prime/latin-400.css";
+// The first screen's H1 (Archivo, condensed 800) is the LCP element: preload its one variable file.
+import archivo from "@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2?url";
+import "../styles/tokens.css";
+import "../styles/buttons.css";
+import "../styles/site.css";
+import "../styles/wipe.css";
+import { hreflangOf, type LocaleId, type PageConfig } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import JsonLd from "../components/JsonLd.astro";
+import Footer from "../components/layout/Footer.astro";
+import Header from "../components/layout/Header.astro";
+import AnalyticsBoot from "../components/site/AnalyticsBoot.tsx";
+import CookieBanner from "../components/site/CookieBanner.tsx";
+import { ogImagePath, type Schema } from "../lib/seo.ts";
+import { absoluteUrl } from "../lib/site.ts";
+
+export interface Props {
+  title: string;
+  description: string;
+  path: string;
+  locale: LocaleId;
+  noindex: boolean;
+  alternates?: { hreflang: string; href: string }[];
+  schemas?: Schema[];
+  ogImage?: string;
+  page: PageConfig | null;
+}
+const {
+  title,
+  description,
+  path,
+  locale,
+  noindex,
+  page,
+  alternates = [],
+  schemas = [],
+  ogImage = ogImagePath("en", "home"),
+} = Astro.props;
+---
+<!doctype html>
+<html lang={hreflangOf(locale)}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0f14" />
+    <link rel="preload" href={archivo} as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={absoluteUrl(path)} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VideoZombieCouple" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={absoluteUrl(path)} />
+    <meta property="og:image" content={absoluteUrl(ogImage)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    {noindex && <meta name="robots" content="noindex" />}
+    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+    <JsonLd schemas={schemas} />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip" href="#main">{t("nav.skip", {}, locale)}</a>
+    <Header locale={locale} page={page} />
+    <main id="main"><slot /></main>
+    <Footer locale={locale} />
+    <div class="grain" aria-hidden="true"></div>
+    <CookieBanner client:idle />
+    <AnalyticsBoot client:idle pageId={page?.id ?? "404"} kind={page?.kind ?? null} locale={locale} />
+    <script>
+      // Spec 8.4: catches errors from the start; the Sentry SDK loads only after the first one.
+      import { installErrorCatcher } from "../lib/errors.ts";
+      installErrorCatcher();
+    </script>
+  </body>
+</html>

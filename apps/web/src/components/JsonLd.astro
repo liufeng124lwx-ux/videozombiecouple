@@ -1,0 +1,11 @@
+---
+import type { Schema } from "../lib/seo.ts";
+
+interface Props {
+  schemas: Schema[];
+}
+const { schemas } = Astro.props;
+// "<" must not appear raw inside a script element.
+const json = (schema: Schema) => JSON.stringify(schema).replace(/</g, "\\u003c");
+---
+{schemas.map((schema) => <script is:inline type="application/ld+json" set:html={json(schema)} />)}

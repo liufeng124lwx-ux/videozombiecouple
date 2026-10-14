@@ -1,0 +1,71 @@
+---
+import { render } from "astro:content";
+import { indexable, pageById, pagePath } from "@vzc/catalog";
+import F from "../components/F.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { pageContent } from "../lib/content.ts";
+import { type RouteProps, staticPaths } from "../lib/routes.ts";
+import { alternateLinks, ogImagePath, pageSchemas } from "../lib/seo.ts";
+import { absoluteUrl, buildMode } from "../lib/site.ts";
+import AccountPage from "../templates/AccountPage.astro";
+import BlogPage from "../templates/BlogPage.astro";
+import HomePage from "../templates/HomePage.astro";
+import LegalPage from "../templates/LegalPage.astro";
+import PricingPage from "../templates/PricingPage.astro";
+import StoryPage from "../templates/StoryPage.astro";
+
+export function getStaticPaths() {
+  return staticPaths(buildMode());
+}
+
+const { pageId, locale, draft } = Astro.props as RouteProps;
+const page = pageById(pageId);
+if (!page) throw new Error(`Unknown page ${pageId}`);
+const path = pagePath(page, locale);
+const h1 = page.locales[locale]?.h1 ?? "";
+const entry = await pageContent(page, locale, draft);
+const Content = entry ? (await render(entry)).Content : null;
+const noindex = !indexable({ page, locale, path, draft }, buildMode());
+const url = absoluteUrl(path);
+const schemas = pageSchemas({
+  kind: page.kind,
+  h1,
+  url,
+  homeUrl: absoluteUrl("/"),
+  image: absoluteUrl(ogImagePath(locale, page.id)),
+  content: entry?.data ?? null,
+});
+const links = alternateLinks(page, buildMode(), absoluteUrl);
+---
+<BaseLayout
+  title={entry?.data.title ?? `${h1} (draft) | VideoZombieCouple`}
+  description={entry?.data.description ?? h1}
+  path={path}
+  locale={locale}
+  noindex={noindex}
+  alternates={links}
+  schemas={schemas}
+  ogImage={ogImagePath(locale, page.id)}
+  page={page}
+>
+  {
+    (page.kind === "home" || page.kind === "landing") && entry ? (
+      <HomePage locale={locale} h1={h1} page={page} entry={entry} variant={page.kind === "home" ? "home" : "landing"} />
+    ) : page.kind === "story" ? (
+      <StoryPage locale={locale} h1={h1} />
+    ) : page.kind === "pricing" && entry ? (
+      <PricingPage locale={locale} h1={h1} entry={entry} />
+    ) : page.kind === "account" ? (
+      <AccountPage locale={locale} h1={h1} />
+    ) : page.kind === "legal" && entry ? (
+      <LegalPage locale={locale} h1={h1} entry={entry} />
+    ) : page.kind === "blog" && entry ? (
+      <BlogPage locale={locale} h1={h1} entry={entry} />
+    ) : (
+      <div class="wrap prose">
+        <h1>{h1}</h1>
+        {Content && <Content components={{ F }} />}
+      </div>
+    )
+  }
+</BaseLayout>

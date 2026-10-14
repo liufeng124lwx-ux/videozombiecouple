@@ -12,7 +12,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from caption import render_caption
+from caption import render_caption, render_mark
 from grade import Part, build_compose_cmd, build_poster_cmd
 
 app = FastAPI()
@@ -115,9 +115,10 @@ def compose_route(body: ComposeBody):
         music = d / "music.m4a"
         fetch_to(body.musicUrl, music)
         cap = render_caption(body.caption.line1, body.caption.line2, str(d / "caption.png"))
+        mark = render_mark(str(d / "mark.png"))
         out = d / "video.mp4"
         poster = d / "poster.jpg"
-        subprocess.run(build_compose_cmd(parts, str(music), cap, str(out)), check=True)
+        subprocess.run(build_compose_cmd(parts, str(music), cap, str(out), mark_png=mark), check=True)
         subprocess.run(build_poster_cmd(str(out), parts, str(poster)), check=True)
         put_file(body.outUrl, out, "video/mp4")
         put_file(body.posterUrl, poster, "image/jpeg")
