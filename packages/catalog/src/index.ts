@@ -1,4 +1,5 @@
 export * from "./capabilities.ts";
+export * from "./facts.ts";
 export * from "./limits.ts";
 export * from "./modes.ts";
 export * from "./pages.ts";

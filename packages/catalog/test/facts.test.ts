@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+import { fact, facts, interpolate } from "../src/index.ts";
+
+describe("page facts", () => {
+  it("formats prices and per-video prices from the packs", () => {
+    expect(fact("pack.pack1.usd")).toBe("$4.99");
+    expect(fact("pack.pack3.usd")).toBe("$11.99");
+    expect(fact("pack.pack3.videos")).toBe("3");
+    expect(fact("pack.pack10.perVideo")).toBe("$3.00");
+    expect(fact("price.fromPerVideo")).toBe("$3.00");
+  });
+
+  it("knows the story numbers", () => {
+    expect(fact("video.seconds")).toBe("12");
+    expect(fact("video.width")).toBe("720");
+    expect(fact("video.height")).toBe("1280");
+    expect(fact("preview.daily")).toBe("3");
+    expect(fact("candidates.perFrame")).toBe("2");
+    expect(fact("retention.photosDays")).toBe("3");
+    expect(fact("retention.videoDays")).toBe("14");
+  });
+
+  it("fills {{key}} and fails on unknown keys", () => {
+    expect(interpolate("From {{ price.fromPerVideo }} a video")).toBe("From $3.00 a video");
+    expect(() => interpolate("{{nope}}")).toThrow(/Unknown fact/);
+  });
+
+  it("never yields NaN or undefined", () => {
+    for (const [key, value] of Object.entries(facts()))
+      expect(value, key).not.toMatch(/NaN|undefined/);
+  });
+});
