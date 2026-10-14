@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+.env*
+!.env.example
+.superpowers/
+# eval: photos and model outputs stay local
+eval/data/real/
+eval/data/personas/
+eval/results/
