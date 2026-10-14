@@ -2,6 +2,7 @@ import { type LocaleId, pageEntries } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import type { APIRoute, GetStaticPaths } from "astro";
 import { renderOg } from "../../../lib/og.ts";
+import { HERO_PAIR, sampleFile } from "../../../lib/samples.ts";
 import { buildMode } from "../../../lib/site.ts";
 
 /** Spec 2.4: one share image per built page, generated at build time. */
@@ -14,6 +15,10 @@ export const getStaticPaths: GetStaticPaths = () =>
 export const GET: APIRoute = async ({ params, props }) => {
   const locale = params.locale as LocaleId;
   const labels = { before: t("og.before", {}, locale), after: t("og.after", {}, locale) };
-  const jpg = await renderOg(String(props.title), null, labels);
+  const jpg = await renderOg(
+    String(props.title),
+    { before: sampleFile(HERO_PAIR, "A"), after: sampleFile(HERO_PAIR, "C") },
+    labels,
+  );
   return new Response(jpg, { headers: { "content-type": "image/jpeg" } });
 };

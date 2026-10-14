@@ -141,7 +141,10 @@ export function pageSchemas(input: SchemaInput): Schema[] {
         updated: content.updated,
       }),
     );
-  if (content.steps && content.howTo) out.push(howTo(content.howTo, content.steps));
+  if (content.steps)
+    out.push(
+      howTo(content.howTo ?? `How to make a ${input.h1.toLowerCase()} video`, content.steps),
+    );
   if (content.faq && content.faq.length > 0) out.push(faqPage(content.faq));
   if (input.kind !== "home")
     out.push(
