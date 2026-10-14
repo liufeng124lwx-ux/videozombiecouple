@@ -1,19 +1,20 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { CAPABILITIES, MODES, PROMPT_VERSION } from "@vzc/catalog";
+import { MODES } from "@vzc/catalog";
 import { vi } from "vitest";
 import { Dispatcher } from "../src/durable-objects/dispatcher.ts";
-import { JobRunner } from "../src/durable-objects/job-runner.ts";
 import { RateLimiter } from "../src/durable-objects/rate-limiter.ts";
+import { StoryRunner } from "../src/durable-objects/story-runner.ts";
 import { Wallet } from "../src/durable-objects/wallet.ts";
-import type { JobSpec } from "../src/jobs/types.ts";
 import { ipSegment } from "../src/middleware/identity.ts";
 import { app } from "../src/router.ts";
 import { hashIdentity } from "../src/services/crypto.ts";
 import { HUMAN_PASS_TTL_SEC, HUMAN_PASS_USES } from "../src/services/human-pass.ts";
 import { ulid } from "../src/services/ids.ts";
 import { randomHex, SESSION_TTL_MS, sha256Hex } from "../src/services/session.ts";
+import type { ChargeHold } from "../src/services/settle.ts";
 import { createUser } from "../src/services/users.ts";
+import type { StorySpec } from "../src/stories/types.ts";
 
 export const ORIGIN = "https://videozombiecouple.com";
 export const HMAC_KEY = "test-hmac-key";
@@ -312,9 +313,9 @@ export async function setup(extra: Record<string, unknown> = {}) {
   const dispatchers = namespace((ctx) => new Dispatcher(ctx, env as never));
   namespaces.dispatchers = dispatchers as unknown as Namespace;
   env.DISPATCHER = dispatchers.binding;
-  const runners = namespace((ctx) => new JobRunner(ctx, env as never));
+  const runners = namespace((ctx) => new StoryRunner(ctx, env as never));
   namespaces.runners = runners as unknown as Namespace;
-  env.JOB_RUNNER = runners.binding;
+  env.STORY_RUNNER = runners.binding;
   // --- end durable objects ---
   Object.assign(env, extra);
 
@@ -419,51 +420,50 @@ export async function setup(extra: Record<string, unknown> = {}) {
     return { userId, session };
   }
 
-  /** A jobs row, its input in R2 and its runner, as POST /v1/jobs would leave them. */
-  async function job(overrides: Partial<JobSpec> = {}) {
-    const capability = overrides.capability ?? "unblur.std";
-    const mode = overrides.mode ?? "auto";
-    const spec: JobSpec = {
-      id: ulid(),
-      owner: "g:test",
-      capability,
-      mode,
-      prompt: MODES[mode].prompt,
-      promptVersion: PROMPT_VERSION,
-      aspect: "4:3",
-      inputKey: `in/${ulid()}.jpg`,
-      priority: "free",
-      charge: { kind: "none" },
+  /** A stories row, both photos in R2 and its runner, as POST /v1/stories would leave them. */
+  async function story(overrides: Partial<StorySpec> = {}) {
+    const id = overrides.id ?? ulid();
+    const spec: StorySpec = {
+      id,
+      owner: "u:test",
+      userId: "test",
+      kind: "human",
+      scene: "cabin-wheat",
+      names: null,
+      date: null,
+      survivorKey: `keep/${id}/survivor.jpg`,
+      infectedKey: `keep/${id}/infected.jpg`,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 86_400_000,
       ...overrides,
     };
-    await bucket.BUCKET.put(spec.inputKey, jpeg(1600, 1200));
+    await bucket.BUCKET.put(spec.survivorKey, jpeg(1024, 1024));
+    await bucket.BUCKET.put(spec.infectedKey, jpeg(1024, 1024));
     db.prepare(
-      "INSERT INTO jobs(id,owner,visitor_hash,fp_hash,ip_hash,capability,mode,mode_source,tier,prompt_version,input_key,crop_box,diagnosis,status,charge,priority,idempotency_key,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       spec.id,
       spec.owner,
+      spec.userId,
       "visitor-hash",
       null,
       "ip-hash",
-      spec.capability,
-      spec.mode,
-      "auto",
-      CAPABILITIES[spec.capability].tier,
-      spec.promptVersion,
-      spec.inputKey,
-      "{}",
-      "{}",
-      "created",
-      JSON.stringify({ kind: spec.charge.kind }),
-      spec.priority,
+      spec.kind,
+      spec.scene,
+      MODES[spec.kind].promptVersion,
+      spec.names,
+      spec.date,
+      spec.survivorKey,
+      spec.infectedKey,
+      "previewing",
       `idem-${spec.id}`,
       spec.createdAt,
-      spec.expiresAt,
+      spec.createdAt + 86_400_000,
     );
     return { spec, runner: runners.instance(spec.id) };
   }
+
+  /** A charge hold that touches nothing, for runner tests that do not look at billing. */
+  const noCharge: ChargeHold = { kind: "none" };
 
   /** A finished browser upload: asks for a key like the page does, then PUTs a JPEG. */
   async function upload(
@@ -491,7 +491,8 @@ export async function setup(extra: Record<string, unknown> = {}) {
     advance,
     pass,
     signIn,
-    job,
+    story,
+    noCharge,
     upload,
     namespaces,
     limiters,

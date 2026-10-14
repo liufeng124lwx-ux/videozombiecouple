@@ -1,7 +1,8 @@
 import type { Dispatcher } from "./durable-objects/dispatcher.ts";
-import type { JobRunner } from "./durable-objects/job-runner.ts";
 import type { RateLimiter } from "./durable-objects/rate-limiter.ts";
+import type { StoryRunner } from "./durable-objects/story-runner.ts";
 import type { Wallet } from "./durable-objects/wallet.ts";
+import type { ComposerApi } from "./services/composer.ts";
 
 export interface Bindings {
   DB: D1Database;
@@ -9,7 +10,15 @@ export interface Bindings {
   BUCKET: R2Bucket;
   RATE_LIMITER: DurableObjectNamespace<RateLimiter>;
   DISPATCHER: DurableObjectNamespace<Dispatcher>;
-  JOB_RUNNER: DurableObjectNamespace<JobRunner>;
+  STORY_RUNNER: DurableObjectNamespace<StoryRunner>;
+  /** Cloudflare Container running apps/composer (absent locally and in tests). */
+  COMPOSER?: DurableObjectNamespace;
+  /** Local runs: a composer started with docker (http://localhost:8080). */
+  COMPOSER_URL?: string;
+  /** "1" swaps the composer for an in-process fake (no container). */
+  FAKE_COMPOSER?: string;
+  /** Tests only: a scripted composer. */
+  COMPOSER_IMPL?: ComposerApi;
   WALLET: DurableObjectNamespace<Wallet>;
   ANALYTICS?: AnalyticsEngineDataset;
   /** https://videozombiecouple.com (staging: https://staging.videozombiecouple.com). */

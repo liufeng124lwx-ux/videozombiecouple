@@ -1,4 +1,3 @@
-import { TIERS, type TierId } from "@vzc/catalog";
 import type { Bindings } from "../types.ts";
 import { limiter } from "./limits.ts";
 import { commitQuota, releaseQuota } from "./quota.ts";
@@ -25,31 +24,26 @@ export type ChargeHold =
     }
   | { kind: "none" };
 
-/** Turns the hold into a charge for the delivered tier, or gives it back when nothing was delivered. */
+/** Turns the hold into a charge of `credits` (commit), or gives it back (null). */
 export async function settle(
   env: Bindings,
-  jobId: string,
+  storyId: string,
   charge: ChargeHold,
-  tier: TierId | null,
+  credits: number | null,
 ): Promise<void> {
   if (charge.kind === "quota") {
-    if (tier) await commitQuota(env, charge.counters, charge.nonce);
+    if (credits !== null) await commitQuota(env, charge.counters, charge.nonce);
     else await releaseQuota(env, charge.counters, charge.nonce);
     return;
   }
   if (charge.kind === "credits") {
     const wallet = env.WALLET.get(env.WALLET.idFromName(charge.userId));
-    if (tier)
-      await wallet.commitReservation(
-        charge.reservationId,
-        Math.min(TIERS[tier].credits, charge.reserved),
-        jobId,
-      );
-    else await wallet.releaseReservation(charge.reservationId, jobId);
+    const spent = credits === null ? null : Math.min(credits, charge.reserved);
+    if (spent !== null) await wallet.commitReservation(charge.reservationId, spent, storyId);
+    else await wallet.releaseReservation(charge.reservationId, storyId);
     if (charge.spendCounter) {
       const spend = limiter(env, charge.spendCounter);
-      if (tier)
-        await spend.commit(charge.reservationId, Math.min(TIERS[tier].credits, charge.reserved));
+      if (spent !== null) await spend.commit(charge.reservationId, spent);
       else await spend.release(charge.reservationId);
     }
   }

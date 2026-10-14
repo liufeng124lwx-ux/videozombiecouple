@@ -8,6 +8,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { type Route, seedRoutes } from "@vzc/providers";
+import { durationsJson } from "../src/services/routes-store.ts";
 
 const q = (value: string | null) => (value === null ? "NULL" : `'${value.replace(/'/g, "''")}'`);
 
@@ -18,8 +19,7 @@ const CATALOG_COLUMNS = [
   "provider",
   "model",
   "params",
-  "pad_aspect",
-  "credits_tier",
+  "durations",
   "aspects",
   "cost_usd",
   "label",
@@ -39,15 +39,16 @@ export function routeSyncSql(seeds: Route[], now = Date.now()): string {
       q(r.model),
       q(JSON.stringify(r.params)),
       r.timeoutMs,
-      r.padAspect ? 1 : 0,
-      q(r.creditsTier),
+      0,
+      q("video"),
       q(JSON.stringify(r.aspects)),
       r.costUsd,
       q(r.label),
       r.enabled ? 1 : 0,
       now,
+      q(durationsJson(r)),
     ].join(",");
-    return `INSERT INTO provider_routes(id,capability,mode,rank,parallel,provider,model,params,timeout_ms,pad_aspect,credits_tier,aspects,cost_usd,label,enabled,updated_at) VALUES(${values}) ON CONFLICT(id) DO UPDATE SET ${update};`;
+    return `INSERT INTO provider_routes(id,capability,mode,rank,parallel,provider,model,params,timeout_ms,pad_aspect,credits_tier,aspects,cost_usd,label,enabled,updated_at,durations) VALUES(${values}) ON CONFLICT(id) DO UPDATE SET ${update};`;
   });
   rows.push(
     `DELETE FROM provider_routes WHERE id NOT IN (${seeds.map((r) => q(r.id)).join(",")});`,

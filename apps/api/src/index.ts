@@ -2,9 +2,10 @@ import { runCron } from "./ops/cron.ts";
 import { app } from "./router.ts";
 import type { Bindings } from "./types.ts";
 
+export { Composer } from "./composer-container.ts";
 export { Dispatcher } from "./durable-objects/dispatcher.ts";
-export { JobRunner } from "./durable-objects/job-runner.ts";
 export { RateLimiter } from "./durable-objects/rate-limiter.ts";
+export { StoryRunner } from "./durable-objects/story-runner.ts";
 export { Wallet } from "./durable-objects/wallet.ts";
 
 export default {

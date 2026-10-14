@@ -1,4 +1,4 @@
-import type { CapabilityId, ModeId, TierId } from "@vzc/catalog";
+import type { CapabilityId, ModeId } from "@vzc/catalog";
 import { type Route, seedRoutes } from "@vzc/providers";
 
 type Row = {
@@ -11,12 +11,11 @@ type Row = {
   model: string;
   params: string;
   timeout_ms: number;
-  pad_aspect: number;
-  credits_tier: string;
   aspects: string;
   cost_usd: number;
   label: string;
   enabled: number;
+  durations: string;
 };
 
 const CACHE_MS = 30_000;
@@ -33,11 +32,10 @@ function fromRow(row: Row): Route {
     model: row.model,
     params: JSON.parse(row.params) as Record<string, string>,
     timeoutMs: row.timeout_ms,
-    padAspect: row.pad_aspect === 1,
-    creditsTier: row.credits_tier as TierId,
     aspects: JSON.parse(row.aspects) as string[],
     costUsd: row.cost_usd,
     label: row.label,
+    ...(JSON.parse(row.durations || "{}") as Pick<Route, "minSec" | "maxSec" | "allowedSec">),
     enabled: row.enabled === 1,
   };
 }
@@ -56,6 +54,12 @@ export function forgetRoutes(db: D1Database): void {
   cache.delete(db);
 }
 
+/** The clip limits of a video route as stored in provider_routes.durations. */
+export function durationsJson(r: Route): string {
+  const { minSec, maxSec, allowedSec } = r;
+  return JSON.stringify({ minSec, maxSec, allowedSec });
+}
+
 /** Spec 8.1 / 4.5: the first edit writes the seeds into D1, then changes the one route. */
 export async function saveRoute(
   db: D1Database,
@@ -71,7 +75,7 @@ export async function saveRoute(
       seedRoutes().map((r) =>
         db
           .prepare(
-            "INSERT OR IGNORE INTO provider_routes(id,capability,mode,rank,parallel,provider,model,params,timeout_ms,pad_aspect,credits_tier,aspects,cost_usd,label,enabled,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO provider_routes(id,capability,mode,rank,parallel,provider,model,params,timeout_ms,pad_aspect,credits_tier,aspects,cost_usd,label,enabled,updated_at,durations) VALUES(?,?,?,?,?,?,?,?,?,0,'video',?,?,?,?,?,?)",
           )
           .bind(
             r.id,
@@ -83,13 +87,12 @@ export async function saveRoute(
             r.model,
             JSON.stringify(r.params),
             r.timeoutMs,
-            r.padAspect ? 1 : 0,
-            r.creditsTier,
             JSON.stringify(r.aspects),
             r.costUsd,
             r.label,
             r.enabled ? 1 : 0,
             now,
+            durationsJson(r),
           ),
       ),
     );

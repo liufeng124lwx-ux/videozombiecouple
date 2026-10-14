@@ -10,6 +10,7 @@
     "route-sync": "tsx scripts/route-sync.ts"
   },
   "dependencies": {
+    "@cloudflare/containers": "0.3.7",
     "@vzc/catalog": "workspace:*",
     "@vzc/contracts": "workspace:*",
     "@vzc/providers": "workspace:*",
