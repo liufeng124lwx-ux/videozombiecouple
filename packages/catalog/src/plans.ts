@@ -10,7 +10,7 @@ export type Plan = {
   year: { usd: number; usdPerMonth: number; productKey: string };
 };
 
-/** PRD 8.4 / spec 6.7. Yearly plans still grant credits monthly (spec 6.5). */
+/** Kept from UnblurPix for the billing code paths; not sold (SELL_PLANS). */
 export const PLANS: Record<PlanId, Plan> = {
   starter: {
     id: "starter",
@@ -43,12 +43,15 @@ export type Pack = {
   badge?: "popular";
 };
 
-/** Pack credits never expire (spec 5.3). */
+/** Spec §7: one-time video packs (10 credits = 1 video); credits never expire. */
 export const PACKS: readonly Pack[] = [
-  { id: "pack60", credits: 60, usd: 4.99, productKey: "pack60" },
-  { id: "pack200", credits: 200, usd: 14.99, productKey: "pack200", badge: "popular" },
-  { id: "pack600", credits: 600, usd: 39.99, productKey: "pack600" },
+  { id: "pack1", credits: 10, usd: 4.99, productKey: "pack1" },
+  { id: "pack3", credits: 30, usd: 11.99, productKey: "pack3", badge: "popular" },
+  { id: "pack10", credits: 100, usd: 29.99, productKey: "pack10" },
 ];
+
+/** Spec §7: no subscriptions. The plan types stay because the billing code still reads them. */
+export const SELL_PLANS = false;
 
 export type Product =
   | {
@@ -62,25 +65,28 @@ export type Product =
   | { kind: "pack"; key: string; credits: number; usd: number };
 
 /** Everything a checkout can sell, keyed like the Waffo products' `productKey` metadata. */
+/** Everything a checkout can sell, keyed like the Waffo products' `productKey` metadata. */
 export const PRODUCTS: readonly Product[] = [
-  ...PLAN_IDS.flatMap((id): Product[] => [
-    {
-      kind: "plan",
-      key: PLANS[id].month.productKey,
-      plan: id,
-      interval: "month",
-      monthlyCredits: PLANS[id].monthlyCredits,
-      usd: PLANS[id].month.usd,
-    },
-    {
-      kind: "plan",
-      key: PLANS[id].year.productKey,
-      plan: id,
-      interval: "year",
-      monthlyCredits: PLANS[id].monthlyCredits,
-      usd: PLANS[id].year.usd,
-    },
-  ]),
+  ...(SELL_PLANS
+    ? PLAN_IDS.flatMap((id): Product[] => [
+        {
+          kind: "plan",
+          key: PLANS[id].month.productKey,
+          plan: id,
+          interval: "month",
+          monthlyCredits: PLANS[id].monthlyCredits,
+          usd: PLANS[id].month.usd,
+        },
+        {
+          kind: "plan",
+          key: PLANS[id].year.productKey,
+          plan: id,
+          interval: "year",
+          monthlyCredits: PLANS[id].monthlyCredits,
+          usd: PLANS[id].year.usd,
+        },
+      ])
+    : []),
   ...PACKS.map(
     (pack): Product => ({
       kind: "pack",
@@ -95,7 +101,8 @@ export function productByKey(key: string): Product | null {
   return PRODUCTS.find((product) => product.key === key) ?? null;
 }
 
-export const BONUSES = { signup: 5, referral: 20 } as const;
+/** No free credits: the free thing is the keyframe preview (spec §7). */
+export const BONUSES = { signup: 0, referral: 0 } as const;
 
 export const PHASES = ["P0", "P1", "P2", "P3"] as const;
 export type Phase = (typeof PHASES)[number];

@@ -1,136 +1,80 @@
 import { describe, expect, it } from "vitest";
 import {
   ABUSE,
-  DIAGNOSIS_THRESHOLDS,
-  FREE_RETRY,
+  FILE_LIMITS,
   isLive,
-  LOCALE_IDS,
   liveRelated,
-  MODE_IDS,
   PAGES,
   type PageConfig,
   pageById,
   pagePath,
   QUOTA,
+  RETENTION,
 } from "../src/index.ts";
 
 describe("limits", () => {
-  it("carry the diagnosis thresholds calibrated on the eval set (spec 3.4)", () => {
-    expect(DIAGNOSIS_THRESHOLDS).toMatchObject({
-      motionAnisotropy: 0.35,
-      textBlockShare: 0.08,
-      sepiaShare: 0.9,
-      sharpnessLogOffset: 0.6,
-      sharpnessLogSpan: 2.4,
-    });
+  it("give logged-in users 3 free previews a day (spec §7)", () => {
+    expect(QUOTA).toEqual({ previewUserDaily: 3, previewIpSegmentDaily: 10 });
   });
 
-  it("match spec 5.2 and 3.7", () => {
-    expect(QUOTA).toEqual({ guestDaily: 2, userDaily: 4, ipSegmentDaily: 10 });
-    expect(FREE_RETRY.perJob).toBe(1);
-    expect(FREE_RETRY.perIdentityDaily).toBe(3);
-    expect(FREE_RETRY.rateMinJobs).toBeLessThanOrEqual(FREE_RETRY.rateWindow);
+  it("keep photos 1 day, work files 3 days and videos 14 days (spec §3.4)", () => {
+    expect(RETENTION).toMatchObject({ inputHours: 24, workDays: 3, outputDays: 14 });
   });
 
-  it("match the abuse rules in spec 5.4 and 7.3", () => {
-    expect(ABUSE).toEqual({
-      bonusOncePerMs: 30 * 86_400_000,
-      rejectionWindowMs: 86_400_000,
-      maxRejections: 5,
-      suspiciousDeviceMs: 30 * 86_400_000,
-    });
+  it("need faces big enough to recognise", () => {
+    expect(FILE_LIMITS.minShortEdge).toBe(384);
+  });
+
+  it("keep the abuse rules", () => {
+    expect(ABUSE.maxRejections).toBe(5);
   });
 });
 
 describe("pages", () => {
-  it("have unique ids and unique slugs per locale", () => {
+  it("have unique ids and unique slugs", () => {
     expect(new Set(PAGES.map((p) => p.id)).size).toBe(PAGES.length);
-    for (const locale of LOCALE_IDS) {
-      const slugs = PAGES.flatMap((p) => {
-        const entry = p.locales[locale];
-        return entry ? [entry.slug] : [];
-      });
-      expect(new Set(slugs).size).toBe(slugs.length);
-    }
+    expect(new Set(PAGES.map((p) => p.locales.en.slug)).size).toBe(PAGES.length);
   });
 
   it("use lowercase url slugs without a trailing slash; only home is empty", () => {
-    for (const page of PAGES) {
-      const slug = page.locales.en.slug;
-      if (page.id === "home") expect(slug).toBe("");
+    for (const p of PAGES) {
+      const slug = p.locales.en.slug;
+      if (p.id === "home") expect(slug).toBe("");
       else expect(slug).toMatch(/^[a-z0-9-]+(\/[a-z0-9-]+)*$/);
     }
   });
 
   it("link only to pages that exist, never to themselves", () => {
-    for (const page of PAGES) {
-      for (const id of page.related) {
+    for (const p of PAGES)
+      for (const id of p.related) {
         expect(pageById(id)).toBeDefined();
-        expect(id).not.toBe(page.id);
+        expect(id).not.toBe(p.id);
       }
-    }
   });
 
-  it("give every tool page modes and a default mode among them", () => {
-    for (const page of PAGES.filter((p) => p.engine === "unblur")) {
-      expect(page.modes?.length).toBeGreaterThan(0);
-      for (const mode of page.modes ?? []) expect(MODE_IDS).toContain(mode);
-      expect(page.modes).toContain(page.defaultMode);
-    }
+  it("set the H1 to the page's core keyword (spec §6)", () => {
+    expect(pageById("home")?.locales.en.h1).toBe("Zombie Video Couple");
+    expect(pageById("zombie-love-story-ai")?.locales.en.h1).toBe("Zombie Love Story AI");
   });
 
-  it("set the H1 to the page's core keyword", () => {
-    expect(pageById("home")?.locales.en.h1).toBe("Unblur Image");
-    expect(pageById("fix-blurry-photo")?.locales.en.h1).toBe("Fix Blurry Photo");
-  });
-
-  it("noindex legal pages and the account page (spec 2.4)", () => {
-    for (const id of ["privacy", "terms", "refund", "dmca", "account"])
+  it("noindex legal, story and account pages", () => {
+    for (const id of ["privacy", "terms", "refund", "dmca", "story", "account"])
       expect(pageById(id)?.noindex).toBe(true);
   });
 
-  it("start with only home, pricing, account and legal pages live (one page at a time)", () => {
-    const live = PAGES.filter((p) => isLive(p)).map((p) => p.id);
-    expect(live).not.toContain("unblur-photo");
-    expect(live).toContain("home");
+  it("ship phase one live and keep phase two as drafts (spec §9)", () => {
+    const live = PAGES.filter((p) => isLive(p) && p.kind !== "legal").map((p) => p.id);
+    expect(live).toEqual(["home", "zombie-love-story-ai", "pricing", "story", "account"]);
+    expect(pageById("pet-zombie-video")?.preset).toEqual({ kind: "pet" });
   });
 
   it("show only live related pages", () => {
-    const pages: PageConfig[] = [
-      {
-        id: "a",
-        kind: "ai-tool",
-        locales: { en: { slug: "a", status: "live", h1: "A" } },
-        related: ["b", "c"],
-      },
-      {
-        id: "b",
-        kind: "ai-tool",
-        locales: { en: { slug: "b", status: "draft", h1: "B" } },
-        related: [],
-      },
-      {
-        id: "c",
-        kind: "ai-tool",
-        locales: { en: { slug: "c", status: "live", h1: "C" } },
-        related: [],
-      },
-    ];
-    expect(liveRelated(pages[0] as PageConfig, "en", pages).map((p) => p.id)).toEqual(["c"]);
+    const home = pageById("home") as PageConfig;
+    expect(liveRelated(home).map((p) => p.id)).toEqual(["zombie-love-story-ai"]);
   });
 
-  it("build paths with a locale prefix except for English", () => {
-    const page: PageConfig = {
-      id: "fix",
-      kind: "ai-tool",
-      locales: {
-        en: { slug: "fix-blurry-photo", status: "live", h1: "Fix Blurry Photo" },
-        es: { slug: "arreglar-foto-borrosa", status: "draft", h1: "Arreglar foto borrosa" },
-      },
-      related: [],
-    };
-    expect(pagePath(page)).toBe("/fix-blurry-photo");
-    expect(pagePath(page, "es")).toBe("/es/arreglar-foto-borrosa");
+  it("build root-relative paths", () => {
     expect(pagePath(pageById("home") as PageConfig)).toBe("/");
+    expect(pagePath(pageById("pricing") as PageConfig)).toBe("/pricing");
   });
 });

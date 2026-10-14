@@ -1,55 +1,33 @@
-import type { EditorPageId } from "./editor.ts";
-import type { ModeId } from "./modes.ts";
-import type { ImageToolId } from "./tools.ts";
+import type { Kind, SceneId } from "./story.ts";
 
-export const LOCALE_IDS = ["en", "es", "ja", "pt-br", "ru", "id", "fr", "de"] as const;
+/** Spec §1.3: English only; the i18n structure stays for later. */
+export const LOCALE_IDS = ["en"] as const;
 export type LocaleId = (typeof LOCALE_IDS)[number];
 
-export type PageKind =
-  | "home"
-  | "ai-tool"
-  | "local-tool"
-  | "editor"
-  | "pricing"
-  | "blog"
-  | "legal"
-  | "account";
+export type PageKind = "home" | "landing" | "story" | "pricing" | "blog" | "legal" | "account";
 
 export type PageLocale = { slug: string; status: "live" | "draft"; h1: string; liveSince?: string };
 
-/** Spec 2.1: one row per page; production builds only emit live locales. */
+/** Spec §6: one row per page; production builds only emit live pages. */
 export type PageConfig = {
   id: string;
   kind: PageKind;
-  engine?: "unblur";
-  defaultMode?: ModeId;
-  modes?: readonly ModeId[];
+  /** Landing pages open the tool with these presets. */
+  preset?: { kind?: Kind; scene?: SceneId };
   noindex?: boolean;
   locales: Partial<Record<LocaleId, PageLocale>> & { en: PageLocale };
   related: readonly string[];
-  /** Local tools spec 1.2: which IMAGE_TOOLS preset a local-tool page runs (not Compress GIF). */
-  tool?: ImageToolId;
-  /** Editor spec 3.4: which EDITOR_PAGES preset an editor page opens with. */
-  editor?: EditorPageId;
 };
 
-const UNBLUR_MODES: readonly ModeId[] = ["auto", "motion", "focus", "portrait", "text", "old"];
-
-const tool = (
+const page = (
   id: string,
+  kind: PageKind,
+  slug: string,
   h1: string,
-  defaultMode: ModeId,
+  status: "live" | "draft",
   related: string[],
-  status: "live" | "draft" = "draft",
-): PageConfig => ({
-  id,
-  kind: id === "home" ? "home" : "ai-tool",
-  engine: "unblur",
-  defaultMode,
-  modes: UNBLUR_MODES,
-  locales: { en: { slug: id === "home" ? "" : id, status, h1 } },
-  related,
-});
+  preset?: PageConfig["preset"],
+): PageConfig => ({ id, kind, preset, locales: { en: { slug, status, h1 } }, related });
 
 const legal = (id: string, slug: string, h1: string): PageConfig => ({
   id,
@@ -59,72 +37,36 @@ const legal = (id: string, slug: string, h1: string): PageConfig => ({
   related: [],
 });
 
+/** Spec §6 and §9: phase one ships home, the love-story page and pricing; phase two the rest. */
 export const PAGES: readonly PageConfig[] = [
-  tool(
+  page("home", "home", "", "Zombie Video Couple", "live", [
+    "zombie-love-story-ai",
+    "pet-zombie-video",
+  ]),
+  page("zombie-love-story-ai", "landing", "zombie-love-story-ai", "Zombie Love Story AI", "live", [
     "home",
-    "Unblur Image",
-    "auto",
-    ["unblur-photo", "fix-blurry-photo", "make-image-clearer", "compress-gif"],
-    "live",
+    "zombie-love-story-prompts",
+  ]),
+  page(
+    "pet-zombie-video",
+    "landing",
+    "pet-zombie-video",
+    "Pet Zombie Video",
+    "draft",
+    ["home", "zombie-love-story-ai"],
+    { kind: "pet" },
   ),
-  tool("unblur-photo", "Unblur Photo", "portrait", [
-    "home",
-    "fix-blurry-photo",
-    "make-image-clearer",
-  ]),
-  tool("fix-blurry-photo", "Fix Blurry Photo", "auto", [
-    "home",
-    "unblur-photo",
-    "make-image-clearer",
-  ]),
-  tool("make-image-clearer", "Make Image Clearer", "auto", [
-    "home",
-    "unblur-photo",
-    "fix-blurry-photo",
-  ]),
-  {
-    id: "compress-gif",
-    kind: "local-tool",
-    locales: { en: { slug: "compress-gif", status: "draft", h1: "Compress GIF" } },
-    related: ["home"],
-  },
-  {
-    id: "heic-to-jpg",
-    kind: "local-tool",
-    tool: "heic-to-jpg",
-    locales: { en: { slug: "heic-to-jpg", status: "draft", h1: "HEIC to JPG" } },
-    related: ["home", "compress-gif"],
-  },
-  {
-    id: "color-picker-from-image",
-    kind: "editor",
-    editor: "color-picker-from-image",
-    locales: {
-      en: { slug: "color-picker-from-image", status: "draft", h1: "Color Picker from Image" },
-    },
-    related: ["home", "heic-to-jpg"],
-  },
-  {
-    id: "how-to-unblur-a-picture",
-    kind: "blog",
-    locales: {
-      en: { slug: "blog/how-to-unblur-a-picture", status: "draft", h1: "How to Unblur a Picture" },
-    },
-    related: ["home", "fix-blurry-photo"],
-  },
-  {
-    id: "pricing",
-    kind: "pricing",
-    locales: { en: { slug: "pricing", status: "live", h1: "Pricing" } },
-    related: [],
-  },
-  {
-    id: "account",
-    kind: "account",
-    noindex: true,
-    locales: { en: { slug: "account", status: "live", h1: "Account" } },
-    related: [],
-  },
+  page(
+    "zombie-love-story-prompts",
+    "blog",
+    "zombie-love-story-prompts",
+    "Zombie Love Story Prompts",
+    "draft",
+    ["home", "zombie-love-story-ai"],
+  ),
+  page("pricing", "pricing", "pricing", "Pricing", "live", []),
+  { ...page("story", "story", "story", "Your Zombie Love Story", "live", []), noindex: true },
+  { ...page("account", "account", "account", "Account", "live", []), noindex: true },
   legal("privacy", "privacy", "Privacy Policy"),
   legal("terms", "terms", "Terms of Service"),
   legal("refund", "refund", "Refund Policy"),
@@ -176,16 +118,7 @@ export type BuildMode = "production" | "preview";
 
 export type PageEntry = { page: PageConfig; locale: LocaleId; path: string; draft: boolean };
 
-export const LOCALE_NAMES: Record<LocaleId, string> = {
-  en: "English",
-  es: "Español",
-  ja: "日本語",
-  "pt-br": "Português (Brasil)",
-  ru: "Русский",
-  id: "Bahasa Indonesia",
-  fr: "Français",
-  de: "Deutsch",
-};
+export const LOCALE_NAMES: Record<LocaleId, string> = { en: "English" };
 
 export function builtLocales(page: PageConfig, mode: BuildMode): LocaleId[] {
   return LOCALE_IDS.filter((locale) => {
@@ -212,7 +145,7 @@ export function indexable(entry: PageEntry, mode: BuildMode): boolean {
 }
 
 export function hreflangOf(locale: LocaleId): string {
-  return locale === "pt-br" ? "pt-BR" : locale;
+  return locale;
 }
 
 /** Spec 2.3: each built locale of the page, plus x-default on English. */
@@ -228,11 +161,4 @@ export function alternates(
   return locales.includes("en")
     ? [{ hreflang: "x-default", path: pagePath(page, "en") }, ...links]
     : links;
-}
-
-/** Spec 2.4: the Tools menu groups. */
-export function navGroup(page: PageConfig): "image" | "video" | "free" | null {
-  if (page.kind === "local-tool") return "free";
-  if ((page.kind === "home" || page.kind === "ai-tool") && page.engine === "unblur") return "image";
-  return null;
 }

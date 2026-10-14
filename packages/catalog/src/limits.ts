@@ -1,11 +1,13 @@
 /** Spec 5.2. Guests are counted per cookie and per device fingerprint, each capped at guestDaily. */
-export const QUOTA = { guestDaily: 2, userDaily: 4, ipSegmentDaily: 10 } as const;
+/** Spec §7: free previews need an account; the IP segment cap stops account farming. */
+export const QUOTA = { previewUserDaily: 3, previewIpSegmentDaily: 10 } as const;
 
 /** Spec 3.2 / 7.2. */
 export const FILE_LIMITS = {
   maxBytes: 20_000_000,
   maxMegapixels: 50,
-  minShortEdge: 64,
+  /** Faces must be big enough for identity (spec §4.2 S0). */
+  minShortEdge: 384,
   accept: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
 } as const;
 
@@ -24,51 +26,13 @@ export const RATE_LIMITS = {
   codeAttemptsPerIpHour: 30,
 } as const;
 
-/** Spec 3.7. */
-export const FREE_RETRY = {
-  perJob: 1,
-  perIdentityDaily: 3,
-  rateWindow: 20,
-  rateMinJobs: 10,
-  rateMax: 0.3,
-  siteAlertRate: 0.15,
+/** Spec §3.4: uploads 1 day, keyframes and shots 3 days, finished videos 14 days. */
+export const RETENTION = {
+  inputHours: 24,
+  workDays: 3,
+  outputDays: 14,
+  signedUrlSeconds: 3600,
 } as const;
-
-/** Spec 3.7 defaults; recalibrate on real photos before launch (spec 11.3). */
-export const GUARD_THRESHOLDS = {
-  compositionMinCorrelation: 0.9,
-  colorMaxDeltaE: 8,
-  faceMaxShiftOfWidth: 0.2,
-} as const;
-
-/**
- * Spec 3.4. The first five are defaults to recalibrate on real photos before launch; the rest were
- * calibrated on the 38 eval images (motion vs focus 17/20, old photos 4/4, text 5/6, no false hits).
- */
-export const DIAGNOSIS_THRESHOLDS = {
-  alreadySharpScore: 75,
-  portraitMinFaceArea: 0.05,
-  lowResLongEdge: 800,
-  faceTimeoutMs: 1500,
-  /** MediaPipe face detections below this confidence are ignored. */
-  faceMinConfidence: 0.5,
-  analysisLongEdge: 512,
-  /** Gradient structure-tensor coherence at or above this means motion blur. */
-  motionAnisotropy: 0.35,
-  /** Share of 16px blocks that are two-toned and high-contrast (letters on paper or a screen). */
-  textBlockShare: 0.08,
-  /** Share of pixels with a sepia cast (R ≥ G ≥ B, warm and muted). */
-  sepiaShare: 0.9,
-  /** sharpness = 100 · (log10(Laplacian variance + 1) − offset) / span, clamped to 0–100. */
-  sharpnessLogOffset: 0.6,
-  sharpnessLogSpan: 2.4,
-} as const;
-
-/** Spec 3.5. */
-export const WORKSPACE_LIMITS = { maxVersions: 20, idbMaxBytes: 300_000_000 } as const;
-
-/** Spec 1.3 / 4.1. */
-export const RETENTION = { freeHours: 24, creditDays: 7, signedUrlSeconds: 3600 } as const;
 
 /** Spec 4.2 / 3.7. */
 export const DISPATCH = {
@@ -96,11 +60,6 @@ export const REFUND_POLICY = {
   packDays: 7,
   subscriptionDays: 7,
   subscriptionMaxUsedShare: 0.2,
-} as const;
-
-/** Design S16 / spec 10A.7: browser-only tools; the targets are the long-tail sizes people search. */
-export const LOCAL_TOOLS = {
-  compressGif: { maxFiles: 20, targetsKb: [256, 1024, 5120], defaultTargetKb: 1024 },
 } as const;
 
 /** Spec 7.5: EU, EEA, UK and Switzerland visitors see the cookie banner and start opted out. */
@@ -138,46 +97,6 @@ export const CONSENT_COUNTRIES: ReadonlySet<string> = new Set([
   "GB",
   "CH",
 ]);
-
-/** Spec 3.5 / 3.7: the workspace and the refine that runs in the browser. */
-export const REFINE = {
-  /** Gaussian sigma of the low-pass, as a share of the image's long edge (about 12 px at 2048). */
-  lowPassSigmaOfLongEdge: 0.006,
-  /** The full-resolution export is computed in tiles of this size. */
-  exportTile: 1024,
-  /** Display textures: long edge on phones / elsewhere; never above the GPU's MAX_TEXTURE_SIZE. */
-  textureLongEdgePhone: 2048,
-  textureLongEdgeDesktop: 4096,
-  /** Restore brush radius in screen pixels, and the step of the [ and ] keys. */
-  brushMin: 4,
-  brushMax: 160,
-  brushDefault: 40,
-  brushStep: 4,
-  /** 0 is a hard edge, 1 feathers all the way from the centre. */
-  brushSoftnessDefault: 0.6,
-  /** Undo steps kept: brush strokes, refine settings and version switches. */
-  historyMax: 50,
-  /** Versions kept for one photo; the oldest go first. */
-  versionsMax: 20,
-  /** Spec 3.5: and at most this many bytes of their full-size images (300 MB). */
-  versionsBytesMax: 300 * 1024 * 1024,
-  /** A lost WebGL context that hasn't come back after this long falls back to Canvas 2D. */
-  lostContextMs: 3000,
-  /** Spec 3.5: the workspace is saved this long after the last change. */
-  saveDelayMs: 1500,
-  /** Spec 3.8: the result is revealed over this long. */
-  revealMs: 900,
-  /** Largest zoom, in screen pixels per photo pixel; the + and − keys zoom by zoomStep. */
-  zoomMax: 8,
-  zoomStep: 1.25,
-  /** The loupe shows the result this many times larger, in a circle this many CSS pixels wide. */
-  loupeZoom: 2.5,
-  loupeRadius: 95,
-  /** Pressing this long without moving shows the original (touch). */
-  longPressMs: 350,
-  /** design §11 --mask: the brush overlay is yellow at this opacity. */
-  maskTint: 0.48,
-} as const;
 
 /** Cost guardrails spec 3: daily model-spend lines per category; ops checks them every 5 minutes. */
 export const BUDGETS = {

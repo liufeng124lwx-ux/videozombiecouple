@@ -25,9 +25,8 @@ describe("cost guardrails (cost-guardrails spec 3, 4, 8)", () => {
     expect(SPEND_CAPS.newPayerDays).toBeGreaterThan(0);
   });
 
-  it("offers the daily free quota on standard unblur only (spec 8)", () => {
-    const free = CAPABILITY_IDS.filter((id) => CAPABILITIES[id].usesDailyQuota);
-    expect(free).toEqual(["unblur.std"]);
+  it("keeps two dispatcher pools, images and videos", () => {
+    expect(CAPABILITY_IDS.map((id) => CAPABILITIES[id].pool)).toEqual(["kie-image", "kie-video"]);
   });
 
   it("warns before pausing", () => {
