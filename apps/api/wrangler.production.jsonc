@@ -22,16 +22,27 @@
     "bindings": [
       { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
       { "name": "DISPATCHER", "class_name": "Dispatcher" },
-      { "name": "JOB_RUNNER", "class_name": "JobRunner" },
-      { "name": "WALLET", "class_name": "Wallet" }
+      { "name": "STORY_RUNNER", "class_name": "StoryRunner" },
+      { "name": "WALLET", "class_name": "Wallet" },
+      { "name": "COMPOSER", "class_name": "Composer" }
     ]
   },
   "exports": {
     "RateLimiter": { "type": "durable-object", "storage": "sqlite" },
     "Dispatcher": { "type": "durable-object", "storage": "sqlite" },
-    "JobRunner": { "type": "durable-object", "storage": "sqlite" },
-    "Wallet": { "type": "durable-object", "storage": "sqlite" }
+    "StoryRunner": { "type": "durable-object", "storage": "sqlite" },
+    "Wallet": { "type": "durable-object", "storage": "sqlite" },
+    "Composer": { "type": "durable-object", "storage": "sqlite" }
   },
+  // Spec §3: apps/composer (ffmpeg + face scoring); scales to zero when idle.
+  "containers": [
+    {
+      "class_name": "Composer",
+      "image": "../composer/Dockerfile",
+      "max_instances": 3,
+      "instance_type": "standard"
+    }
+  ],
   "send_email": [
     { "name": "EMAIL", "allowed_sender_addresses": ["no-reply@videozombiecouple.com"] }
   ],
