@@ -40,7 +40,7 @@
       "class_name": "Composer",
       "image": "../composer/Dockerfile",
       "max_instances": 3,
-      "instance_type": "standard"
+      "instance_type": "standard-1"
     }
   ],
   "send_email": [

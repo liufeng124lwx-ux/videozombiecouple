@@ -1,0 +1,74 @@
+[
+  {
+    "id": "p01",
+    "kind": "human",
+    "survivor": "personas/p01-survivor.jpg",
+    "infected": "personas/p01-infected.jpg"
+  },
+  {
+    "id": "p02",
+    "kind": "human",
+    "survivor": "personas/p02-survivor.jpg",
+    "infected": "personas/p02-infected.jpg"
+  },
+  {
+    "id": "p03",
+    "kind": "human",
+    "survivor": "personas/p03-survivor.jpg",
+    "infected": "personas/p03-infected.jpg"
+  },
+  {
+    "id": "p04",
+    "kind": "human",
+    "survivor": "personas/p04-survivor.jpg",
+    "infected": "personas/p04-infected.jpg"
+  },
+  {
+    "id": "p05",
+    "kind": "human",
+    "survivor": "personas/p05-survivor.jpg",
+    "infected": "personas/p05-infected.jpg"
+  },
+  {
+    "id": "p06",
+    "kind": "human",
+    "survivor": "personas/p06-survivor.jpg",
+    "infected": "personas/p06-infected.jpg"
+  },
+  {
+    "id": "p07",
+    "kind": "human",
+    "survivor": "personas/p07-survivor.jpg",
+    "infected": "personas/p07-infected.jpg"
+  },
+  {
+    "id": "p08",
+    "kind": "human",
+    "survivor": "personas/p08-survivor.jpg",
+    "infected": "personas/p08-infected.jpg"
+  },
+  {
+    "id": "p09",
+    "kind": "human",
+    "survivor": "personas/p09-survivor.jpg",
+    "infected": "personas/p09-infected.jpg"
+  },
+  {
+    "id": "p10",
+    "kind": "human",
+    "survivor": "personas/p10-survivor.jpg",
+    "infected": "personas/p10-infected.jpg"
+  },
+  {
+    "id": "q01",
+    "kind": "pet",
+    "survivor": "personas/q01-survivor.jpg",
+    "infected": "personas/q01-infected.jpg"
+  },
+  {
+    "id": "q02",
+    "kind": "pet",
+    "survivor": "personas/q02-survivor.jpg",
+    "infected": "personas/q02-infected.jpg"
+  }
+]
