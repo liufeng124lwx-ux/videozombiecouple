@@ -23,6 +23,13 @@ export const ERROR_CODES = [
   "WEAK_PASSWORD",
   "SUBSCRIPTION_ACTIVE",
   "PAYMENTS_UNAVAILABLE",
+  "PREVIEW_QUOTA_EXHAUSTED",
+  "LOGIN_REQUIRED",
+  "NOT_READY",
+  "RECOMPOSE_USED",
+  "FACE_NOT_FOUND",
+  "UNDERAGE",
+  "COMPOSE_FAILED",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -55,6 +62,13 @@ export const ERROR_CHARGE: Record<ErrorCode, ChargeEffect> = {
   WEAK_PASSWORD: "none",
   SUBSCRIPTION_ACTIVE: "none",
   PAYMENTS_UNAVAILABLE: "none",
+  PREVIEW_QUOTA_EXHAUSTED: "none",
+  LOGIN_REQUIRED: "none",
+  NOT_READY: "not_charged",
+  RECOMPOSE_USED: "none",
+  FACE_NOT_FOUND: "refunded",
+  UNDERAGE: "refunded",
+  COMPOSE_FAILED: "refunded",
   INTERNAL: "refunded",
 };
 
