@@ -1,4 +1,5 @@
 import { AwsClient } from "aws4fetch";
+import { filesProxied, fileUrl } from "../files.ts";
 import { isLocal, localUrl } from "../local.ts";
 import type { Bindings } from "../types.ts";
 
@@ -15,6 +16,7 @@ export async function presign(
   signedHeaders: Record<string, string> = {},
 ): Promise<string> {
   if (isLocal(env)) return localUrl(env, key, method, expiresSec);
+  if (filesProxied(env)) return fileUrl(env, key, method, expiresSec, signedHeaders);
   const client = new AwsClient({
     accessKeyId: env.R2_ACCESS_KEY_ID,
     secretAccessKey: env.R2_SECRET_ACCESS_KEY,

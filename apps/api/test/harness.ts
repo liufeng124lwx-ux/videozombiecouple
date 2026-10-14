@@ -359,6 +359,11 @@ export async function setup(extra: Record<string, unknown> = {}) {
     };
   }
 
+  /** A raw request to the app (binary bodies, any method), as a browser or kie would send it. */
+  function raw(path: string, init: RequestInit = {}) {
+    return app.request(path, init, env as never);
+  }
+
   /**
    * Moves the fake clock forward, firing due alarms in time order like the runtime would. An
    * alarm that throws is re-armed one second later (the runtime retries failed alarms) and the
@@ -504,6 +509,7 @@ export async function setup(extra: Record<string, unknown> = {}) {
     kv: store,
     r2: bucket,
     call,
+    raw,
     advance,
     pass,
     signIn,

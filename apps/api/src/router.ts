@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { admin } from "./admin/index.ts";
+import { files } from "./files.ts";
 import { fail } from "./http.ts";
 import { localR2 } from "./local.ts";
 import { ban } from "./middleware/ban.ts";
@@ -65,6 +66,7 @@ app.post("/webhooks/kie/:storyId", kieCallback);
 app.post("/webhooks/waffo", waffoWebhook);
 
 app.route("/local-r2", localR2);
+app.route("/files", files);
 app.route("/admin", admin);
 
 app.notFound((c) => fail(c, "NOT_FOUND"));
