@@ -38,7 +38,7 @@ export async function noteRejections(env: Bindings, who: Who): Promise<boolean> 
   const rejections = async (column: "owner" | "fp_hash", value: string) =>
     (
       await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM jobs WHERE ${column}=? AND error_code='CONTENT_REJECTED' AND created_at>?`,
+        `SELECT COUNT(*) AS n FROM stories WHERE ${column}=? AND error_code='CONTENT_REJECTED' AND created_at>?`,
       )
         .bind(value, since)
         .first<{ n: number }>()

@@ -12,10 +12,15 @@ import { account, ledger, removeAccount, setPassword } from "./routes/account.ts
 import { codeLogin, linkLogin, logout, passwordLogin, requestEmailLogin } from "./routes/auth.ts";
 import { billing, cancelPlan, changePlan, checkout, resumePlan } from "./routes/billing.ts";
 import { googleCallback, googleStart } from "./routes/google.ts";
-import { createJob, getJob, retryJob } from "./routes/jobs.ts";
 import { me } from "./routes/me.ts";
 import { quota } from "./routes/quota.ts";
-import { tools } from "./routes/tools.ts";
+import {
+  createStory,
+  getStory,
+  listStories,
+  recomposeStory,
+  renderStory,
+} from "./routes/stories.ts";
 import { createUpload } from "./routes/uploads.ts";
 import { kieCallback, waffoWebhook } from "./routes/webhooks.ts";
 import { reportRequest } from "./services/sentry.ts";
@@ -50,12 +55,13 @@ app.post("/v1/billing/subscription/resume", resumePlan);
 app.get("/auth/google/start", googleStart);
 app.get("/auth/google/callback", googleCallback);
 app.get("/v1/quota", quota);
-app.get("/v1/tools", tools);
 app.post("/v1/uploads", createUpload);
-app.post("/v1/jobs", createJob);
-app.get("/v1/jobs/:id", getJob);
-app.post("/v1/jobs/:id/retry", retryJob);
-app.post("/webhooks/kie/:jobId", kieCallback);
+app.post("/v1/stories", createStory);
+app.get("/v1/stories", listStories);
+app.get("/v1/stories/:id", getStory);
+app.post("/v1/stories/:id/render", renderStory);
+app.post("/v1/stories/:id/recompose", recomposeStory);
+app.post("/webhooks/kie/:storyId", kieCallback);
 app.post("/webhooks/waffo", waffoWebhook);
 
 app.route("/local-r2", localR2);

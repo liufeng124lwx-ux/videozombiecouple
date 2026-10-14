@@ -5,7 +5,8 @@ export type AttemptRow = {
   model: string;
   outcome: "succeeded" | "failed" | "abandoned";
   failKind: string | null;
-  freeRetry: boolean;
+  /** Free preview work (true) or paid video work (false). */
+  free: boolean;
   costUsd: number | null;
   durationMs: number | null;
 };
@@ -14,13 +15,7 @@ export type AttemptRow = {
 export function recordAttempt(env: Bindings, row: AttemptRow): void {
   env.ANALYTICS?.writeDataPoint({
     indexes: [row.capability],
-    blobs: [
-      row.capability,
-      row.model,
-      row.outcome,
-      row.failKind ?? "",
-      row.freeRetry ? "free_retry" : "paid",
-    ],
+    blobs: [row.capability, row.model, row.outcome, row.failKind ?? "", row.free ? "free" : "paid"],
     doubles: [row.costUsd ?? 0, row.durationMs ?? 0],
   });
 }

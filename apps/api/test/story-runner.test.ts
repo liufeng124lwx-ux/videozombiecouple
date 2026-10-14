@@ -1,4 +1,5 @@
 import { TIERS } from "@vzc/catalog";
+import type { StoryView } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COMPOSER_MAX_FAILURES } from "../src/durable-objects/story-runner.ts";
 import type { ComposeRequest, ComposerApi, ScoreResponse } from "../src/services/composer.ts";
@@ -86,7 +87,7 @@ async function untilStatus(
 ) {
   for (let i = 0; i < maxMin * 6; i++) {
     const view = (await runner.view()) as { status: string };
-    if (view.status === status) return view;
+    if (view.status === status) return view as StoryView;
     await h.advance(10_000);
   }
   throw new Error(`never reached ${status}: ${JSON.stringify(await runner.view())}`);

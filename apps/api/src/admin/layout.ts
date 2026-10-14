@@ -33,7 +33,7 @@ export function page(title: string, actor: string, body: Body) {
       </head>
       <body>
         <header>
-          <a href="/admin">Switches</a><a href="/admin/users">Users</a><a href="/admin/jobs">Jobs</a>
+          <a href="/admin">Switches</a><a href="/admin/users">Users</a><a href="/admin/jobs">Stories</a>
           <a href="/admin/routes">Routes</a><a href="/admin/bans">Bans</a>
           <span class="who">${actor}</span>
         </header>

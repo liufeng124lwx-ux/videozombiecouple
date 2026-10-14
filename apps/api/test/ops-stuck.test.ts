@@ -66,7 +66,7 @@ describe("stuck stories (spec 8.2)", () => {
     expect(await h.limiters.instance(counters[0]?.name ?? "").used()).toBe(0);
   });
 
-  it("fails a story whose runner never started, and says so", async () => {
+  it("fails a preview whose runner never started as preview_failed, and says so", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
     const { spec } = await h.story();
@@ -74,7 +74,7 @@ describe("stuck stories (spec 8.2)", () => {
     const sent: string[] = [];
     await checkStuck(env, late, async (_e, text) => void sent.push(text));
     await checkStuck(env, late + 300_000, async (_e, text) => void sent.push(text));
-    expect(status(h, spec.id)).toMatchObject({ status: "failed", error_code: "TIMEOUT" });
+    expect(status(h, spec.id)).toMatchObject({ status: "preview_failed", error_code: "TIMEOUT" });
     expect(sent.some((s) => s.includes(spec.id))).toBe(true);
   });
 

@@ -6,37 +6,18 @@ import { limiter } from "./limits.ts";
 
 export type QuotaCounter = { name: string; limit: number };
 
-/** Spec 5.2: cookie and device each get the guest limit; the IP segment gets its own cap. */
-export function guestCounters(ids: {
-  visitorHash: string;
-  fpHash: string | null;
-  ipSegmentHash: string;
-}): QuotaCounter[] {
-  const counters: QuotaCounter[] = [
-    { name: `quota:visitor:${ids.visitorHash}`, limit: QUOTA.guestDaily },
-  ];
-  if (ids.fpHash) counters.push({ name: `quota:fp:${ids.fpHash}`, limit: QUOTA.guestDaily });
-  counters.push({ name: `quota:ip:${ids.ipSegmentHash}`, limit: QUOTA.ipSegmentDaily });
-  return counters;
-}
-
-/** Spec 5.2: an account gets its own daily limit; the IP segment cap still applies. */
-export function userCounters(userId: string, ipSegmentHash: string): QuotaCounter[] {
+/** Spec §7: free previews are per account, with a cap per IP segment against account farming. */
+export function previewCounters(userId: string, ipSegmentHash: string): QuotaCounter[] {
   return [
-    { name: `quota:user:${userId}`, limit: QUOTA.userDaily },
-    { name: `quota:ip:${ipSegmentHash}`, limit: QUOTA.ipSegmentDaily },
+    { name: `quota:preview:user:${userId}`, limit: QUOTA.previewUserDaily },
+    { name: `quota:preview:ip:${ipSegmentHash}`, limit: QUOTA.previewIpSegmentDaily },
   ];
 }
 
+/** The signed-in user's preview counters; guests have none (previews need an account). */
 export function countersFor(c: Context<AppEnv>): QuotaCounter[] {
   const userId = c.get("userId");
-  return userId
-    ? userCounters(userId, c.get("ipSegmentHash"))
-    : guestCounters({
-        visitorHash: c.get("visitorHash"),
-        fpHash: c.get("fpHash"),
-        ipSegmentHash: c.get("ipSegmentHash"),
-      });
+  return userId ? previewCounters(userId, c.get("ipSegmentHash")) : [];
 }
 
 /** Reserves one use on every counter, or none: a refusal or an error gives back what was taken. */

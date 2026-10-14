@@ -9,6 +9,8 @@ import { isSuspicious } from "./suspicion.ts";
  * segment every 30 days, never for suspicious devices. Refusals are silent.
  */
 export async function grantSignupBonus(c: Context<AppEnv>, userId: string): Promise<boolean> {
+  // Spec §7: no free credits; don't spend the device / IP claim on an empty grant.
+  if (BONUSES.signup <= 0) return false;
   const fpHash = c.get("fpHash");
   if (await isSuspicious(c.env, { owner: `u:${userId}`, userId, fpHash })) return false;
   // Claims are atomic in the RateLimiter DO; a KV read-then-write let concurrent sign-ups all pass.

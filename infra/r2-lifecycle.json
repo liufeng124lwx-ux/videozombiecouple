@@ -40,7 +40,7 @@
       }
     },
     {
-      "id": "shots-3d",
+      "id": "shots-15d",
       "enabled": true,
       "conditions": {
         "prefix": "shot/"
@@ -48,7 +48,7 @@
       "deleteObjectsTransition": {
         "condition": {
           "type": "Age",
-          "maxAge": 259200
+          "maxAge": 1296000
         }
       }
     },

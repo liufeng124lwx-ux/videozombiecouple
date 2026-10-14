@@ -19,14 +19,14 @@ type Attempt = {
 };
 const LINK_SEC = 3600;
 
-/** Spec 8.1: look a job up by its id or by a kie task id from one of its attempts. */
+/** Spec 8.1: look a story up by its id or by a kie task id from one of its attempts. */
 export async function jobs(c: Context<AppEnv>) {
   const q = (c.req.query("q") ?? "").trim();
   const task = q.replace(/["%_\\]/g, "");
   const results = q
     ? (
         await c.env.DB.prepare(
-          "SELECT id, owner, capability, status, created_at FROM jobs WHERE id=? OR (? != '' AND attempts LIKE ?) ORDER BY created_at DESC LIMIT 20",
+          "SELECT id, owner, kind || ' · ' || scene AS capability, status, created_at FROM stories WHERE id=? OR (? != '' AND steps LIKE ?) ORDER BY created_at DESC LIMIT 20",
         )
           .bind(q, task, `%"taskId":"${task}"%`)
           .all<Row>()
@@ -34,17 +34,17 @@ export async function jobs(c: Context<AppEnv>) {
     : [];
   return c.html(
     page(
-      "Jobs",
+      "Stories",
       c.get("adminEmail"),
       html`<form>
-          <input name="q" value="${q}" placeholder="job id or kie task id" size="40" autofocus />
+          <input name="q" value="${q}" placeholder="story id or kie task id" size="40" autofocus />
           <button>Find</button>
         </form>
         <table>
           <tr>
-            <th>Job</th>
+            <th>Story</th>
             <th>Owner</th>
-            <th>Capability</th>
+            <th>Kind · scene</th>
             <th>Status</th>
             <th>Created</th>
           </tr>
@@ -63,43 +63,43 @@ export async function jobs(c: Context<AppEnv>) {
   );
 }
 
-/** Spec 8.1: every attempt, and while the job is kept, signed links to its input and results. */
+/** Spec 8.1: every step and attempt, and while the story is kept, signed links to its files. */
 export async function job(c: Context<AppEnv>) {
   const id = c.req.param("id") ?? "";
-  const row = await c.env.DB.prepare("SELECT * FROM jobs WHERE id=?").bind(id).first<Row>();
-  if (!row) return c.text("No such job", 404);
+  const row = await c.env.DB.prepare("SELECT * FROM stories WHERE id=?").bind(id).first<Row>();
+  if (!row) return c.text("No such story", 404);
   let attempts: Attempt[] = [];
   try {
-    attempts = JSON.parse(String(row.attempts ?? "[]")) as Attempt[];
+    const steps = JSON.parse(String(row.steps ?? "[]")) as { id: string; attempts: Attempt[] }[];
+    attempts = steps.flatMap((step) =>
+      step.attempts.map((a, i) => ({ ...a, id: `${step.id} #${i + 1}`, role: step.id })),
+    );
   } catch {}
   const live = row.status !== "expired" && Number(row.expires_at) > Date.now();
   const files: { key: string; url: string }[] = [];
   if (live) {
-    const keys = [String(row.input_key)];
-    for (const prefix of [`out/${id}/`, `keep/${id}/`])
+    const keys: string[] = [];
+    for (const prefix of [`keep/${id}/`, `kf/${id}/`, `shot/${id}/`, `out/${id}/`])
       for (const object of (await c.env.BUCKET.list({ prefix })).objects)
         if (!keys.includes(object.key)) keys.push(object.key);
     for (const key of keys) files.push({ key, url: await presign(c.env, key, "GET", LINK_SEC) });
   }
   return c.html(
     page(
-      `Job ${id}`,
+      `Story ${id}`,
       c.get("adminEmail"),
       html`<p>
-          ${String(row.capability)} · ${String(row.mode)} · <b>${String(row.status)}</b>
+          ${String(row.kind)} · ${String(row.scene)} · <b>${String(row.status)}</b>
           ${String(row.error_code ?? "")} · owner ${String(row.owner)} · created
           ${when(row.created_at)} · expires ${when(row.expires_at)}
         </p>
-        <p>
-          charge <code>${String(row.charge)}</code> · feedback
-          <code>${String(row.feedback ?? "—")}</code>
-        </p>
+        <p>cost <code>$${String(row.cost_usd)}</code> · picks <code>${String(row.picks)}</code></p>
         <h2>Attempts</h2>
         <table>
           <tr>
             <th>Attempt</th>
             <th>Model</th>
-            <th>Role</th>
+            <th>Step</th>
             <th>State</th>
             <th>kie task</th>
             <th>Cost</th>
@@ -121,7 +121,7 @@ export async function job(c: Context<AppEnv>) {
           )}
         </table>
         <h2>Ban</h2>
-        <p class="note">Bans the identities stored on this job (raw ids are never kept).</p>
+        <p class="note">Bans the identities stored on this story (raw ids are never kept).</p>
         ${(
           [
             ["visitor", row.visitor_hash],

@@ -6,25 +6,27 @@ async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<void> {
   for (const object of listed.objects) await bucket.delete(object.key);
 }
 
-/** Spec 1.3 / 8.2: an expired job's upload and results go, and the row says so. Never samples/. */
+/**
+ * Spec §3.4: a story's files go when it expires (R2 lifecycle rules are the backstop: in/ 1 day,
+ * keep/ kf/ 3 days, shot/ out/ 15 days so a late title change still has its shots), and the row says so. Never assets/ or samples/.
+ */
 export async function cleanupExpired(env: Bindings, now: number): Promise<number> {
   const { results } = await env.DB.prepare(
-    "SELECT id, input_key FROM jobs WHERE expires_at<=? AND status!='expired' ORDER BY expires_at LIMIT ?",
+    "SELECT id FROM stories WHERE expires_at<=? AND status NOT IN ('expired','previewing','rendering') ORDER BY expires_at LIMIT ?",
   )
     .bind(now, OPS.cleanupBatch)
-    .all<{ id: string; input_key: string }>();
+    .all<{ id: string }>();
   let failed = 0;
-  for (const job of results) {
-    // One file that won't delete must not hold up everyone else's (the 24-hour promise, spec 7.4).
+  for (const story of results) {
+    // One file that won't delete must not hold up everyone else's.
     try {
-      if (!job.input_key.startsWith("samples/")) await env.BUCKET.delete(job.input_key);
-      await deletePrefix(env.BUCKET, `out/${job.id}/`);
-      await deletePrefix(env.BUCKET, `keep/${job.id}/`);
-      await env.DB.prepare("UPDATE jobs SET status='expired' WHERE id=?").bind(job.id).run();
+      for (const prefix of ["keep", "kf", "shot", "out"])
+        await deletePrefix(env.BUCKET, `${prefix}/${story.id}/`);
+      await env.DB.prepare("UPDATE stories SET status='expired' WHERE id=?").bind(story.id).run();
     } catch {
       failed++;
     }
   }
-  if (failed > 0) throw new Error(`${failed} expired jobs could not be cleaned; the rest were`);
+  if (failed > 0) throw new Error(`${failed} expired stories could not be cleaned; the rest were`);
   return results.length;
 }

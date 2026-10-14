@@ -81,7 +81,7 @@ export async function user(c: Context<AppEnv>) {
     "SELECT id, product_key, amount, currency, status, refunded_amount, created_at FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 50",
   );
   const jobs = await all(
-    "SELECT id, capability, status, error_code, created_at FROM jobs WHERE owner='u:' || ? ORDER BY created_at DESC LIMIT 20",
+    "SELECT id, kind || ' · ' || scene AS capability, status, error_code, created_at FROM stories WHERE owner='u:' || ? ORDER BY created_at DESC LIMIT 20",
   );
   const actor = c.get("adminEmail");
   return c.html(

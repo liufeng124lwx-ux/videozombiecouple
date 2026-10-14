@@ -5,18 +5,18 @@ import { fail } from "../http.ts";
 import { clearBadSignatures, countBadSignature } from "../ops/webhook-alerts.ts";
 import { callbackToken, safeEqual } from "../services/crypto.ts";
 import type { AppEnv } from "../types.ts";
-import { JOB_ID, runnerFor } from "./jobs.ts";
+import { runnerFor, STORY_ID } from "./stories.ts";
 
 /**
- * Spec 4.1: kie calls `/webhooks/kie/<jobId>?t=<HMAC>` when a task ends. The body is not trusted;
+ * Spec §4.2: kie calls `/webhooks/kie/<storyId>?t=<HMAC>` when a task ends. The body is not trusted;
  * the runner asks recordInfo itself. Repeats and late calls are harmless (review focus 3).
  */
 export async function kieCallback(c: Context<AppEnv>) {
-  const jobId = c.req.param("jobId") ?? "";
+  const storyId = c.req.param("storyId") ?? "";
   const token = c.req.query("t") ?? "";
-  if (!JOB_ID.test(jobId) || !safeEqual(token, await callbackToken(jobId, c.env.HMAC_KEY)))
+  if (!STORY_ID.test(storyId) || !safeEqual(token, await callbackToken(storyId, c.env.HMAC_KEY)))
     return fail(c, "FORBIDDEN");
-  await runnerFor(c, jobId).poke();
+  await runnerFor(c, storyId).poke();
   return c.json({ ok: true });
 }
 

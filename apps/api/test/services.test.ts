@@ -141,15 +141,29 @@ describe("recordAttempt", () => {
       model: "nano-banana-pro",
       outcome: "failed",
       failKind: "timeout",
-      freeRetry: false,
+      free: false,
       costUsd: null,
       durationMs: 90_000,
+    });
+    recordAttempt(h.env as unknown as Bindings, {
+      capability: "keyframe",
+      model: "gpt-image-2-image-to-image",
+      outcome: "succeeded",
+      failKind: null,
+      free: true,
+      costUsd: 0.015,
+      durationMs: 70_000,
     });
     expect(h.analytics).toEqual([
       {
         indexes: ["keyframe"],
         blobs: ["keyframe", "nano-banana-pro", "failed", "timeout", "paid"],
         doubles: [0, 90_000],
+      },
+      {
+        indexes: ["keyframe"],
+        blobs: ["keyframe", "gpt-image-2-image-to-image", "succeeded", "", "free"],
+        doubles: [0.015, 70_000],
       },
     ]);
   });

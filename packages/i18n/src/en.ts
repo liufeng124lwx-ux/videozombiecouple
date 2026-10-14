@@ -641,7 +641,7 @@ export const en = {
   "error.FILE_TOO_LARGE": "This photo is over {maxMb} MB. Try a smaller copy.",
   "error.PHOTO_TOO_NARROW":
     "This photo is too long and thin to unblur. Crop it to a less extreme shape and try again.",
-  "error.QUOTA_EXHAUSTED": "You’ve used today’s free unblurs. Nothing was charged.",
+  "error.QUOTA_EXHAUSTED": "You’ve used today’s free previews. Nothing was charged.",
   "error.CREDITS_LOW": "You don’t have enough credits for this. Nothing was charged.",
   "error.CONTENT_REJECTED": "The AI’s safety filter blocked this photo. Nothing was charged.",
   "error.TIMEOUT": "This took too long, so we stopped it. Nothing was charged. Try again.",
@@ -671,6 +671,15 @@ export const en = {
   "error.SUBSCRIPTION_ACTIVE": "Cancel your plan first, then try again.",
   "error.PAYMENTS_UNAVAILABLE":
     "Payments aren’t available right now. Nothing was charged. Try again later.",
+  "error.PREVIEW_QUOTA_EXHAUSTED":
+    "You’ve used today’s free previews. They come back tomorrow, or make a video from one you already have.",
+  "error.LOGIN_REQUIRED": "Sign in to make your free preview. It takes a few seconds.",
+  "error.NOT_READY": "Your preview isn’t ready yet. Wait for both frames, then try again.",
+  "error.RECOMPOSE_USED": "You’ve already changed this video’s end title once.",
+  "error.FACE_NOT_FOUND":
+    "We couldn’t find a clear face in one of the photos. Use a front-facing photo of one person. Nothing was charged.",
+  "error.UNDERAGE": "This tool is only for photos of adults. Nothing was charged.",
+  "error.COMPOSE_FAILED": "We couldn’t finish your video. Your credits were given back. Try again.",
   "error.INTERNAL": "Something went wrong on our side. Nothing was charged. Try again.",
   "error.NETWORK":
     "We can’t reach VideoZombieCouple right now. Check your connection and try again.",

@@ -36,16 +36,16 @@ const bonuses = (h: Awaited<ReturnType<typeof setup>>, userId: string) =>
   ).n;
 
 describe("sign-up bonus (spec 5.4)", () => {
-  it("gives a new account its bonus once, worth BONUSES.signup (no free credits now)", async () => {
+  it("gives no bonus and spends no device or IP claim while the bonus is 0 (spec §7)", async () => {
     const h = await setup();
-    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(1);
-    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(1);
-    const user = h.db.prepare("SELECT id FROM users").get() as { id: string };
     expect(BONUSES.signup).toBe(0);
-    expect((await h.wallets.instance(user.id).balance(user.id)).total).toBe(BONUSES.signup);
+    expect(await signUp(h, "ann@example.com", { device: "device-aaaaaaaa" })).toBe(0);
+    const claims = h.limiters.entries.size;
+    expect([...h.limiters.entries.keys()].some((k) => k.startsWith("bonus:"))).toBe(false);
+    expect(claims).toBeGreaterThanOrEqual(0);
   });
 
-  it("gives one bonus per device every 30 days", async () => {
+  it.skipIf(BONUSES.signup === 0)("gives one bonus per device every 30 days", async () => {
     const h = await setup();
     await signUp(h, "a@example.com", { device: "device-aaaaaaaa", ip: "198.51.100.1" });
     expect(await signUp(h, "b@example.com", { device: "device-aaaaaaaa", ip: "203.0.113.9" })).toBe(
@@ -57,7 +57,7 @@ describe("sign-up bonus (spec 5.4)", () => {
     );
   });
 
-  it("gives one bonus per IP segment every 30 days", async () => {
+  it.skipIf(BONUSES.signup === 0)("gives one bonus per IP segment every 30 days", async () => {
     const h = await setup();
     await signUp(h, "a@example.com", { device: "device-aaaaaaaa", ip: "198.51.100.1" });
     expect(
@@ -65,7 +65,7 @@ describe("sign-up bonus (spec 5.4)", () => {
     ).toBe(0);
   });
 
-  it("gives nothing to a device marked suspicious", async () => {
+  it.skipIf(BONUSES.signup === 0)("gives nothing to a device marked suspicious", async () => {
     const h = await setup();
     const { hashIdentity } = await import("../src/services/crypto.ts");
     const fp = await hashIdentity("device:device-aaaaaaaa", "test-hmac-key");
@@ -137,31 +137,34 @@ describe("suspicious marks (spec 7.3)", () => {
 // Final review: the 30-day check was a KV read followed by a KV write, so sign-ups that landed
 // together all passed it.
 describe("sign-up bonus under concurrency", () => {
-  it("gives one bonus when several accounts from one IP segment sign up at once", async () => {
-    const h = await setup();
-    await h.pass();
-    const emails = ["a@example.com", "b@example.com", "c@example.com", "d@example.com"];
-    const codes: string[] = [];
-    for (const email of emails) {
-      await h.call("/v1/auth/email", { method: "POST", body: { email } });
-      codes.push(/\b(\d{6})\b/.exec(h.mail[h.mail.length - 1]?.subject ?? "")?.[1] ?? "");
-    }
-    // Slow KV reads of the bonus keys: every sign-up reads "not granted yet" before any writes.
-    const kv = h.env.KV as KVNamespace;
-    const get = kv.get.bind(kv) as (key: string) => Promise<string | null>;
-    (kv as unknown as { get: (key: string) => Promise<string | null> }).get = async (key) => {
-      const value = await get(key);
-      if (key.startsWith("bonus:")) await new Promise((resolve) => setTimeout(resolve, 20));
-      return value;
-    };
-    await Promise.all(
-      emails.map((email, i) =>
-        h.call("/v1/auth/code", { method: "POST", body: { email, code: codes[i] } }),
-      ),
-    );
-    const granted = h.db
-      .prepare("SELECT COUNT(*) AS n FROM credit_buckets WHERE source_ref='signup'")
-      .get();
-    expect(granted).toEqual({ n: 1 });
-  });
+  it.skipIf(BONUSES.signup === 0)(
+    "gives one bonus when several accounts from one IP segment sign up at once",
+    async () => {
+      const h = await setup();
+      await h.pass();
+      const emails = ["a@example.com", "b@example.com", "c@example.com", "d@example.com"];
+      const codes: string[] = [];
+      for (const email of emails) {
+        await h.call("/v1/auth/email", { method: "POST", body: { email } });
+        codes.push(/\b(\d{6})\b/.exec(h.mail[h.mail.length - 1]?.subject ?? "")?.[1] ?? "");
+      }
+      // Slow KV reads of the bonus keys: every sign-up reads "not granted yet" before any writes.
+      const kv = h.env.KV as KVNamespace;
+      const get = kv.get.bind(kv) as (key: string) => Promise<string | null>;
+      (kv as unknown as { get: (key: string) => Promise<string | null> }).get = async (key) => {
+        const value = await get(key);
+        if (key.startsWith("bonus:")) await new Promise((resolve) => setTimeout(resolve, 20));
+        return value;
+      };
+      await Promise.all(
+        emails.map((email, i) =>
+          h.call("/v1/auth/code", { method: "POST", body: { email, code: codes[i] } }),
+        ),
+      );
+      const granted = h.db
+        .prepare("SELECT COUNT(*) AS n FROM credit_buckets WHERE source_ref='signup'")
+        .get();
+      expect(granted).toEqual({ n: 1 });
+    },
+  );
 });

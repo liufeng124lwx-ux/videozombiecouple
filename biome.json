@@ -12,7 +12,9 @@
       "!**/public/vendor/**",
       "!docs",
       "!eval",
-      "!.superpowers"
+      "!.superpowers",
+      "!**/.venv",
+      "!**/__pycache__"
     ]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

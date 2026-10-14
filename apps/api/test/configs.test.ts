@@ -70,12 +70,12 @@ describe("deployable configs (spec 1.4)", () => {
     const age = (prefix: string) =>
       rules.find((r: Config) => r.conditions?.prefix === prefix)?.deleteObjectsTransition?.condition
         ?.maxAge;
-    // Spec 3.4: uploads a day, work files (photos, keyframes, shots) 3 days, videos a day after
-    // the cron would have deleted them.
+    // Spec 3.4: uploads a day, photos and keyframes 3 days; shots live as long as the video (a
+    // late end-title change recomposes from them), a day after the cron would delete both.
     expect(age("in/")).toBe(RETENTION.inputHours * 3_600);
-    for (const prefix of ["keep/", "kf/", "shot/"])
-      expect(age(prefix)).toBe(RETENTION.workDays * 86_400);
-    expect(age("out/")).toBe((RETENTION.outputDays + 1) * 86_400);
+    for (const prefix of ["keep/", "kf/"]) expect(age(prefix)).toBe(RETENTION.workDays * 86_400);
+    for (const prefix of ["shot/", "out/"])
+      expect(age(prefix)).toBe((RETENTION.outputDays + 1) * 86_400);
     expect(rules.some((r: Config) => r.conditions?.prefix?.startsWith("samples"))).toBe(false);
     expect(rules.every((r: Config) => r.enabled === true)).toBe(true);
   });

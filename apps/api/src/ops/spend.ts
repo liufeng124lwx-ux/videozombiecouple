@@ -10,17 +10,17 @@ export type AttemptStat = {
 export type SpendScope = "all" | "free" | "paid";
 
 const FOREVER = Number.MAX_SAFE_INTEGER;
-/** A call finishes at most this long after its job was created (a free retry near the 24h expiry can run past a day). */
-const MAX_JOB_SPAN_MS = 2 * 86_400_000;
+/** A call finishes at most this long after its story was created (a video can be ordered until the photos expire). */
+const MAX_JOB_SPAN_MS = 4 * 86_400_000;
 export const startOfUtcDay = (t: number) => t - (t % 86_400_000);
 
 const SCOPE_SQL: Record<SpendScope, string> = {
   all: "",
-  free: "AND json_extract(jobs.charge, '$.kind') != 'credits'",
-  paid: "AND json_extract(jobs.charge, '$.kind') = 'credits'",
+  free: "AND json_extract(s.value, '$.phase') = 'preview'",
+  paid: "AND json_extract(s.value, '$.phase') = 'video'",
 };
 
-/** Every model call that finished in [from, to) (JobRunner writes them to jobs.attempts). */
+/** Every model call that finished in [from, to) (StoryRunner writes them to stories.steps). */
 export async function attemptsBetween(
   env: Bindings,
   from: number,
@@ -29,13 +29,13 @@ export async function attemptsBetween(
 ): Promise<AttemptStat[]> {
   const { results } = await env.DB.prepare(
     `SELECT capability, state, costUsd, finishedAt, failKind FROM (
-       SELECT jobs.capability AS capability,
+       SELECT json_extract(s.value, '$.capability') AS capability,
               json_extract(a.value, '$.state') AS state,
               json_extract(a.value, '$.failKind') AS failKind,
               COALESCE(json_extract(a.value, '$.costUsd'), 0) AS costUsd,
-              COALESCE(json_extract(a.value, '$.finishedAt'), jobs.finished_at, jobs.created_at) AS finishedAt
-         FROM jobs, json_each(jobs.attempts) AS a
-        WHERE jobs.created_at >= ? ${SCOPE_SQL[scope]})
+              COALESCE(json_extract(a.value, '$.finishedAt'), stories.finished_at, stories.created_at) AS finishedAt
+         FROM stories, json_each(stories.steps) AS s, json_each(json_extract(s.value, '$.attempts')) AS a
+        WHERE stories.created_at >= ? ${SCOPE_SQL[scope]})
       WHERE finishedAt >= ? AND finishedAt < ?`,
   )
     .bind(Math.max(0, from - MAX_JOB_SPAN_MS), from, to)

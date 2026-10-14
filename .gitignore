@@ -15,3 +15,6 @@ test-results/
 playwright-report/
 .dev.vars
 apps/web/public/vendor/
+.venv/
+__pycache__/
+.pytest_cache/

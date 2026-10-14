@@ -1,5 +1,5 @@
-import { type CapabilityId, MODES, OPS } from "@vzc/catalog";
-import { planRoutes } from "@vzc/providers";
+import { type CapabilityId, OPS } from "@vzc/catalog";
+import { pickSeconds, planRoutes } from "@vzc/providers";
 import { providerKit } from "../services/provider-kit.ts";
 import { presign } from "../services/r2-presign.ts";
 import { loadRoutes } from "../services/routes-store.ts";
@@ -9,7 +9,10 @@ import { deliver, raise, resolve, type Send } from "./alerts.ts";
 export const HEALTH_SAMPLE = "samples/health.jpg";
 const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Spec 8.2: one real job on the fixed sample through the capability's primary route. */
+const HEALTH_PROMPT =
+  "Cinematic film still of the same person in golden hour light, vertical 9:16. Keep the identity exact. No text.";
+
+/** Spec §8.3: one real call on the fixed sample through the capability's primary route. */
 export async function healthCheck(
   env: Bindings,
   capability: CapabilityId,
@@ -25,13 +28,23 @@ export async function healthCheck(
   };
   if (!(await env.BUCKET.head(HEALTH_SAMPLE))) return fail(`${HEALTH_SAMPLE} is missing from R2`);
   try {
-    const route = planRoutes(await loadRoutes(env.DB), capability, "auto").primary[0];
+    const route = planRoutes(await loadRoutes(env.DB), capability, "human").primary[0];
     if (!route) return fail("no enabled route");
     const { adapter } = providerKit(env);
     const imageUrl = await presign(env, HEALTH_SAMPLE, "GET", 3600);
+    const input =
+      capability === "shot"
+        ? {
+            prompt: HEALTH_PROMPT,
+            images: [],
+            first: imageUrl,
+            seconds: pickSeconds(route, 1),
+            aspect: "9:16",
+          }
+        : { prompt: HEALTH_PROMPT, images: [imageUrl], aspect: "9:16" };
     const { taskId } = await adapter.submit(
       route,
-      { imageUrl, prompt: MODES.auto.prompt, aspect: route.aspects[0] ?? "4:3" },
+      input,
       `${env.API_ORIGIN}/v1/ops/health-callback`,
     );
     for (let waited = 0; waited <= OPS.healthTimeoutMs; waited += OPS.healthPollMs) {
@@ -49,9 +62,9 @@ export async function healthCheck(
   }
 }
 
-/** Standard every hour; Pro on the 6-hourly round (spec 8.2). */
+/** Keyframes every hour; a short video shot on the 6-hourly round (it costs more). */
 export async function checkHealth(env: Bindings, now: number, send: Send = deliver): Promise<void> {
-  await healthCheck(env, "unblur.std", now, send);
+  await healthCheck(env, "keyframe", now, send);
   if (new Date(now).getUTCHours() % OPS.healthProEveryHours === 0)
-    await healthCheck(env, "unblur.pro", now, send);
+    await healthCheck(env, "shot", now, send);
 }

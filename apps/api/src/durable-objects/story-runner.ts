@@ -725,6 +725,8 @@ export class StoryRunner extends DurableObject<Bindings> {
   async #sync(state: StoryState): Promise<void> {
     const steps = Object.values(state.steps).map((s) => ({
       id: s.id,
+      phase: s.phase,
+      capability: s.capability ?? s.kind,
       state: s.state,
       error: s.error,
       attempts: s.attempts.map((a) => ({
@@ -734,6 +736,7 @@ export class StoryRunner extends DurableObject<Bindings> {
         costUsd: a.costUsd,
         costEstimated: a.costEstimated ?? false,
         costTimeMs: a.costTimeMs,
+        finishedAt: a.finishedAt,
         failKind: a.failKind,
       })),
     }));
@@ -749,7 +752,7 @@ export class StoryRunner extends DurableObject<Bindings> {
     ]);
     if (signature === state.syncedSig) return;
     await this.env.DB.prepare(
-      "UPDATE stories SET status=?, picks=?, steps=?, output_key=?, poster_key=?, error_code=?, cost_usd=?, names=?, date=?, finished_at=? WHERE id=?",
+      "UPDATE stories SET status=?, picks=?, steps=?, output_key=?, poster_key=?, error_code=?, cost_usd=?, names=?, date=?, finished_at=?, expires_at=CASE WHEN ?='done' THEN ? ELSE expires_at END WHERE id=?",
     )
       .bind(
         state.status,
@@ -762,6 +765,8 @@ export class StoryRunner extends DurableObject<Bindings> {
         state.spec.names,
         state.spec.date,
         state.finishedAt,
+        state.status,
+        (state.finishedAt ?? Date.now()) + RETENTION.outputDays * 86_400_000,
         state.spec.id,
       )
       .run();
@@ -776,7 +781,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       outcome:
         attempt.state === "succeeded" || attempt.state === "abandoned" ? attempt.state : "failed",
       failKind: attempt.failKind,
-      freeRetry: step.phase === "preview",
+      free: step.phase === "preview",
       costUsd: attempt.costUsd,
       durationMs:
         attempt.submittedAt === null

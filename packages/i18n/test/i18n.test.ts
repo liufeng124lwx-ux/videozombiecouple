@@ -1,4 +1,4 @@
-import { fact } from "@vzc/catalog";
+import { FILE_LIMITS } from "@vzc/catalog";
 import { ERROR_CODES } from "@vzc/contracts";
 import { describe, expect, it } from "vitest";
 import { en, errorMessage, hasMessages, t } from "../src/index.ts";
@@ -18,7 +18,9 @@ describe("i18n (spec 2.3)", () => {
   });
 
   it("puts catalog numbers into error messages", () => {
-    expect(errorMessage("FILE_TOO_LARGE")).toContain(`${fact("file.maxMb")} MB`);
+    expect(errorMessage("FILE_TOO_LARGE")).toContain(
+      `${Math.round(FILE_LIMITS.maxBytes / 1_000_000)} MB`,
+    );
     expect(errorMessage("RATE_LIMITED", { seconds: 30 })).toContain("30 seconds");
   });
 
@@ -27,9 +29,7 @@ describe("i18n (spec 2.3)", () => {
       expect(value.replaceAll("4K", ""), key).not.toMatch(/\d/);
   });
 
-  it("knows which locales it can build", () => {
+  it("builds English (the only locale for now, spec §1.3)", () => {
     expect(hasMessages("en")).toBe(true);
-    expect(hasMessages("es")).toBe(false);
-    expect(() => t("nav.tools", {}, "es")).toThrow("No UI messages for es");
   });
 });

@@ -1,4 +1,4 @@
-import { fact, type LocaleId } from "@vzc/catalog";
+import { FILE_LIMITS, type LocaleId } from "@vzc/catalog";
 import { en } from "./en.ts";
 
 export type MessageKey = keyof typeof en;
@@ -24,7 +24,7 @@ export function t(key: MessageKey, params: Params = {}, locale: LocaleId = "en")
 export function errorMessage(code: string, params: Params = {}, locale: LocaleId = "en"): string {
   const key = `error.${code}`;
   const known: MessageKey = key in en ? (key as MessageKey) : "error.INTERNAL";
-  return t(known, { maxMb: fact("file.maxMb"), ...params }, locale);
+  return t(known, { maxMb: Math.round(FILE_LIMITS.maxBytes / 1_000_000), ...params }, locale);
 }
 
 export { en };

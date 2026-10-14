@@ -1,11 +1,11 @@
 import { OPS } from "@vzc/catalog";
 import type { Bindings } from "../types.ts";
 
-/** Spec 8.2 / 7.4: after 90 days a job keeps its numbers but not who or where it came from. */
+/** Spec §8: after 90 days a story keeps its numbers but not who made it, or their names. */
 export async function anonymizeOld(env: Bindings, now: number): Promise<void> {
   await env.DB.prepare(
-    // Spec 4.6: no owner either; the idempotency key is unique per owner, so it becomes the id.
-    "UPDATE jobs SET owner='anon', idempotency_key=id, visitor_hash='anon', ip_hash='anon', fp_hash=NULL, diagnosis='{}' WHERE created_at<? AND ip_hash!='anon'",
+    // No owner either; the idempotency key is unique per owner, so it becomes the id.
+    "UPDATE stories SET owner='anon', user_id='anon', idempotency_key=id, visitor_hash='anon', ip_hash='anon', fp_hash=NULL, names=NULL, date=NULL WHERE created_at<? AND ip_hash!='anon'",
   )
     .bind(now - OPS.anonymizeAfterDays * 86_400_000)
     .run();
