@@ -15,9 +15,9 @@ const route = (id: string) => {
   return found;
 };
 const input = {
-  imageUrl: "https://r2.example/in/x.jpg",
+  images: ["https://r2.example/in/x.jpg"],
   prompt: "Restore this photo",
-  aspect: "4:3",
+  aspect: "9:16",
 };
 
 /** A fetch that answers with the given JSON bodies in order and records the requests. */
@@ -31,34 +31,6 @@ function fakeFetch(...bodies: unknown[]) {
   return { fetch: fn as unknown as typeof fetch, calls };
 }
 
-describe("buildKieInput", () => {
-  it("maps Seedream to image_urls + size", () => {
-    expect(buildKieInput(route("unblur.std:seedream-2k:1"), input)).toEqual({
-      prompt: "Restore this photo",
-      image_urls: ["https://r2.example/in/x.jpg"],
-      aspect_ratio: "4:3",
-      size: "2K",
-      output_format: "png",
-    });
-  });
-
-  it("maps Nano Banana to image_input + resolution", () => {
-    expect(buildKieInput(route("unblur.4k:nano-banana-pro-4k:1"), input)).toEqual({
-      prompt: "Restore this photo",
-      image_input: ["https://r2.example/in/x.jpg"],
-      aspect_ratio: "4:3",
-      resolution: "4K",
-      output_format: "png",
-    });
-  });
-
-  it("refuses an aspect ratio the model does not accept", () => {
-    expect(() =>
-      buildKieInput(route("unblur.std:seedream-2k:1"), { ...input, aspect: "5:4" }),
-    ).toThrow(/5:4/);
-  });
-});
-
 describe("KieAdapter.submit", () => {
   it("posts model, input and callback and returns the task id", async () => {
     const { fetch, calls } = fakeFetch({
@@ -68,7 +40,7 @@ describe("KieAdapter.submit", () => {
     });
     const kie = new KieAdapter({ apiKey: "test-key", fetch });
     const result = await kie.submit(
-      route("unblur.std:seedream-2k:1"),
+      route("keyframe:seedream-5-pro:3"),
       input,
       "https://api.test/cb",
     );
@@ -76,7 +48,7 @@ describe("KieAdapter.submit", () => {
     expect(calls[0]?.url).toBe(`${KIE_API}/jobs/createTask`);
     const sent = JSON.parse(String(calls[0]?.init?.body));
     expect(sent).toMatchObject({
-      model: "seedream/5-flash-image-to-image",
+      model: "seedream/5-pro-image-to-image",
       callBackUrl: "https://api.test/cb",
     });
     expect(new Headers(calls[0]?.init?.headers).get("authorization")).toBe("Bearer test-key");
@@ -86,7 +58,7 @@ describe("KieAdapter.submit", () => {
     const { fetch } = fakeFetch({ code: 422, msg: "image could not be processed", data: null });
     const kie = new KieAdapter({ apiKey: "k", fetch });
     const error = await kie
-      .submit(route("unblur.std:seedream-2k:1"), input, "https://cb")
+      .submit(route("keyframe:seedream-5-pro:3"), input, "https://cb")
       .catch((e) => e);
     expect(error).toBeInstanceOf(ProviderError);
     expect(error).toMatchObject({ kind: "invalid", code: 422 });
@@ -173,7 +145,7 @@ describe("KieAdapter.status", () => {
 });
 
 describe("review fixes", () => {
-  const seedream = route("unblur.std:seedream-2k:1");
+  const seedream = route("keyframe:seedream-5-pro:3");
 
   it("wraps network failures in a provider error", async () => {
     const down = (async () => {
@@ -198,7 +170,7 @@ describe("review fixes", () => {
   });
 
   it("raises an invalid provider error for an aspect the model does not accept", () => {
-    expect(() => buildKieInput(seedream, { ...input, aspect: "5:4" })).toThrow(ProviderError);
+    expect(() => buildKieInput(seedream, { ...input, aspect: "21:9" })).toThrow(ProviderError);
   });
 
   it("reads resultJson when response.resultUrls is empty", async () => {

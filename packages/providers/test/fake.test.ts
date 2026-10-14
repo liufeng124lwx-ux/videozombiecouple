@@ -2,10 +2,10 @@ import { ROUTES } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
 import { FakeAdapter, ProviderError } from "../src/index.ts";
 
-const seedream = ROUTES.find((r) => r.id === "unblur.std:seedream-2k:1");
-const nb2 = ROUTES.find((r) => r.id === "unblur.std:nano-banana-2-1k:2");
+const seedream = ROUTES.find((r) => r.id === "keyframe:seedream-5-pro:3");
+const nb2 = ROUTES.find((r) => r.id === "keyframe:nano-banana-2:2");
 if (!seedream || !nb2) throw new Error("routes missing");
-const input = { imageUrl: "https://r2.example/in/x.jpg", prompt: "p", aspect: "4:3" };
+const input = { images: ["https://r2.example/in/x.jpg"], prompt: "p", aspect: "9:16" };
 
 describe("FakeAdapter", () => {
   it("succeeds after one pending poll by default", async () => {

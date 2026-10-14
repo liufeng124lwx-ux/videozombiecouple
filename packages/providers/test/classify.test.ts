@@ -30,9 +30,9 @@ describe("classifyKie (spec 4.3)", () => {
 
 // Review focus 2: kie answers HTTP 200 with an error code in the body.
 describe("errors wrapped in HTTP 200", () => {
-  const seedream = ROUTES.find((r) => r.id === "unblur.std:seedream-2k:1");
+  const seedream = ROUTES.find((r) => r.id === "keyframe:seedream-5-pro:3");
   if (!seedream) throw new Error("seedream route missing");
-  const input = { imageUrl: "https://r2.example/in/x.jpg", prompt: "p", aspect: "1:1" };
+  const input = { images: ["https://r2.example/in/x.jpg"], prompt: "p", aspect: "9:16" };
   const answering = (body: unknown) =>
     (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 

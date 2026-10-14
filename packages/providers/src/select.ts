@@ -1,5 +1,4 @@
-import { type CapabilityId, type ModeId, ROUTES, TIERS, type TierId } from "@vzc/catalog";
-import { intersectAspects } from "@vzc/contracts";
+import { type CapabilityId, type ModeId, ROUTES, type RouteSeed } from "@vzc/catalog";
 import type { Route } from "./types.ts";
 
 export type RoutePlan = { primary: Route[]; fallbacks: Route[] };
@@ -40,28 +39,10 @@ export function planRoutes(
   return { primary, fallbacks: pool.filter((r) => !primary.includes(r)) };
 }
 
-/**
- * Spec 3.1: padding is decided per capability over all its routes, enabled or not, so primary,
- * fallback and free retry share one upload and one cropBox even when a breaker flips a route.
- */
-export function padAspects(
-  routes: readonly Route[],
-  capability: CapabilityId,
-): { pad: boolean; aspects: string[] } {
-  const all = routes.filter((r) => r.capability === capability);
-  if (all.length === 0) throw new Error(`no route for ${capability}`);
-  return {
-    pad: all.every((r) => r.padAspect),
-    aspects: intersectAspects(all.map((r) => r.aspects)),
-  };
-}
-
-/** The tier to charge: the most expensive tier among routes whose result was delivered (spec 3.7). */
-export function chargeTier(delivered: readonly Route[]): TierId | null {
-  let best: TierId | null = null;
-  for (const route of delivered) {
-    if (best === null || TIERS[route.creditsTier].credits > TIERS[best].credits)
-      best = route.creditsTier;
-  }
-  return best;
+/** Clip length to ask a video route for: the target rounded up into the route's limits (spec §5.1). */
+export function pickSeconds(route: RouteSeed, targetSec: number): number {
+  const want = Math.min(route.maxSec ?? 15, Math.max(route.minSec ?? 1, Math.ceil(targetSec)));
+  const allowed = route.allowedSec;
+  if (!allowed?.length) return want;
+  return allowed.find((s) => s >= want) ?? (allowed[allowed.length - 1] as number);
 }

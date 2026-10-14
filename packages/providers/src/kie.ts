@@ -1,10 +1,10 @@
 import type { RouteSeed } from "@vzc/catalog";
 import {
   type FailKind,
-  type JobInput,
   type ProviderAdapter,
   ProviderError,
   type StatusResult,
+  type TaskInput,
 } from "./types.ts";
 
 export const KIE_API = "https://api.kie.ai/api/v1";
@@ -22,25 +22,62 @@ type KieRecord = {
   response?: { resultUrls?: unknown } | null;
 };
 
-/** The model-specific `input` object for createTask (field names from the kie schema API). */
-export function buildKieInput(route: RouteSeed, input: JobInput): Record<string, unknown> {
+/** The model-specific `input` object for createTask (field names from the kie schema API, 2026-10-14). */
+export function buildKieInput(route: RouteSeed, input: TaskInput): Record<string, unknown> {
   if (!route.aspects.includes(input.aspect))
     throw new ProviderError("invalid", `aspect ${input.aspect} is not accepted by ${route.model}`);
-  if (route.model.startsWith("seedream/"))
+  const m = route.model;
+  const p = route.params;
+  const { prompt, images, aspect } = input;
+  if (m.startsWith("nano-banana"))
+    return { prompt, image_input: images, aspect_ratio: aspect, ...p };
+  if (m.startsWith("seedream/")) return { prompt, image_urls: images, aspect_ratio: aspect, ...p };
+  if (m.startsWith("gpt-image-2") || m.startsWith("flux-2/"))
+    return { prompt, input_urls: images, aspect_ratio: aspect, ...p };
+  // Every video route animates a keyframe.
+  const { first, last, seconds } = input;
+  if (!first || seconds === undefined)
+    throw new ProviderError("invalid", `${m} needs a first frame and a length in seconds`);
+  const lastFrame = last ? { last_frame_url: last } : {};
+  const frames = last ? [first, last] : [first];
+  if (m.startsWith("bytedance/seedance-2"))
     return {
-      prompt: input.prompt,
-      image_urls: [input.imageUrl],
-      aspect_ratio: input.aspect,
-      ...route.params,
+      prompt,
+      first_frame_url: first,
+      ...lastFrame,
+      aspect_ratio: aspect,
+      duration: seconds,
+      generate_audio: false,
+      ...p,
     };
-  if (route.model.startsWith("nano-banana"))
+  if (m === "kling-3.0/video")
     return {
-      prompt: input.prompt,
-      image_input: [input.imageUrl],
-      aspect_ratio: input.aspect,
-      ...route.params,
+      prompt,
+      image_urls: frames,
+      sound: false,
+      duration: String(seconds),
+      multi_shots: false,
+      ...p,
     };
-  throw new ProviderError("invalid", `no kie input mapping for model ${route.model}`);
+  if (m === "veo-3-1")
+    return {
+      prompt,
+      generation_type: "FIRST_AND_LAST_FRAMES_2_VIDEO",
+      image_urls: frames,
+      aspect_ratio: aspect,
+      duration: seconds,
+      ...p,
+    };
+  if (m === "wan/2-7-image-to-video")
+    return {
+      prompt,
+      first_frame_url: first,
+      ...lastFrame,
+      duration: seconds,
+      prompt_extend: false,
+      ...p,
+    };
+  throw new ProviderError("invalid", `no kie input mapping for model ${m}`);
 }
 
 const CONTENT = /nsfw|content polic|safety|violat|sensitive|prohibited/i;
@@ -118,7 +155,7 @@ export class KieAdapter implements ProviderAdapter {
 
   async submit(
     route: RouteSeed,
-    input: JobInput,
+    input: TaskInput,
     callbackUrl: string,
   ): Promise<{ taskId: string }> {
     const response = await this.#request(`${KIE_API}/jobs/createTask`, {

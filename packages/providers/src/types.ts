@@ -3,14 +3,15 @@ import type { RouteSeed } from "@vzc/catalog";
 /** A provider_routes row at runtime: the seed plus the admin on/off switch. */
 export type Route = RouteSeed & { enabled: boolean };
 
-export type JobInput = {
-  /** Signed R2 URL of the padded JPG (spec 3.2). */
-  imageUrl: string;
+/** One kie call: keyframes edit `images`; video shots animate `first` (and `last`) for `seconds`. */
+export type TaskInput = {
   prompt: string;
-  /** One of route.aspects; the browser padded the photo to it. */
+  /** Reference images (signed R2 URLs) for image edits, in the order the prompt names them. */
+  images: string[];
+  first?: string;
+  last?: string;
+  seconds?: number;
   aspect: string;
-  /** P1 mask editing. */
-  maskUrl?: string;
 };
 
 export type StatusResult =
@@ -28,7 +29,7 @@ export type FailKind =
   | "key_daily_cap";
 
 export interface ProviderAdapter {
-  submit(route: RouteSeed, input: JobInput, callbackUrl: string): Promise<{ taskId: string }>;
+  submit(route: RouteSeed, input: TaskInput, callbackUrl: string): Promise<{ taskId: string }>;
   status(taskId: string): Promise<StatusResult>;
   classify(fail: { code?: number | string; msg?: string }): FailKind;
 }

@@ -2,10 +2,10 @@ import type { RouteSeed } from "@vzc/catalog";
 import { classifyKie } from "./kie.ts";
 import {
   type FailKind,
-  type JobInput,
   type ProviderAdapter,
   ProviderError,
   type StatusResult,
+  type TaskInput,
 } from "./types.ts";
 
 export type FakeStep =
@@ -21,7 +21,7 @@ type Task = { step: FakeStep; polls: number };
  * Used by API integration tests and by FAKE_PROVIDER=1 (spec 11.1).
  */
 export class FakeAdapter implements ProviderAdapter {
-  readonly submitted: { taskId: string; model: string; input: JobInput; callbackUrl: string }[] =
+  readonly submitted: { taskId: string; model: string; input: TaskInput; callbackUrl: string }[] =
     [];
   readonly #script: Map<string, FakeStep[]>;
   readonly #fallback: FakeStep;
@@ -42,7 +42,7 @@ export class FakeAdapter implements ProviderAdapter {
 
   async submit(
     route: RouteSeed,
-    input: JobInput,
+    input: TaskInput,
     callbackUrl: string,
   ): Promise<{ taskId: string }> {
     const step = this.#script.get(route.model)?.shift() ?? this.#fallback;
