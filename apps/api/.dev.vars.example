@@ -1,0 +1,17 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit .dev.vars.
+HMAC_KEY=local-dev-key
+# Cloudflare's always-pass Turnstile test secret.
+TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+R2_ACCESS_KEY_ID=local
+R2_SECRET_ACCESS_KEY=local
+KIE_API_KEY=unused-in-fake-mode
+FAKE_PROVIDER=1
+# Google sign-in stays off locally unless both are set.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Payments stay off locally unless all Waffo settings are present.
+WAFFO_MODE=test
+WAFFO_MERCHANT_ID=
+WAFFO_PRIVATE_KEY=
+WAFFO_STORE_ID=
+WAFFO_PRODUCTS={}

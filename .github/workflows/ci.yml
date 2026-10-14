@@ -1,0 +1,45 @@
+name: ci
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  # deploy.yml runs this on every push to main before deploying.
+  workflow_call:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm --filter @vzc/web verify
+      - run: pnpm --filter @vzc/api dryrun
+      - run: pnpm --filter @vzc/api exec wrangler deploy --dry-run -c wrangler.production.jsonc --outdir dist-production
+
+  # Spec 11.2: WebGL in headless Chromium via SwiftShader, the Canvas 2D fallback, the guest journey
+  # against a local API with the fake provider, and Lighthouse on the production build.
+  browser:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vzc/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @vzc/web browser-check
+      - run: pnpm --filter @vzc/web e2e
+      - run: pnpm --filter @vzc/web lighthouse

@@ -1,0 +1,60 @@
+// Staging. scripts/setup-cloudflare.sh staging creates the resources and prints the ids to fill in
+// below; `wrangler deploy --dry-run` does not need real ids. Production: wrangler.production.jsonc.
+// scripts/launch-secrets.sh staging lists every secret and which are still missing.
+// Secrets (wrangler secret put): HMAC_KEY, TURNSTILE_SECRET, R2_ACCESS_KEY_ID,
+// R2_SECRET_ACCESS_KEY, KIE_API_KEY (a kie sub-key with a spend cap on staging, spec 1.4),
+// GOOGLE_CLIENT_SECRET, WAFFO_PRIVATE_KEY, GA4_API_SECRET.
+// Waffo (test mode): VideoZombieCouple's own merchant, separate from video2mp4; products made by scripts/waffo-setup.ts.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vzc-api-staging",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-04",
+  "routes": [{ "pattern": "api-staging.videozombiecouple.com", "custom_domain": true }],
+  "kv_namespaces": [{ "binding": "KV", "id": "REPLACE_BY_SETUP" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vzc-staging",
+      "database_id": "REPLACE_BY_SETUP",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "vzc-staging" }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+      { "name": "DISPATCHER", "class_name": "Dispatcher" },
+      { "name": "JOB_RUNNER", "class_name": "JobRunner" },
+      { "name": "WALLET", "class_name": "Wallet" }
+    ]
+  },
+  "exports": {
+    "RateLimiter": { "type": "durable-object", "storage": "sqlite" },
+    "Dispatcher": { "type": "durable-object", "storage": "sqlite" },
+    "JobRunner": { "type": "durable-object", "storage": "sqlite" },
+    "Wallet": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "send_email": [
+    { "name": "EMAIL", "allowed_sender_addresses": ["no-reply@videozombiecouple.com"] }
+  ],
+  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "vzc_staging_attempts" }],
+  // Spec 8.2: every 5 minutes, hourly, daily (03:30 UTC) and weekly (Monday 04:00 UTC).
+  "triggers": { "crons": ["*/5 * * * *", "0 * * * *", "30 3 * * *", "0 4 * * 1"] },
+  "vars": {
+    "ENVIRONMENT": "staging",
+    "ALLOWED_ORIGIN": "https://staging.videozombiecouple.com",
+    "API_ORIGIN": "https://api-staging.videozombiecouple.com",
+    "COOKIE_DOMAIN": ".videozombiecouple.com",
+    "TURNSTILE_HOSTNAME": "staging.videozombiecouple.com",
+    "R2_ACCOUNT_ID": "4b2e7a7b095a410bd4bbc63a23698cdf",
+    "R2_BUCKET_NAME": "vzc-staging",
+    "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
+    "GOOGLE_CLIENT_ID": "",
+    "WAFFO_MODE": "test",
+    "WAFFO_MERCHANT_ID": "",
+    "WAFFO_STORE_ID": "",
+    "WAFFO_PRODUCTS": "{}",
+    "GA4_MEASUREMENT_ID": ""
+  }
+}

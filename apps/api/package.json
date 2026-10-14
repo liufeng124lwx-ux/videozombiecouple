@@ -1,0 +1,27 @@
+{
+  "name": "@vzc/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run",
+    "dryrun": "wrangler deploy --dry-run --outdir dist",
+    "route-sync": "tsx scripts/route-sync.ts"
+  },
+  "dependencies": {
+    "@vzc/catalog": "workspace:*",
+    "@vzc/contracts": "workspace:*",
+    "@vzc/providers": "workspace:*",
+    "aws4fetch": "1.0.20",
+    "hono": "4.13.13",
+    "toucan-js": "4.1.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261004.1",
+    "fast-check": "4.10.1",
+    "tsx": "4.23.15",
+    "wrangler": "4.147.0"
+  }
+}

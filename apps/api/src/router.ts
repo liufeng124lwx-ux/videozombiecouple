@@ -1,0 +1,71 @@
+import { Hono } from "hono";
+import { admin } from "./admin/index.ts";
+import { fail } from "./http.ts";
+import { localR2 } from "./local.ts";
+import { ban } from "./middleware/ban.ts";
+import { originGuard } from "./middleware/cors.ts";
+import { flags } from "./middleware/flags.ts";
+import { identity } from "./middleware/identity.ts";
+import { requestId } from "./middleware/request-id.ts";
+import { session } from "./middleware/session.ts";
+import { account, ledger, removeAccount, setPassword } from "./routes/account.ts";
+import { codeLogin, linkLogin, logout, passwordLogin, requestEmailLogin } from "./routes/auth.ts";
+import { billing, cancelPlan, changePlan, checkout, resumePlan } from "./routes/billing.ts";
+import { googleCallback, googleStart } from "./routes/google.ts";
+import { createJob, getJob, retryJob } from "./routes/jobs.ts";
+import { me } from "./routes/me.ts";
+import { quota } from "./routes/quota.ts";
+import { tools } from "./routes/tools.ts";
+import { createUpload } from "./routes/uploads.ts";
+import { kieCallback, waffoWebhook } from "./routes/webhooks.ts";
+import { reportRequest } from "./services/sentry.ts";
+import type { AppEnv } from "./types.ts";
+
+export const app = new Hono<AppEnv>();
+app.use("*", requestId());
+app.use("*", originGuard());
+app.use("/v1/*", identity());
+app.use("/v1/*", session());
+app.use("/v1/*", ban());
+app.use("/v1/*", flags());
+// Google sign-in arrives by navigation; it needs the guest identity to merge the guest's data.
+app.use("/auth/*", identity());
+
+app.get("/health", (c) => c.json({ ok: true }));
+app.get("/v1/me", me);
+app.post("/v1/auth/logout", logout);
+app.post("/v1/auth/email", requestEmailLogin);
+app.post("/v1/auth/code", codeLogin);
+app.post("/v1/auth/link", linkLogin);
+app.post("/v1/auth/password", passwordLogin);
+app.post("/v1/account/password", setPassword);
+app.get("/v1/account", account);
+app.get("/v1/account/ledger", ledger);
+app.post("/v1/account/delete", removeAccount);
+app.get("/v1/billing", billing);
+app.post("/v1/billing/checkout", checkout);
+app.post("/v1/billing/subscription/change", changePlan);
+app.post("/v1/billing/subscription/cancel", cancelPlan);
+app.post("/v1/billing/subscription/resume", resumePlan);
+app.get("/auth/google/start", googleStart);
+app.get("/auth/google/callback", googleCallback);
+app.get("/v1/quota", quota);
+app.get("/v1/tools", tools);
+app.post("/v1/uploads", createUpload);
+app.post("/v1/jobs", createJob);
+app.get("/v1/jobs/:id", getJob);
+app.post("/v1/jobs/:id/retry", retryJob);
+app.post("/webhooks/kie/:jobId", kieCallback);
+app.post("/webhooks/waffo", waffoWebhook);
+
+app.route("/local-r2", localR2);
+app.route("/admin", admin);
+
+app.notFound((c) => fail(c, "NOT_FOUND"));
+app.onError((error, c) => {
+  console.error(
+    JSON.stringify({ level: "error", requestId: c.get("requestId"), message: String(error) }),
+  );
+  reportRequest(c, error);
+  return fail(c, "INTERNAL");
+});

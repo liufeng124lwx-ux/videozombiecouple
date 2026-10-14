@@ -1,0 +1,69 @@
+{
+  "rules": [
+    {
+      "id": "uploads-1d",
+      "enabled": true,
+      "conditions": {
+        "prefix": "in/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      }
+    },
+    {
+      "id": "results-1d",
+      "enabled": true,
+      "conditions": {
+        "prefix": "out/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      }
+    },
+    {
+      "id": "credit-jobs-8d",
+      "enabled": true,
+      "conditions": {
+        "prefix": "keep/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 691200
+        }
+      }
+    },
+    {
+      "id": "shares-8d",
+      "enabled": true,
+      "conditions": {
+        "prefix": "share/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 691200
+        }
+      }
+    },
+    {
+      "id": "abort-uploads-1d",
+      "enabled": true,
+      "conditions": {
+        "prefix": ""
+      },
+      "abortMultipartUploadsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      }
+    }
+  ]
+}

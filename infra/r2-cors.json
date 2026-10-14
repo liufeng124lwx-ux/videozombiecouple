@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": ["https://videozombiecouple.com"],
+        "methods": ["GET", "PUT", "HEAD"],
+        "headers": ["content-type"]
+      },
+      "exposeHeaders": ["etag", "content-length"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

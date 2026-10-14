@@ -1,0 +1,57 @@
+// Production. scripts/setup-cloudflare.sh production creates the resources and prints the ids to
+// fill in below; `wrangler deploy --dry-run` does not need real ids. Secrets: run
+// scripts/launch-secrets.sh production for the list and what is still missing.
+// Deployed only by .github/workflows/deploy.yml after the manual approval (spec 1.4, 11.2).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vzc-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-04",
+  "routes": [{ "pattern": "api.videozombiecouple.com", "custom_domain": true }],
+  "kv_namespaces": [{ "binding": "KV", "id": "REPLACE_BY_SETUP" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vzc",
+      "database_id": "REPLACE_BY_SETUP",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "vzc" }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+      { "name": "DISPATCHER", "class_name": "Dispatcher" },
+      { "name": "JOB_RUNNER", "class_name": "JobRunner" },
+      { "name": "WALLET", "class_name": "Wallet" }
+    ]
+  },
+  "exports": {
+    "RateLimiter": { "type": "durable-object", "storage": "sqlite" },
+    "Dispatcher": { "type": "durable-object", "storage": "sqlite" },
+    "JobRunner": { "type": "durable-object", "storage": "sqlite" },
+    "Wallet": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "send_email": [
+    { "name": "EMAIL", "allowed_sender_addresses": ["no-reply@videozombiecouple.com"] }
+  ],
+  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "vzc_attempts" }],
+  // Spec 8.2: every 5 minutes, hourly, daily (03:30 UTC) and weekly (Monday 04:00 UTC).
+  "triggers": { "crons": ["*/5 * * * *", "0 * * * *", "30 3 * * *", "0 4 * * 1"] },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "ALLOWED_ORIGIN": "https://videozombiecouple.com",
+    "API_ORIGIN": "https://api.videozombiecouple.com",
+    "COOKIE_DOMAIN": ".videozombiecouple.com",
+    "TURNSTILE_HOSTNAME": "videozombiecouple.com",
+    "R2_ACCOUNT_ID": "4b2e7a7b095a410bd4bbc63a23698cdf",
+    "R2_BUCKET_NAME": "vzc",
+    "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
+    "GOOGLE_CLIENT_ID": "",
+    "WAFFO_MODE": "prod",
+    "WAFFO_MERCHANT_ID": "",
+    "WAFFO_STORE_ID": "",
+    "WAFFO_PRODUCTS": "{}",
+    "GA4_MEASUREMENT_ID": "G-PS40BWYD3Z"
+  }
+}
