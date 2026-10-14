@@ -583,7 +583,12 @@ export class StoryRunner extends DurableObject<Bindings> {
     const shots = STORYBOARD.map((shot) => {
       const key = state.steps[`shot:${shot.id}`]?.outputKey;
       if (!key) throw new Error(`shot ${shot.id} has no output`);
-      return { key, seconds: shot.targetSec, grade: shot.first === "C" ? "warm" : "cold" } as const;
+      return {
+        key,
+        seconds: shot.targetSec,
+        grade: shot.first === "C" ? "warm" : "cold",
+        anchor: shot.last ? "end" : "start",
+      } as const;
     });
     const outKey = `out/${spec.id}/video.mp4`;
     const posterKey = `out/${spec.id}/poster.jpg`;
@@ -595,6 +600,7 @@ export class StoryRunner extends DurableObject<Bindings> {
           url: await this.#url(s.key),
           seconds: s.seconds,
           grade: s.grade,
+          anchor: s.anchor,
         })),
       ),
       musicUrl: await this.#url(`assets/${SCENES[spec.scene].musicKey}`),

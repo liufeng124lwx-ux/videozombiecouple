@@ -68,6 +68,7 @@ class Shot(BaseModel):
     url: str
     seconds: float
     grade: str
+    anchor: str = "start"
 
 
 class Caption(BaseModel):
@@ -102,7 +103,7 @@ def score_route(body: ScoreBody):
 
 @app.post("/compose")
 def compose_route(body: ComposeBody):
-    if not body.shots or any(s.grade not in ("cold", "warm") for s in body.shots):
+    if not body.shots or any(s.grade not in ("cold", "warm") or s.anchor not in ("start", "end") for s in body.shots):
         raise HTTPException(400, "bad shots")
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp)
@@ -110,7 +111,7 @@ def compose_route(body: ComposeBody):
         for i, s in enumerate(body.shots):
             p = d / f"shot{i + 1}.mp4"
             fetch_to(s.url, p)
-            parts.append(Part(str(p), s.seconds, s.grade))
+            parts.append(Part(str(p), s.seconds, s.grade, s.anchor))
         music = d / "music.m4a"
         fetch_to(body.musicUrl, music)
         cap = render_caption(body.caption.line1, body.caption.line2, str(d / "caption.png"))

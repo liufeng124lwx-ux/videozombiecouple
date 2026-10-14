@@ -18,7 +18,13 @@ const SAFE = "No blood, no gore, no biting, no gunfire, no text.";
 describe("story catalog", () => {
   it("storyboard plus caption is 12 seconds and shot 3 runs A→B", () => {
     expect(STORYBOARD.reduce((t, s) => t + s.targetSec, 0) + CAPTION_SEC).toBe(12);
-    expect(STORYBOARD.find((s) => s.id === 3)).toMatchObject({ first: "A", last: "B" });
+    expect(STORYBOARD.find((s) => s.id === 3)).toMatchObject({
+      first: "A",
+      last: "B",
+      targetSec: 3,
+    });
+    // Kling's shortest clip is 3 s: the embrace shot fits without a cut.
+    expect(STORYBOARD.map((s) => s.targetSec)).toEqual([3, 2, 3, 3]);
   });
 
   it("every prompt carries the safety line for every scene and kind", () => {

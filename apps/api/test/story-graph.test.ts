@@ -113,7 +113,7 @@ describe("story graph", () => {
     expect(shot3).toMatchObject({
       first: "https://r2/kf/S/a.jpg",
       last: "https://r2/kf/S/kf-B.jpg",
-      targetSec: 2.5,
+      targetSec: 3,
     });
     const shot4 = await kieInputFor(s.steps["shot:4"]!, s, url);
     expect(shot4.first).toBe("https://r2/kf/S/c.jpg");

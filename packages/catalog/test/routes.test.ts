@@ -23,4 +23,14 @@ describe("routes", () => {
     for (const r of ROUTES)
       for (const v of Object.values(r.params)) expect(typeof v).toBe("string");
   });
+
+  it("follows the 2026-10-14 eval: GPT Image 2 for keyframes, Kling 3.0 for shots", () => {
+    const primary = (cap: string) => ROUTES.find((r) => r.capability === cap && r.rank === 1);
+    expect(primary("keyframe")?.model).toBe("gpt-image-2-image-to-image");
+    expect(primary("shot")?.model).toBe("kling-3.0/video");
+    // Seedance 2 Fast fails kie's content review on zombie frames; Wan 2.7 drifts faces.
+    expect(
+      ROUTES.some((r) => r.model === "bytedance/seedance-2-fast" || r.model.startsWith("wan/")),
+    ).toBe(false);
+  });
 });

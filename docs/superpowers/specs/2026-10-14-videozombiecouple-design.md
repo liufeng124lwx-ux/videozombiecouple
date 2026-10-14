@@ -110,13 +110,13 @@ staging / production 两套；域名 `videozombiecouple.com`、`api.`、`staging
 | # | 时长 | 首帧 | 画面 | 运镜 | 声音 |
 |---|---|---|---|---|---|
 | 1 | 0–3s | A | 昏暗木屋，幸存者举枪微抖，丧尸伴侣在门口逆光转头 | 肩后缓慢推近 | 低频嗡鸣、心跳 |
-| 2 | 3–5.5s | A 特写 | 幸存者眼眶泛红，手指离开扳机 | 静止特写，浅景深 | 第一个音进来 |
-| 3 | 5.5–8s | A → B | 放下枪张开双臂，两人抱紧 | 缓慢环绕 | 渐强 |
+| 2 | 3–5s | A | 握枪的手特写，手指离开扳机（宠物版：手放低手电筒） | 缓慢推近，浅景深 | 第一个音进来 |
+| 3 | 5–8s | A → B | 放下枪张开双臂，两人抱紧 | 缓慢环绕 | 渐强 |
 | ✂ | 8s | B → C | 匹配剪辑（同姿势同机位） | — | 鼓点落在切点 |
 | 4 | 8–11s | C | 麦田日落，两人健康，抱着笑，风吹头发与麦穗 | 慢动作拉远 | 主旋律 |
 | 5 | 11–12s | 后期 | 字幕卡 “Even at the end of the world.” + 名字与日期 | — | 余音 |
 
-镜头 3 若模型支持首尾帧，用 A 起、B 止；不支持则只用 B 作首帧生成「抱紧后的微动作」，第 2、3 镜之间用硬切。由评测决定。
+镜头 3 用 A 起、B 止（所有入选视频模型都支持首尾帧）；合成时保留该片段的**结尾**。镜头 2 原为幸存者面部特写，因关键帧 A 里幸存者是背侧位而改为手部特写。各模型最短时长不足时向上取整生成，合成时剪到目标时长。评测结论见 `docs/model-eval.md`。
 
 ### 5.2 提示词结构
 画面风格 → 场景 → 角色（引用 IMAGE 1 / IMAGE 2）→ 一个动作 → 运镜 → 光线 → 约束。视频镜头统一包含 “Faces stay consistent” 与 “subtle, restrained motion”。丧尸妆写具体部位（pale grey-green skin, cloudy white eyes, dark veins at the temples, torn clothing），并要求 “clearly recognizable as IMAGE N”。负面约束固定：no blood, no gore, no biting, no gunfire, no text。宠物版丧尸妆只写 “cloudy eyes, patchy fur”。
@@ -208,6 +208,8 @@ staging / production 两套；域名 `videozombiecouple.com`、`api.`、`staging
 3. 指标：关键帧人脸相似度、视频各镜头人脸相似度、盲评（像不像本人 / 情绪 / 转场）、单次预览成本、单条视频总成本、失败率。
 4. 产出：锁定模型路由、超时、积分 N、免费预览上限、最终定价。
 5. 预算：每轮 ≤ $10；改提示词或路由前必须重跑受影响部分。
+
+结论见 `docs/model-eval.md`（2026-10-14：关键帧 GPT Image 2，镜头 Kling 3.0）。
 
 ## 11. 测试
 - 单元：分镜与提示词组装、kie 图像 / 视频入参映射、积分预扣与退还、阶段状态机、宠物版角色锁定。

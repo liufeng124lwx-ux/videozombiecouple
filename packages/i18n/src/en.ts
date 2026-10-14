@@ -13,9 +13,13 @@ export const en = {
   "nav.skip": "Skip to content",
   "nav.language": "Language",
   "nav.home": "Home",
+  "nav.make": "Make yours",
   "footer.aiTools": "AI tools",
   "footer.freeTools": "Free tools",
   "footer.company": "Company",
+  "footer.make": "Make one",
+  "footer.tagline":
+    "Your zombie love story, starring the two of you. A short AI film made from two photos.",
   "footer.licenses": "Open-source licenses",
   "footer.cookies": "Cookie settings",
   "footer.copyright": "© {year} Arrayon Inc.",

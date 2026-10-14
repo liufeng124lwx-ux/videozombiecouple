@@ -1,4 +1,4 @@
-import { TIERS } from "@vzc/catalog";
+import { ROUTES, TIERS } from "@vzc/catalog";
 import type { StoryView } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COMPOSER_MAX_FAILURES } from "../src/durable-objects/story-runner.ts";
@@ -122,11 +122,14 @@ describe("StoryRunner", () => {
   it("preview fails when every A candidate fails, and gives the quota back", async () => {
     const reject = { kind: "fail", failMsg: "content policy violation" };
     const h = await setup({
-      FAKE_SCRIPT: JSON.stringify({
-        "nano-banana-pro": [reject, reject, reject, reject],
-        "nano-banana-2": [reject, reject, reject, reject],
-        "seedream/5-pro-image-to-image": [reject, reject, reject, reject],
-      }),
+      FAKE_SCRIPT: JSON.stringify(
+        Object.fromEntries(
+          ROUTES.filter((r) => r.capability === "keyframe").map((r) => [
+            r.model,
+            Array(8).fill(reject),
+          ]),
+        ),
+      ),
     });
     scripted(h);
     const { spec, runner } = await h.story();
@@ -158,18 +161,25 @@ describe("StoryRunner", () => {
       "cold",
       "warm",
     ]);
-    expect(calls.composeRequests[0]?.shots.map((s) => s.seconds)).toEqual([3, 2.5, 2.5, 3]);
+    expect(calls.composeRequests[0]?.shots.map((s) => s.seconds)).toEqual([3, 2, 3, 3]);
+    // Shot 3 ends on the embrace (keyframe B): keep the end of the clip, not the start.
+    expect(calls.composeRequests[0]?.shots.map((s) => s.anchor)).toEqual([
+      "start",
+      "start",
+      "end",
+      "start",
+    ]);
     expect(h.wallet.calls).toContainEqual(["commit", "test", spec.id, 10, spec.id]);
   });
 
   it("a shot that exhausts its routes fails the video and releases the credits", async () => {
     const down = { kind: "fail", failMsg: "internal error" };
     const h = await setup({
-      FAKE_SCRIPT: JSON.stringify({
-        "bytedance/seedance-2-mini": [down, down, down, down, down, down, down, down],
-        "kling-3.0/video": [down, down, down, down, down, down, down, down],
-        "wan/2-7-image-to-video": [down, down, down, down, down, down, down, down],
-      }),
+      FAKE_SCRIPT: JSON.stringify(
+        Object.fromEntries(
+          ROUTES.filter((r) => r.capability === "shot").map((r) => [r.model, Array(12).fill(down)]),
+        ),
+      ),
     });
     scripted(h);
     const { spec, runner } = await readyStory(h);

@@ -50,8 +50,8 @@ def test_compose_makes_a_12_second_720x1280_film_and_poster(files):
     tmp, uploads = files
     shots = [
         {"url": clip(tmp / "a.mp4", 4, "navy"), "seconds": 3, "grade": "cold"},
-        {"url": clip(tmp / "b.mp4", 4, "gray"), "seconds": 2.5, "grade": "cold"},
-        {"url": clip(tmp / "c.mp4", 4, "teal"), "seconds": 2.5, "grade": "cold"},
+        {"url": clip(tmp / "b.mp4", 4, "gray"), "seconds": 2, "grade": "cold"},
+        {"url": clip(tmp / "c.mp4", 4, "teal"), "seconds": 3, "grade": "cold", "anchor": "end"},
         {"url": clip(tmp / "d.mp4", 4, "orange"), "seconds": 3, "grade": "warm"},
     ]
     body = {

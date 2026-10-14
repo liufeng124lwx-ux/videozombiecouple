@@ -1,4 +1,4 @@
-import { SPEND_CAPS } from "@vzc/catalog";
+import { ROUTES, SPEND_CAPS } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { settle } from "../src/services/settle.ts";
 import { dailyCreditCap } from "../src/services/spend-cap.ts";
@@ -10,10 +10,9 @@ const DAY = 86_400_000;
 const DOWN = { kind: "fail", failMsg: "internal error" };
 const SHOTS_DOWN = JSON.stringify(
   Object.fromEntries(
-    ["bytedance/seedance-2-mini", "kling-3.0/video", "wan/2-7-image-to-video"].map((m) => [
-      m,
-      Array(8).fill(DOWN),
-    ]),
+    ROUTES.filter((r) => r.capability === "shot")
+      .map((r) => r.model)
+      .map((m) => [m, Array(8).fill(DOWN)]),
   ),
 );
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FakeAdapter, ProviderError } from "../src/index.ts";
 
 const seedream = ROUTES.find((r) => r.id === "keyframe:seedream-5-pro:3");
-const nb2 = ROUTES.find((r) => r.id === "keyframe:nano-banana-2:2");
+const nb2 = ROUTES.find((r) => r.id === "keyframe:nano-banana-pro:2");
 if (!seedream || !nb2) throw new Error("routes missing");
 const input = { images: ["https://r2.example/in/x.jpg"], prompt: "p", aspect: "9:16" };
 

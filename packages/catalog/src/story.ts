@@ -63,8 +63,8 @@ export const STORYBOARD: {
   faces: Face[];
 }[] = [
   { id: 1, targetSec: 3, first: "A", faces: ["infected"] },
-  { id: 2, targetSec: 2.5, first: "A", faces: [] },
-  { id: 3, targetSec: 2.5, first: "A", last: "B", faces: ["survivor", "infected"] },
+  { id: 2, targetSec: 2, first: "A", faces: [] },
+  { id: 3, targetSec: 3, first: "A", last: "B", faces: ["survivor", "infected"] },
   { id: 4, targetSec: 3, first: "C", faces: ["survivor", "infected"] },
 ];
 

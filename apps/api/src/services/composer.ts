@@ -17,7 +17,8 @@ export type ScoreResponse = {
 
 /** POST /compose (spec §4.2 S5): the container reads and writes R2 through these signed URLs only. */
 export type ComposeRequest = {
-  shots: { url: string; seconds: number; grade: "cold" | "warm" }[];
+  /** anchor "end": the clip ends on a keyframe (the embrace), so keep its last `seconds`. */
+  shots: { url: string; seconds: number; grade: "cold" | "warm"; anchor: "start" | "end" }[];
   musicUrl: string;
   caption: { line1: string; line2: string | null };
   outUrl: string;

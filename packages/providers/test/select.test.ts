@@ -8,8 +8,11 @@ const disable = (routes: Route[], id: string) =>
 describe("planRoutes", () => {
   it("runs the rank-1 keyframe route first with the others as fallbacks, in rank order", () => {
     const plan = planRoutes(seedRoutes(), "keyframe", "human");
-    expect(ids(plan.primary)).toEqual(["keyframe:nano-banana-pro:1"]);
-    expect(ids(plan.fallbacks)).toEqual(["keyframe:nano-banana-2:2", "keyframe:seedream-5-pro:3"]);
+    expect(ids(plan.primary)).toEqual(["keyframe:gpt-image-2:1"]);
+    expect(ids(plan.fallbacks)).toEqual([
+      "keyframe:nano-banana-pro:2",
+      "keyframe:seedream-5-pro:3",
+    ]);
   });
 
   it("plans shots from the shot routes only", () => {
@@ -22,19 +25,15 @@ describe("planRoutes", () => {
     const routes = [...seedRoutes(), special];
     const pet = planRoutes(routes, "keyframe", "pet");
     expect(ids(pet.primary)).toEqual(["keyframe:pet-special:1"]);
-    expect(ids(pet.fallbacks)).toEqual(["keyframe:nano-banana-2:2", "keyframe:seedream-5-pro:3"]);
+    expect(ids(pet.fallbacks)).toEqual(["keyframe:nano-banana-pro:2", "keyframe:seedream-5-pro:3"]);
     expect(ids(planRoutes(routes, "keyframe", "human").primary)).toEqual([
-      "keyframe:nano-banana-pro:1",
+      "keyframe:gpt-image-2:1",
     ]);
   });
 
   it("promotes the next rank when the primary is disabled", () => {
-    const plan = planRoutes(
-      disable(seedRoutes(), "keyframe:nano-banana-pro:1"),
-      "keyframe",
-      "human",
-    );
-    expect(ids(plan.primary)).toEqual(["keyframe:nano-banana-2:2"]);
+    const plan = planRoutes(disable(seedRoutes(), "keyframe:gpt-image-2:1"), "keyframe", "human");
+    expect(ids(plan.primary)).toEqual(["keyframe:nano-banana-pro:2"]);
   });
 
   it("submits routes together only when the lowest rank is marked parallel", () => {
@@ -42,8 +41,8 @@ describe("planRoutes", () => {
       r.capability === "keyframe" && r.rank <= 2 ? { ...r, rank: 1, parallel: true } : r,
     );
     expect(ids(planRoutes(routes, "keyframe", "human").primary).sort()).toEqual([
-      "keyframe:nano-banana-2:2",
-      "keyframe:nano-banana-pro:1",
+      "keyframe:gpt-image-2:1",
+      "keyframe:nano-banana-pro:2",
     ]);
   });
 

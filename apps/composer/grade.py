@@ -22,6 +22,8 @@ class Part:
     path: str
     seconds: float
     grade: str
+    # "end": the clip ends on a keyframe (shot 3 ends on the embrace), so keep its last seconds.
+    anchor: str = "start"
 
 
 def fmt(x: float) -> str:
@@ -36,6 +38,8 @@ def build_compose_cmd(parts: list[Part], music: str, caption_png: str, out: str)
     total = total_seconds(parts)
     cmd = ["ffmpeg", "-y", "-loglevel", "error"]
     for p in parts:
+        if p.anchor == "end":
+            cmd += ["-sseof", f"-{fmt(p.seconds)}"]
         cmd += ["-t", fmt(p.seconds), "-i", p.path]
     cmd += ["-loop", "1", "-t", fmt(CAPTION_SEC), "-i", caption_png]
     cmd += ["-i", music]

@@ -77,43 +77,46 @@ const video = (
   ...s,
 });
 
-/** Provisional until docs/model-eval.md lands (backend plan Task 4 replaces these from the eval). */
+/**
+ * docs/model-eval.md (eval run r1, 2026-10-14). Timeouts are about twice the measured p90, at least
+ * 120 s for images and 300 s for videos; costs are the measured averages.
+ */
 export const ROUTES: readonly RouteSeed[] = [
-  image(
-    { capability: "keyframe", rank: 1 },
-    "nano-banana-pro",
-    "nano-banana-pro",
-    { resolution: "1K", output_format: "jpg" },
-    0.04,
-    "Nano Banana Pro",
-  ),
-  image(
-    { capability: "keyframe", rank: 2 },
-    "nano-banana-2",
-    "nano-banana-2",
-    { resolution: "1K", output_format: "jpg" },
-    0.025,
-    "Nano Banana 2",
-  ),
-  image(
-    { capability: "keyframe", rank: 3 },
-    "seedream-5-pro",
-    "seedream/5-pro-image-to-image",
-    { quality: "basic", output_format: "jpeg" },
-    0.0425,
-    "Seedream 5 Pro",
-  ),
+  {
+    ...image(
+      { capability: "keyframe", rank: 1 },
+      "gpt-image-2",
+      "gpt-image-2-image-to-image",
+      { resolution: "1K" },
+      0.015,
+      "GPT Image 2",
+    ),
+    timeoutMs: 220_000,
+  },
+  {
+    ...image(
+      { capability: "keyframe", rank: 2 },
+      "nano-banana-pro",
+      "nano-banana-pro",
+      { resolution: "1K", output_format: "jpg" },
+      0.04,
+      "Nano Banana Pro",
+    ),
+    timeoutMs: 260_000,
+  },
+  {
+    ...image(
+      { capability: "keyframe", rank: 3 },
+      "seedream-5-pro",
+      "seedream/5-pro-image-to-image",
+      { quality: "basic", output_format: "jpeg" },
+      0.0425,
+      "Seedream 5 Pro",
+    ),
+    timeoutMs: 260_000,
+  },
   video(
     { capability: "shot", rank: 1 },
-    "seedance-2-mini",
-    "bytedance/seedance-2-mini",
-    { resolution: "720p" },
-    0.164,
-    "Seedance 2 Mini",
-    { minSec: 4, maxSec: 15 },
-  ),
-  video(
-    { capability: "shot", rank: 2 },
     "kling-3-std",
     "kling-3.0/video",
     { mode: "std" },
@@ -122,12 +125,21 @@ export const ROUTES: readonly RouteSeed[] = [
     { minSec: 3, maxSec: 15 },
   ),
   video(
+    { capability: "shot", rank: 2 },
+    "veo-3-1-lite",
+    "veo-3-1",
+    { model: "veo3_lite", resolution: "720p" },
+    0.075,
+    "Veo 3.1 Lite",
+    { minSec: 4, maxSec: 8, allowedSec: [4, 6, 8] },
+  ),
+  video(
     { capability: "shot", rank: 3 },
-    "wan-2-7",
-    "wan/2-7-image-to-video",
+    "seedance-2-mini",
+    "bytedance/seedance-2-mini",
     { resolution: "720p" },
-    0.24,
-    "Wan 2.7",
-    { minSec: 2, maxSec: 15 },
+    0.164,
+    "Seedance 2 Mini",
+    { minSec: 4, maxSec: 15 },
   ),
 ];

@@ -1,3 +1,4 @@
+import { ROUTES } from "@vzc/catalog";
 import type { FakeStep } from "@vzc/providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { liftKieCap, pauseForKieCap } from "../src/ops/kie-cap.ts";
@@ -5,7 +6,7 @@ import type { Bindings } from "../src/types.ts";
 import { setup } from "./harness.ts";
 
 const NOON = Date.UTC(2026, 9, 9, 12);
-const SHOT_MODELS = ["bytedance/seedance-2-mini", "kling-3.0/video", "wan/2-7-image-to-video"];
+const SHOT_MODELS = ROUTES.filter((r) => r.capability === "shot").map((r) => r.model);
 /** Every shot model refuses its first call: the kie key hit its daily cap. */
 const CAPPED: Record<string, FakeStep[]> = Object.fromEntries(
   SHOT_MODELS.map((m) => [
