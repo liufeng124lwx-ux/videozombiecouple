@@ -113,6 +113,12 @@ export const en = {
   "story.tips.one": "One person per photo",
   "story.tips.light": "Good light, no sunglasses",
   "story.tips.adults": "Adults who agreed to it",
+  "story.consent.human":
+    "I'm 18 or older. Both people in these photos are adults who agreed to be in this film and to their faces being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
+  "story.consent.pet":
+    "I'm 18 or older. The person in this photo is me, or an adult who agreed to be in this film and to their face being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
+  "story.consent.terms": "Terms",
+  "story.consent.biometric": "Biometric data notice",
   "story.privacy":
     "Your photos are private. They are deleted within {photosDays} days, and we never use them to train AI.",
   "story.scene.label": "Pick the scene",
@@ -325,7 +331,8 @@ export const en = {
   "delete.confirm.title": "Delete your account?",
   "delete.confirm.text": "This can’t be undone. Right away we will:",
   "delete.confirm.photos": "delete your photos and results",
-  "delete.confirm.credits": "remove your {n} credits (they can’t be refunded)",
+  "delete.confirm.credits":
+    "remove your {n} credits. Bought a pack in the last {days} days and haven't used it? Ask us for a refund first.",
   "delete.confirm.signout": "sign you out everywhere",
   "delete.confirm.orders": "We keep order records for tax, without your name or email.",
   "delete.confirm.type": "Type DELETE to confirm",
@@ -379,6 +386,9 @@ export const en = {
     "We couldn’t find a clear face in one of the photos. Use a front-facing photo of one person. Nothing was charged.",
   "error.UNDERAGE":
     "This tool is only for photos of adults. If you are one, try a clearer, recent photo. Nothing was charged.",
+  "error.CONSENT_REQUIRED": "Please tick the box to confirm both people agreed, then try again.",
+  "error.REGION_UNAVAILABLE":
+    "Films of two people aren't available in your state yet. You can make the pet version.",
   "error.PHOTO_REJECTED":
     "One of these photos can't be used: please choose a clothed, everyday photo. Nothing was charged.",
   "error.COMPOSE_FAILED": "We couldn’t finish your video. Your credits were given back. Try again.",

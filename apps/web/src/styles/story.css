@@ -177,6 +177,26 @@
   color: var(--text-2);
 }
 
+/* The upload consent: a real checkbox, read before the button */
+.consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--text-2);
+  line-height: 1.5;
+  cursor: pointer;
+}
+.consent input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--ember);
+}
+.consent a {
+  color: var(--text);
+}
+
 /* Cinema tickets: paper, notched sides, a window onto the scene, a perforated stub */
 .scenes {
   border: 0;

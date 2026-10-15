@@ -68,6 +68,9 @@ export const ABUSE = {
   minEstimatedAge: 21,
 } as const;
 
+/** Terms, "Report a video": a film shown without consent comes down this soon after a report. */
+export const TAKEDOWN_HOURS = 48;
+
 /** Spec 6.6: full refund for an untouched pack, or a new plan barely used, inside these windows. */
 export const REFUND_POLICY = {
   packDays: 7,

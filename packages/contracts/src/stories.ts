@@ -10,6 +10,12 @@ const Names = z.string().trim().max(40);
 const DateText = z.string().trim().max(20);
 
 /** Spec §4.1: who turns is chosen in the browser by swapping the two keys. */
+/**
+ * The upload consent the person ticks before every story (both people are adults who agreed; the
+ * in-memory face analysis). Bump it whenever that text changes: stories record the version agreed to.
+ */
+export const UPLOAD_CONSENT_VERSION = "2026-10-15";
+
 export const CreateStorySchema = z.object({
   survivorKey: UploadKeySchema,
   infectedKey: UploadKeySchema,
@@ -18,6 +24,8 @@ export const CreateStorySchema = z.object({
   names: Names.optional(),
   date: DateText.optional(),
   idempotencyKey: IdempotencyKey,
+  /** UPLOAD_CONSENT_VERSION; anything else is answered CONSENT_REQUIRED. */
+  consent: z.string().max(32).optional(),
 });
 export type CreateStoryRequest = z.infer<typeof CreateStorySchema>;
 

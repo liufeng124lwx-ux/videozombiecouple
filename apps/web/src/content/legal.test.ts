@@ -45,6 +45,27 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
     expect(text).toContain(DMCA);
   });
 
+  it("privacy has a public biometric data policy: what, why, consent, retention schedule, no sale", () => {
+    const text = page("privacy");
+    expect(text).toContain("## Biometric data");
+    for (const part of [
+      "Illinois Biometric Information Privacy Act",
+      "face geometry",
+      "Before every upload",
+      "never sell, lease, trade or otherwise profit from",
+      "never written to disk",
+      "aren’t available in Illinois",
+    ])
+      expect(text, part).toContain(part);
+  });
+
+  it("terms say how the upload confirmation works and how to get a film taken down within 48 hours", () => {
+    const text = page("terms");
+    expect(text).toContain("ticking the box before every upload");
+    expect(text).toContain("## Report a video");
+    expect(text).toContain('within <F k="takedown.hours" /> hours');
+  });
+
   it("terms cover adults only, whose photos, AI accuracy, banned uses, no affiliation and Wyoming law", () => {
     const text = page("terms");
     for (const phrase of [

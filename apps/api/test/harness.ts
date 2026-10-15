@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { MODES } from "@vzc/catalog";
+import { UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { vi } from "vitest";
 import { Dispatcher } from "../src/durable-objects/dispatcher.ts";
 import { RateLimiter } from "../src/durable-objects/rate-limiter.ts";
@@ -229,6 +230,7 @@ export function storyBody(
     kind: "human",
     scene: "cabin-wheat",
     idempotencyKey: `idem-${survivorKey.slice(3, 29)}`,
+    consent: UPLOAD_CONSENT_VERSION,
     ...overrides,
   };
 }

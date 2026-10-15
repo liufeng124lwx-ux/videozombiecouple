@@ -1,3 +1,4 @@
+import { fact } from "@vzc/catalog";
 import "../../styles/dialog.css";
 import type { BillingView } from "@vzc/contracts";
 import { t } from "@vzc/i18n";
@@ -95,7 +96,12 @@ export default function DeleteAccount({
               <p class="sub">{t("delete.confirm.text")}</p>
               <ul class="bullets">
                 <li>{t("delete.confirm.photos")}</li>
-                <li>{t("delete.confirm.credits", { n: credits.toLocaleString("en-US") })}</li>
+                <li>
+                  {t("delete.confirm.credits", {
+                    n: credits.toLocaleString("en-US"),
+                    days: fact("refund.packDays"),
+                  })}
+                </li>
                 <li>{t("delete.confirm.signout")}</li>
               </ul>
               <p class="fine">{t("delete.confirm.orders")}</p>

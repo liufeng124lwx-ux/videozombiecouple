@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import type { StoryView } from "@vzc/contracts";
+import { type StoryView, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api.ts";
 
@@ -57,7 +57,12 @@ const view = (status: StoryView["status"], over: Partial<StoryView> = {}): Story
   ...over,
 });
 
-function addPhotos() {
+function agree() {
+  fireEvent.click(screen.getByRole("checkbox", { name: /Both people in these photos are adults/ }));
+}
+
+function addPhotos({ consent = true } = {}) {
+  if (consent) agree();
   const inputs = document.querySelectorAll<HTMLInputElement>('input[type="file"]');
   for (const input of inputs)
     fireEvent.change(input, {
@@ -93,6 +98,29 @@ describe("StoryTool", () => {
     // After checkout the buyer comes back to this story and the film starts by itself.
     expect(packs.textContent).toBe("/story?id=S1&render=1");
     expect(client.render).not.toHaveBeenCalled();
+  });
+
+  it("cannot start until the uploader confirms both people agreed; sends the consent version", async () => {
+    client.getStory.mockResolvedValue(view("preview_ready"));
+    render(<StoryTool posters={{}} pollMs={10} />);
+    addPhotos({ consent: false });
+    const go = (await screen.findByRole("button", { name: "Make my film" })) as HTMLButtonElement;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(go.disabled).toBe(true);
+    const box = screen.getByRole("checkbox", { name: /Both people in these photos are adults/ });
+    expect((box as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByRole("link", { name: "Biometric data notice" }).getAttribute("href")).toBe(
+      "/privacy#biometric-data",
+    );
+    agree();
+    await waitFor(() => expect(go.disabled).toBe(false));
+    fireEvent.click(go);
+    await waitFor(() =>
+      expect(client.createStory).toHaveBeenCalledWith(
+        expect.objectContaining({ consent: UPLOAD_CONSENT_VERSION }),
+        expect.any(Function),
+      ),
+    );
   });
 
   it("a member with videos makes the film straight away", async () => {

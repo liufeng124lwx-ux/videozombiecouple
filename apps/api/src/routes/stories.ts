@@ -1,5 +1,11 @@
 import { MODES, RATE_LIMITS, RETENTION } from "@vzc/catalog";
-import { CreateStorySchema, RecomposeSchema, RenderSchema, type SharedFilm } from "@vzc/contracts";
+import {
+  CreateStorySchema,
+  RecomposeSchema,
+  RenderSchema,
+  type SharedFilm,
+  UPLOAD_CONSENT_VERSION,
+} from "@vzc/contracts";
 import type { Context } from "hono";
 import { MAX_PAID_ATTEMPTS } from "../durable-objects/story-runner.ts";
 import { fail } from "../http.ts";
@@ -40,6 +46,14 @@ async function ownedStory(c: Context<AppEnv>, id: string): Promise<boolean> {
   );
 }
 
+/** "US-IL": the visitor's country and region (Cloudflare's visitor location), or null. */
+function regionOf(c: Context<AppEnv>): string | null {
+  const cf = (c.req.raw as { cf?: { country?: string; regionCode?: string } }).cf;
+  const country = (c.req.header("cf-ipcountry") ?? cf?.country ?? "").toUpperCase();
+  const region = (c.req.header("cf-region-code") ?? cf?.regionCode ?? "").toUpperCase();
+  return country && region ? `${country}-${region}` : null;
+}
+
 /**
  * Limit, check the human and both photos, keep the photos, record the story and start its runner,
  * which only checks the photos (one adult face each) on our own container: nothing is generated
@@ -50,6 +64,10 @@ export async function createStory(c: Context<AppEnv>) {
   const parsed = CreateStorySchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return fail(c, "BAD_REQUEST");
   const request = parsed.data;
+  if (request.consent !== UPLOAD_CONSENT_VERSION) return fail(c, "CONSENT_REQUIRED");
+  // Illinois (BIPA): the second person's face is analysed without their own written release, so
+  // only the pet version (the uploader's own face) is offered there.
+  if (request.kind === "human" && regionOf(c) === "US-IL") return fail(c, "REGION_UNAVAILABLE");
   if ((await readFlags(c.env.KV)).offline.includes("keyframe")) return fail(c, "PROVIDER_DOWN");
   const rate = await hitRate(
     c.env,
@@ -87,7 +105,7 @@ export async function createStory(c: Context<AppEnv>) {
   };
   try {
     await c.env.DB.prepare(
-      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at,consent_version,consent_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     )
       .bind(
         id,
@@ -107,6 +125,8 @@ export async function createStory(c: Context<AppEnv>) {
         request.idempotencyKey,
         now,
         now + RETENTION.workDays * 86_400_000,
+        request.consent,
+        now,
       )
       .run();
   } catch (error) {

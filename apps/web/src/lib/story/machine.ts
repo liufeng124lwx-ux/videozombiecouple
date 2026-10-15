@@ -23,6 +23,8 @@ export type ToolState = {
   checking: Record<Slot, boolean>;
   scene: SceneId;
   title: { names: string; date: string };
+  /** The uploader confirmed both people are adults who agreed (and the face analysis). */
+  consent: boolean;
   phase: Phase;
   storyId: string | null;
   story: StoryView | null;
@@ -38,6 +40,7 @@ export type ToolEvent =
   | { type: "swap" }
   | { type: "scene"; scene: SceneId }
   | { type: "title"; names: string; date: string }
+  | { type: "consent"; value: boolean }
   | { type: "submit" }
   | { type: "created"; storyId: string }
   | { type: "resume"; storyId: string }
@@ -55,6 +58,7 @@ export function initialState(over: Partial<Pick<ToolState, "kind" | "scene">> = 
     checking: { survivor: false, infected: false },
     scene: over.scene ?? "cabin-wheat",
     title: { names: "", date: "" },
+    consent: false,
     phase: "setup",
     storyId: null,
     story: null,
@@ -66,10 +70,14 @@ const usable = (p: Photo | null) =>
   p !== null &&
   (p.face === "ok" || p.face === "unknown" || p.face === "skipped" || p.face === "small");
 
-/** Two photos, each with one clear face (the pet photo is not checked), nothing still loading. */
+/**
+ * Consent given, two photos, each with one clear face (the pet photo is not checked), nothing still
+ * loading.
+ */
 export function canSubmit(s: ToolState): boolean {
   return (
     s.phase === "setup" &&
+    s.consent &&
     !s.checking.survivor &&
     !s.checking.infected &&
     usable(s.photos.survivor) &&
@@ -115,6 +123,8 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
       return { ...s, scene: e.scene };
     case "title":
       return { ...s, title: { names: e.names, date: e.date } };
+    case "consent":
+      return { ...s, consent: e.value };
     case "submit":
       return canSubmit(s) ? { ...s, phase: "uploading", error: null } : s;
     case "created":

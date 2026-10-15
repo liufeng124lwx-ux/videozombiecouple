@@ -52,6 +52,20 @@ Our legal bases under the GDPR are: performing our contract with you (running th
 
 **AI generation.** After you pay, to make keyframes and video shots, your photos are sent to AI models through kie.ai, which runs models from OpenAI, Google, Kuaishou (Kling) and ByteDance (Seedance). They process the photos to return the result to us. We never use your photos to train AI.
 
+## Biometric data
+
+**What it is.** When you upload photos of people, our own servers compute face geometry (a set of numbers that describes a face) from each photo and from each candidate keyframe, and estimate each person’s age. Laws such as the Illinois Biometric Information Privacy Act, similar laws in Texas, Washington and Colorado, and the GDPR treat this as biometric data.
+
+**Why we use it.** Only to check that each photo shows one adult face, and to pick the generated frame that looks most like the people in your photos. Never to identify anyone, never for marketing, and never to train anything.
+
+**Consent.** Before every upload, you confirm that you are 18 or older and that each person in the photos is an adult who agreed to be in the film and to this analysis. We record when you confirmed and which wording you agreed to. Films of two people aren’t available in Illinois; the pet version is.
+
+**How long we keep it.** Face geometry exists only in memory while a check runs, for a few seconds, and is then discarded. It is never written to disk, to a database or to a log. The photos it comes from are deleted within <F k="retention.photosDays" /> days. This is our retention schedule: biometric data is destroyed as soon as the check that needed it ends, and never kept beyond that.
+
+**No sale or disclosure.** We never sell, lease, trade or otherwise profit from biometric data, and we never disclose it to anyone. It never leaves our servers.
+
+**Security.** Photos are stored privately, reached only through short-lived signed links, and sent only over encrypted connections, with the same care as the most sensitive data we hold.
+
 ## Who processes your data for us
 
 | Service | What it does for us | What it receives |

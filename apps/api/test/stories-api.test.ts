@@ -1,4 +1,5 @@
 import { RETENTION, TIERS } from "@vzc/catalog";
+import { UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { callbackToken } from "../src/services/crypto.ts";
 import { HMAC_KEY, setup, storyBody } from "./harness.ts";
@@ -79,6 +80,56 @@ describe("story API", () => {
     });
     expect(again.body.error?.code).toBe("LOGIN_REQUIRED");
     expect(again.cookies.upx_sess).toBeUndefined();
+  });
+
+  it("needs the uploader's consent (face analysis, the other person's agreement) and records which text they agreed to", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    await h.pass();
+    const a = await h.upload();
+    const b = await h.upload();
+    const { consent: _c, ...without } = storyBody(a, b) as Record<string, unknown>;
+    const refused = await h.call("/v1/stories", { method: "POST", body: without });
+    expect(refused.body.error?.code).toBe("CONSENT_REQUIRED");
+    const old = await h.call("/v1/stories", {
+      method: "POST",
+      body: { ...without, consent: "2020-01-01" },
+    });
+    expect(old.body.error?.code).toBe("CONSENT_REQUIRED");
+    const ok = await h.call("/v1/stories", { method: "POST", body: storyBody(a, b) });
+    expect(ok.status).toBe(201);
+    expect(
+      h.db
+        .prepare("SELECT consent_version, consent_at FROM stories WHERE id=?")
+        .get(ok.body.storyId),
+    ).toEqual({ consent_version: UPLOAD_CONSENT_VERSION, consent_at: T0 });
+  });
+
+  it("in Illinois only the pet version is offered (BIPA: the second person's face)", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    await h.pass();
+    const il = { "cf-ipcountry": "US", "cf-region-code": "IL" };
+    const a = await h.upload();
+    const b = await h.upload();
+    const human = await h.call("/v1/stories", {
+      method: "POST",
+      body: storyBody(a, b),
+      headers: il,
+    });
+    expect(human.body.error?.code).toBe("REGION_UNAVAILABLE");
+    const pet = await h.call("/v1/stories", {
+      method: "POST",
+      body: storyBody(a, b, { kind: "pet", idempotencyKey: "idem-pet-il-000000" }),
+      headers: il,
+    });
+    expect(pet.status).toBe(201);
+    const c2 = await h.upload();
+    const d2 = await h.upload();
+    const ny = await h.call("/v1/stories", {
+      method: "POST",
+      body: storyBody(c2, d2, { idempotencyKey: "idem-ny-0000000000" }),
+      headers: { "cf-ipcountry": "US", "cf-region-code": "NY" },
+    });
+    expect(ny.status).toBe(201);
   });
 
   it("rejects another browser's upload", async () => {

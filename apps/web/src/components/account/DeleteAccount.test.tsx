@@ -46,7 +46,12 @@ describe("DeleteAccount (spec 5.5, design S15)", () => {
       <DeleteAccount billing={NO_PLAN} credits={142} onCancelPlan={vi.fn()} navigate={navigate} />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Delete account…" }));
-    expect(screen.getByText("remove your 142 credits (they can’t be refunded)")).toBeTruthy();
+    // An unused pack is still refundable for a while: say so before the credits are gone.
+    expect(
+      screen.getByText(
+        "remove your 142 credits. Bought a pack in the last 7 days and haven't used it? Ask us for a refund first.",
+      ),
+    ).toBeTruthy();
     const confirm = screen.getByRole("button", { name: "Delete account" }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
     fireEvent.input(screen.getByLabelText("Type DELETE to confirm"), {

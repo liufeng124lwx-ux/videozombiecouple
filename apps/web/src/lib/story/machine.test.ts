@@ -28,8 +28,8 @@ const run = (events: Parameters<typeof reduce>[1][], start: ToolState = initialS
   events.reduce(reduce, start);
 
 describe("story tool machine", () => {
-  it("needs two photos with one clear face each before the preview", () => {
-    let s = initialState();
+  it("needs consent and two photos with one clear face each before the preview", () => {
+    let s = run([{ type: "consent", value: true }]);
     expect(canSubmit(s)).toBe(false);
     s = run([{ type: "photo", slot: "survivor", photo: photo() }], s);
     expect(canSubmit(s)).toBe(false);
@@ -37,6 +37,7 @@ describe("story tool machine", () => {
     expect(canSubmit(s)).toBe(false);
     s = run([{ type: "photo", slot: "infected", photo: photo("unknown") }], s);
     expect(canSubmit(s)).toBe(true);
+    expect(canSubmit(run([{ type: "consent", value: false }], s))).toBe(false);
   });
 
   it("swaps who turns, but not in the pet version", () => {
@@ -63,6 +64,7 @@ describe("story tool machine", () => {
 
   it("follows the story through preview, payment and render", () => {
     let s = run([
+      { type: "consent", value: true },
       { type: "photo", slot: "survivor", photo: photo() },
       { type: "photo", slot: "infected", photo: photo() },
       { type: "submit" },

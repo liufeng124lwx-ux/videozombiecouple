@@ -1,5 +1,5 @@
 import { fact, type Kind, type SceneId, TIERS } from "@vzc/catalog";
-import type { SharedFilm } from "@vzc/contracts";
+import { type SharedFilm, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { track } from "../../lib/analytics.ts";
@@ -220,6 +220,7 @@ export default function StoryTool({
           ...(s.title.names ? { names: s.title.names } : {}),
           ...(s.title.date ? { date: s.title.date } : {}),
           idempotencyKey: newIdempotencyKey(),
+          consent: UPLOAD_CONSENT_VERSION,
         },
         token,
       );
@@ -402,6 +403,19 @@ export default function StoryTool({
           </div>
 
           <p class="fine">{t("story.privacy", { photosDays: fact("retention.photosDays") })}</p>
+          <label class="consent small">
+            <input
+              type="checkbox"
+              checked={s.consent}
+              disabled={busy}
+              onChange={(e) => dispatch({ type: "consent", value: e.currentTarget.checked })}
+            />
+            <span>
+              {t(s.kind === "pet" ? "story.consent.pet" : "story.consent.human")}{" "}
+              <a href="/terms">{t("story.consent.terms")}</a> ·{" "}
+              <a href="/privacy#biometric-data">{t("story.consent.biometric")}</a>
+            </span>
+          </label>
           {s.error && (
             <p class="err-text small" role="alert">
               {message(s.error)}
