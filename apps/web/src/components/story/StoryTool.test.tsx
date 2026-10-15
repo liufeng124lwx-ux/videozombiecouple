@@ -166,6 +166,11 @@ describe("StoryTool", () => {
     );
   });
 
+  it("masks the whole tool from session recordings (photos, frames, film)", async () => {
+    const { container } = render(<StoryTool posters={{}} pollMs={10} />);
+    expect(container.firstElementChild?.getAttribute("data-clarity-mask")).toBe("true");
+  });
+
   it("resumes a running story after reload", async () => {
     localStorage.setItem("vzc-story", "S1");
     client.getStory.mockResolvedValue(view("rendering", { preview: { A: "a", C: "c" } }));

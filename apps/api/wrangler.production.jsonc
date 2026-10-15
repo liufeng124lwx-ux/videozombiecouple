@@ -58,11 +58,11 @@
     "R2_ACCOUNT_ID": "4b2e7a7b095a410bd4bbc63a23698cdf",
     "R2_BUCKET_NAME": "vzc",
     "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
-    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_CLIENT_ID": "876510837060-62rgai18m99a6ofgs4rvricmd19pc42u.apps.googleusercontent.com",
     "WAFFO_MODE": "prod",
     "WAFFO_MERCHANT_ID": "",
     "WAFFO_STORE_ID": "",
     "WAFFO_PRODUCTS": "{}",
-    "GA4_MEASUREMENT_ID": "G-PS40BWYD3Z"
+    "GA4_MEASUREMENT_ID": "G-PHDSR4556T"
   }
 }

@@ -269,7 +269,7 @@ export default function StoryTool({
 
   if (shared)
     return (
-      <div class="tool tool-shared">
+      <div class="tool tool-shared" data-clarity-mask="true">
         {shared === "gone" ? (
           <p class="notice">{t("story.shared.gone", { days: fact("retention.videoDays") })}</p>
         ) : (
@@ -303,7 +303,7 @@ export default function StoryTool({
     );
 
   return (
-    <div class="tool" data-phase={s.phase}>
+    <div class="tool" data-phase={s.phase} data-clarity-mask="true">
       {(s.phase === "setup" || s.phase === "uploading") && (
         <div class="tool-setup">
           <div class="kind-toggle" role="radiogroup" aria-label={t("story.kind.label")}>

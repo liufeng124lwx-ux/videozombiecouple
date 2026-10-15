@@ -21,6 +21,9 @@ case "$env" in
 esac
 
 cd "$(dirname "$0")/.."
+# This site's own analytics (public IDs; separate accounts from UnblurPix and video2mp4).
+GA4_ID=G-PHDSR4556T
+CLARITY_ID=yxv3ilksct
 root="$(pwd)"
 secrets="$HOME/.vzc-secrets"
 # Every step is idempotent; retry the Cloudflare API's occasional "fetch failed".
@@ -51,18 +54,27 @@ api deploy -c "$api_config"
 
 echo "== secrets (piped)"
 # Python reads the secret files itself: no secret value ever appears in a process's arguments.
-python3 - "$hmac_file" "$secrets/eval.env" "$secrets/turnstile.env" >"$tmp/secrets.json" <<'PY'
-import json, sys
+python3 - "$hmac_file" "$secrets/eval.env" "$secrets/turnstile.env" "$secrets/google-oauth.json" "$secrets/sentry.json" "$secrets/ga4.json" "$env" >"$tmp/secrets.json" <<'PY'
+import json, os, sys
 def value(path, name):
     for line in open(path):
         if line.startswith(name + "="):
             return line.split("=", 1)[1].strip()
     sys.exit(f"missing {name} in {path}")
-print(json.dumps({
+out = {
     "HMAC_KEY": open(sys.argv[1]).read().strip(),
     "KIE_API_KEY": value(sys.argv[2], "KIE_API_KEY"),
     "TURNSTILE_SECRET": value(sys.argv[3], "TURNSTILE_SECRET"),
-}))
+}
+# Google sign-in (client id is a public var in wrangler*.jsonc; the secret lives here).
+if os.path.exists(sys.argv[4]):
+    out["GOOGLE_CLIENT_SECRET"] = json.load(open(sys.argv[4]))["sec"]
+# Error reports (DSN of the Sentry project "api"); server-side GA4 events in production only.
+if os.path.exists(sys.argv[5]):
+    out["SENTRY_DSN"] = json.load(open(sys.argv[5]))["api"]
+if sys.argv[7] == "production" and os.path.exists(sys.argv[6]):
+    out["GA4_API_SECRET"] = json.load(open(sys.argv[6]))["sec"]
+print(json.dumps(out))
 PY
 chmod 600 "$tmp/secrets.json"
 api secret bulk "$tmp/secrets.json" -c "$api_config" >/dev/null
@@ -70,8 +82,13 @@ rm -f "$tmp/secrets.json"
 
 echo "== site"
 site_key="$(value TURNSTILE_SITE_KEY "$secrets/turnstile.env")"
+# Public IDs: Sentry (web project) everywhere; GA4 and Clarity only count production visitors.
+sentry_web="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["web"])' "$secrets/sentry.json" 2>/dev/null || true)"
+ga4=""; clarity=""
+[ "$env" = production ] && { ga4="$GA4_ID"; clarity="$CLARITY_ID"; }
 (cd apps/web && PUBLIC_API_ORIGIN="$api_origin" PUBLIC_SITE_ORIGIN="$site_origin" \
-  PUBLIC_TURNSTILE_SITE_KEY="$site_key" pnpm --silent "$build" >/dev/null)
+  PUBLIC_TURNSTILE_SITE_KEY="$site_key" PUBLIC_SENTRY_DSN="$sentry_web" \
+  PUBLIC_GA4_ID="$ga4" PUBLIC_CLARITY_ID="$clarity" pnpm --silent "$build" >/dev/null)
 web deploy -c "$web_config"
 
 echo "== smoke"
