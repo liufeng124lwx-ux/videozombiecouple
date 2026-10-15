@@ -271,7 +271,7 @@ export default function StoryTool({
     return (
       <div class="tool tool-shared">
         {shared === "gone" ? (
-          <p class="notice">{t("story.shared.gone")}</p>
+          <p class="notice">{t("story.shared.gone", { days: fact("retention.videoDays") })}</p>
         ) : (
           <div class="tool-done">
             <div class="player">
@@ -290,7 +290,9 @@ export default function StoryTool({
               <p class="scene">{t("story.shared.title")}</p>
               {shared.names && <h3>{shared.names}</h3>}
               {shared.date && <p class="small muted">{shared.date}</p>}
-              <p class="small muted">{t("story.shared.note")}</p>
+              <p class="small muted">
+                {t("story.shared.note", { seconds: fact("video.seconds") })}
+              </p>
             </div>
           </div>
         )}
