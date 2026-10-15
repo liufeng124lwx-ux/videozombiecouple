@@ -117,6 +117,33 @@ export const en = {
     "I'm {adult} or older. Both people in these photos are adults who agreed to be in this film and to their faces being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
   "story.consent.pet":
     "I'm {adult} or older. The person in this photo is me, or an adult who agreed to be in this film and to their face being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
+  "photo.consent":
+    "I'm {adult} or older. The person in this photo is me, or an adult who agreed to it and to their face being analysed, in memory only and never stored or sold, to check their age.",
+  "photo.pick": "Choose a photo",
+  "photo.change": "Choose another photo",
+  "photo.tips": "One person, facing the camera, eyes visible, good light.",
+  "photo.go": "Make my zombie photo",
+  "photo.free": "Free · one photo a day · watermarked · deleted after {hours} hours",
+  "photo.working": "Turning you into a zombie…",
+  "photo.checking": "Checking your photo",
+  "photo.making": "Applying the zombie look",
+  "photo.stamping": "Developing the print",
+  "photo.done": "Your zombie photo",
+  "photo.alt": "Your AI zombie photo",
+  "photo.download": "Download the photo",
+  "photo.deleted": "We delete it and your photo after {hours} hours.",
+  "photo.upsell.title": "Now make the film",
+  "photo.upsell.text":
+    "One of you has turned, the other can't let go. A {seconds}-second zombie love story made from two photos, from {price}.",
+  "photo.upsell.cta": "Make the film",
+  "photo.dailyLimit":
+    "You've made today's free zombie photo. Come back tomorrow for another, or make the film version now.",
+  "photo.again": "Try another photo",
+  "photo.examples.title": "Before and after",
+  "photo.examples.note":
+    "AI-generated people, made with the same zombie look as the tool. Your own photo keeps your face.",
+  "photo.examples.before": "Example portrait before (AI-generated person)",
+  "photo.examples.after": "The same AI-generated person as a zombie",
   "story.consent.terms": "Terms",
   "story.consent.biometric": "Biometric data notice",
   "story.privacy":

@@ -14,8 +14,8 @@ export type Faq = { q: string; a: string };
 export type Step = { title: string; text: string };
 
 const CONTEXT = "https://schema.org";
-/** Pages that carry the story tool: described as a web app with a free offer (the preview). */
-const TOOL_KINDS: readonly PageKind[] = ["home", "landing"];
+/** Pages that carry a tool: described as a web app with a free offer (the check, the free photo). */
+const TOOL_KINDS: readonly PageKind[] = ["home", "landing", "photo"];
 const day = (date: Date) => date.toISOString().slice(0, 10);
 
 export function organization(origin: string): Schema {

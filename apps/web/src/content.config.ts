@@ -27,6 +27,8 @@ const pages = defineCollection({
     likeness: z.object({ title: text, text }).optional(),
     /** Photo tips (good / avoid). */
     tips: z.object({ good: z.array(text), avoid: z.array(text) }).optional(),
+    /** The HowTo name in the structured data (default: "How to make a <h1> video"). */
+    howTo: text.optional(),
     /** How it works: exactly three steps. */
     steps: z.array(item).length(3).optional(),
     /** Honest comparison with the other ways to make this video. */

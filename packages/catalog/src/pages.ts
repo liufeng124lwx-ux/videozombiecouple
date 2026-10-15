@@ -4,7 +4,15 @@ import type { Kind, SceneId } from "./story.ts";
 export const LOCALE_IDS = ["en"] as const;
 export type LocaleId = (typeof LOCALE_IDS)[number];
 
-export type PageKind = "home" | "landing" | "story" | "pricing" | "blog" | "legal" | "account";
+export type PageKind =
+  | "home"
+  | "landing"
+  | "photo"
+  | "story"
+  | "pricing"
+  | "blog"
+  | "legal"
+  | "account";
 
 export type PageLocale = { slug: string; status: "live" | "draft"; h1: string; liveSince?: string };
 
@@ -78,6 +86,11 @@ export const PAGES: readonly PageConfig[] = [
     "live",
     ["home", "zombie-love-story-ai", "pet-zombie-video"],
   ),
+  page("ai-zombie-filter", "photo", "ai-zombie-filter", "AI Zombie Filter", "live", [
+    "home",
+    "pet-zombie-video",
+    "zombie-couple-halloween",
+  ]),
   page("pricing", "pricing", "pricing", "Pricing", "live", []),
   { ...page("story", "story", "story", "Your Zombie Love Story", "live", []), noindex: true },
   { ...page("account", "account", "account", "Account", "live", []), noindex: true },

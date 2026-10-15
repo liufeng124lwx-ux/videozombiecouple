@@ -147,6 +147,7 @@ describe("sitemaps and robots (spec 2.4)", () => {
           "/zombie-love-story-ai",
           "/pet-zombie-video",
           "/zombie-couple-halloween",
+          "/ai-zombie-filter",
           "/pricing",
           "/about",
           "/contact",

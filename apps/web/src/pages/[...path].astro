@@ -13,6 +13,7 @@ import AccountPage from "../templates/AccountPage.astro";
 import BlogPage from "../templates/BlogPage.astro";
 import HomePage from "../templates/HomePage.astro";
 import LegalPage from "../templates/LegalPage.astro";
+import PhotoPage from "../templates/PhotoPage.astro";
 import PricingPage from "../templates/PricingPage.astro";
 import StoryPage from "../templates/StoryPage.astro";
 
@@ -72,6 +73,8 @@ const hero =
   {
     (page.kind === "home" || page.kind === "landing") && entry ? (
       <HomePage locale={locale} h1={h1} page={page} entry={entry} variant={page.kind === "home" ? "home" : "landing"} />
+    ) : page.kind === "photo" && entry ? (
+      <PhotoPage locale={locale} h1={h1} entry={entry} />
     ) : page.kind === "story" ? (
       <StoryPage locale={locale} h1={h1} />
     ) : page.kind === "pricing" && entry ? (

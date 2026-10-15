@@ -1,4 +1,4 @@
-import type { CreateStoryRequest, SharedFilm, StoryView } from "@vzc/contracts";
+import type { CreatePhotoRequest, CreateStoryRequest, SharedFilm, StoryView } from "@vzc/contracts";
 import { ApiError, api, post } from "../api.ts";
 import { withHumanCheck } from "../human-pass.ts";
 
@@ -41,6 +41,15 @@ export async function uploadPhoto(jpeg: Blob, token: Token): Promise<string> {
 export async function createStory(request: CreateStoryRequest, token: Token): Promise<string> {
   const { storyId } = await withHumanCheck(
     (headers) => post<{ storyId: string }>("/v1/stories", request, headers),
+    token,
+  );
+  return storyId;
+}
+
+/** The free AI zombie filter: one photo in, a story id to poll with getStory. */
+export async function createPhoto(request: CreatePhotoRequest, token: Token): Promise<string> {
+  const { storyId } = await withHumanCheck(
+    (headers) => post<{ storyId: string }>("/v1/photos", request, headers),
     token,
   );
   return storyId;

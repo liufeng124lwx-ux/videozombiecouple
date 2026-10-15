@@ -77,6 +77,7 @@ describe("pages", () => {
       "zombie-love-story-ai",
       "pet-zombie-video",
       "zombie-couple-halloween",
+      "ai-zombie-filter",
       "pricing",
       "story",
       "account",
@@ -106,5 +107,16 @@ describe("pages", () => {
       h1: "Zombie Couple Halloween Ideas",
     });
     expect(post?.related).toContain("home");
+  });
+
+  it("has the AI zombie filter page: a tool page of its own kind, linked to the film pages", () => {
+    const page = pageById("ai-zombie-filter");
+    expect(page?.kind).toBe("photo");
+    expect(page?.locales.en).toMatchObject({
+      slug: "ai-zombie-filter",
+      status: "live",
+      h1: "AI Zombie Filter",
+    });
+    expect(page?.related).toEqual(["home", "pet-zombie-video", "zombie-couple-halloween"]);
   });
 });

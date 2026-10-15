@@ -1,0 +1,136 @@
+---
+import "../styles/story.css";
+import "../styles/home.css";
+import "../styles/photo.css";
+import { type CollectionEntry, render } from "astro:content";
+import type { LocaleId } from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import F from "../components/F.astro";
+import Faq from "../components/Faq.astro";
+import PhotoTool from "../components/photo/PhotoTool.tsx";
+import { sampleImage } from "../lib/sample-images.ts";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+  entry: CollectionEntry<"pages">;
+}
+const { locale, h1, entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+const SIZES = "(min-width: 900px) 200px, 40vw";
+// Before → after examples: AI-generated people, made with the same prompt as the tool.
+const EXAMPLES = ["p01", "p06", "p08"];
+const examples = await Promise.all(
+  EXAMPLES.map(async (id) => ({
+    id,
+    before: await sampleImage(`zombie-photo-${id}-before.jpg`, SIZES, [240, 360]),
+    after: await sampleImage(`zombie-photo-${id}-after.jpg`, SIZES, [240, 360]),
+  })),
+);
+---
+<section class="hero photo-hero" aria-label={h1}>
+  <div class="wrap">
+    {d.scene && <p class="onesheet-kicker">{d.scene}</p>}
+    <h1 class="onesheet-title">{h1}</h1>
+    {d.lede && <p class="lede">{d.lede}</p>}
+    <div id="make" class="photo-make">
+      <PhotoTool client:load />
+    </div>
+    {
+      d.trust && (
+        <ul class="trust">
+          {d.trust.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<section class="section photo-examples">
+  <div class="wrap">
+    <h2>{t("photo.examples.title", {}, locale)}</h2>
+    <p class="small muted">{t("photo.examples.note", {}, locale)}</p>
+    <ul class="photo-pairs">
+      {
+        examples.map((ex) => (
+          <li>
+            <img
+              src={ex.before.src}
+              srcset={ex.before.srcset}
+              sizes={SIZES}
+              width={ex.before.width}
+              height={ex.before.height}
+              alt={t("photo.examples.before", {}, locale)}
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="arrow" aria-hidden="true">→</span>
+            <img
+              src={ex.after.src}
+              srcset={ex.after.srcset}
+              sizes={SIZES}
+              width={ex.after.width}
+              height={ex.after.height}
+              alt={t("photo.examples.after", {}, locale)}
+              loading="lazy"
+              decoding="async"
+            />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+{
+  d.steps && (
+    <section class="section steps-section">
+      <div class="wrap">
+        <h2>{t("home.steps.title", {}, locale)}</h2>
+        <ol class="steps">
+          {d.steps.map((step, i) => (
+            <li>
+              <span class="step-n scene">{`0${i + 1}`}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p class="muted">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
+<section class="section">
+  <div class="wrap prose long-read">
+    <Content components={{ F }} />
+  </div>
+</section>
+
+{
+  d.faq && d.faq.length > 0 && (
+    <section class="section faq-section">
+      <div class="wrap">
+        <h2>{t("home.faq.title", {}, locale)}</h2>
+        <Faq items={d.faq} />
+      </div>
+    </section>
+  )
+}
+
+{
+  d.closing && (
+    <section class="closing">
+      <div class="wrap closing-card">
+        <p class="tc-line">{d.closing.title}</p>
+        <p class="lede">{d.closing.text}</p>
+        <a class="btn btn-primary btn-lg" href="/#make">{t("photo.upsell.cta", {}, locale)}</a>
+      </div>
+    </section>
+  )
+}

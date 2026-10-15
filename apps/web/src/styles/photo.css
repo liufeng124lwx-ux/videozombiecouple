@@ -1,0 +1,119 @@
+/* The AI zombie filter page: the tool sits in the hero, a print beside the controls. */
+.photo-hero {
+  padding-block: 40px 56px;
+}
+.photo-hero .lede {
+  max-width: 640px;
+}
+.photo-make {
+  margin-top: 28px;
+}
+.photo-tool {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 760px) {
+  .photo-tool {
+    grid-template-columns: minmax(0, 300px) minmax(0, 440px);
+    gap: 40px;
+  }
+}
+/* The photo slot: a polaroid like the film tool's screen tests. */
+.photo-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  width: min(100%, 300px);
+  padding: 12px 12px 44px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  cursor: pointer;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
+  transform: rotate(-1.5deg);
+}
+.photo-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-slot .plus {
+  width: 34px;
+  height: 34px;
+  background:
+    linear-gradient(var(--paper-ink), var(--paper-ink)) center / 100% 2px no-repeat,
+    linear-gradient(var(--paper-ink), var(--paper-ink)) center / 2px 100% no-repeat;
+  opacity: 0.6;
+}
+.photo-slot-label {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font: 400 13px / 1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.photo-slot input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.photo-slot:focus-within {
+  outline: 2px solid var(--ember);
+  outline-offset: 4px;
+}
+.photo-side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.photo-print {
+  margin: 0;
+  width: min(100%, 360px);
+  padding: 12px 12px 40px;
+  background: var(--paper);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
+}
+.photo-print img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.photo-upsell {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+.photo-pairs {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 900px) {
+  .photo-pairs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.photo-pairs li {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.photo-pairs img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.photo-pairs .arrow {
+  color: var(--ember);
+  font-size: 20px;
+}

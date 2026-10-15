@@ -198,6 +198,7 @@ export function checkSitemaps(pages: BuiltPage[], files: SitemapFiles, origin: s
 export const REQUIRED_SCHEMAS: Partial<Record<PageKind, string[]>> = {
   home: ["Organization", "WebApplication", "HowTo", "FAQPage"],
   landing: ["WebApplication", "HowTo", "FAQPage", "BreadcrumbList"],
+  photo: ["WebApplication", "HowTo", "FAQPage", "BreadcrumbList"],
   pricing: ["FAQPage", "BreadcrumbList"],
   account: ["BreadcrumbList"],
   legal: ["BreadcrumbList"],
@@ -305,7 +306,7 @@ export function wordCount(text: string): number {
 export const WORDS = { min: 1200, max: 1800 } as const;
 
 /** Plan Task 6: the home and landing pages carry 1,200–1,800 words of real text. */
-export const LONG_KINDS: readonly PageKind[] = ["home", "landing"];
+export const LONG_KINDS: readonly PageKind[] = ["home", "landing", "photo"];
 
 /**
  * Section order (`data-section="…"`) a kind of page must keep. Empty until the home and landing

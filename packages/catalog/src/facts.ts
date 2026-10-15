@@ -8,7 +8,7 @@ import {
   TAKEDOWN_HOURS,
 } from "./limits.ts";
 import { PACKS } from "./plans.ts";
-import { CANDIDATES_PER_FRAME, CAPTION_SEC, STORYBOARD, VIDEO } from "./story.ts";
+import { CANDIDATES_PER_FRAME, CAPTION_SEC, PHOTO, STORYBOARD, VIDEO } from "./story.ts";
 import { TIERS } from "./tiers.ts";
 
 /** "$4.99", "$3.00": prices always with cents. */
@@ -35,6 +35,7 @@ function build(): Record<string, string> {
     "age.adult": count(ADULT_AGE),
     "age.minEstimated": count(ABUSE.minEstimatedAge),
     "takedown.hours": count(TAKEDOWN_HOURS),
+    "photo.keepHours": count(PHOTO.keepHours),
   };
   let cheapest = Number.POSITIVE_INFINITY;
   for (const pack of PACKS) {
