@@ -49,6 +49,10 @@ for f in assets/music/*.m4a; do
   api r2 object put "$bucket/assets/music/$(basename "$f")" --file "$root/$f" --content-type audio/mp4 --remote >/dev/null
 done
 
+echo "== R2 lifecycle (infra/r2-lifecycle.json → $bucket)"
+# The retention the site promises lives in this file; applying it every deploy keeps the bucket honest.
+api r2 bucket lifecycle set "$bucket" --file "$root/infra/r2-lifecycle.json" --force >/dev/null
+
 echo "== API worker + composer container"
 api deploy -c "$api_config"
 
