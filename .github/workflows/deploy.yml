@@ -58,10 +58,12 @@ jobs:
         run: |
           pnpm --filter @vzc/web build
           pnpm --filter @vzc/web exec wrangler deploy -c wrangler.jsonc
-      - name: Smoke (one real standard job, about $0.016)
+      # A real story costs about $0.92, so pushes only check health; a manual run makes one film.
+      - name: Smoke (health; a real story on manual runs)
         env:
-          SMOKE_REAL_JOB: "1"
+          SMOKE_REAL_JOB: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
           SMOKE_KEY: ${{ secrets.STAGING_SMOKE_KEY }}
+          SMOKE_SESSION: ${{ secrets.STAGING_SMOKE_SESSION }}
         run: pnpm --filter @vzc/web exec tsx scripts/smoke.ts https://api-staging.videozombiecouple.com https://staging.videozombiecouple.com
 
   production:

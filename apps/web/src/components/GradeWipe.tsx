@@ -86,7 +86,8 @@ export default function GradeWipe(props: GradeWipeProps) {
         height={1280}
         loading={props.priority ? "eager" : "lazy"}
         fetchpriority={props.priority ? "high" : undefined}
-        decoding="async"
+        // The LCP image paints as soon as it arrives, not after the page's scripts.
+        decoding={props.priority ? "sync" : "async"}
       />
       <div class="wipe-warm">
         <img
@@ -97,6 +98,8 @@ export default function GradeWipe(props: GradeWipeProps) {
           width={720}
           height={1280}
           loading={props.priority ? "eager" : "lazy"}
+          // The cold frame is the LCP image; the warm half waits its turn for bandwidth.
+          fetchpriority={props.priority ? "low" : undefined}
           decoding="async"
         />
         <span class="wipe-line" aria-hidden="true" />

@@ -26,8 +26,17 @@ jobs:
       - run: pnpm --filter @vzc/api dryrun
       - run: pnpm --filter @vzc/api exec wrangler deploy --dry-run -c wrangler.production.jsonc --outdir dist-production
 
-  # Spec 11.2: WebGL in headless Chromium via SwiftShader, the Canvas 2D fallback, the guest journey
-  # against a local API with the fake provider, and Lighthouse on the production build.
+  # Spec 11.2: the story journey in headless Chromium against a scripted API, and Lighthouse on
+  # the production build.
+  composer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - run: uv run pytest -q
+        working-directory: apps/composer
+
   browser:
     needs: verify
     runs-on: ubuntu-latest
@@ -40,6 +49,5 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @vzc/web exec playwright install --with-deps chromium
-      - run: pnpm --filter @vzc/web browser-check
       - run: pnpm --filter @vzc/web e2e
       - run: pnpm --filter @vzc/web lighthouse

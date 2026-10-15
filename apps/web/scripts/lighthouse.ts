@@ -1,5 +1,5 @@
 /**
- * Plan 7C / spec 11.1: Lighthouse on the production build — the home page and a tool page (plus the draft local-tool pages, on the preview build) — with
+ * Spec 11.1: Lighthouse on the production build — the home page, the landing page and pricing — with
  * the mobile thresholds: performance ≥ 90, LCP < 2.5 s, CLS < 0.1. Each page runs three times and
  * the median counts, since CI machines vary.
  *
@@ -20,17 +20,13 @@ const MAX_CLS = 0.1;
 
 type Result = { score: number; lcp: number; cls: number; why?: string };
 
-/** The home page, plus the first live page that carries the upload tool (the pricing page until one is live). */
+/** The home page (with the story tool), the landing page that carries the tool too, and pricing. */
 function pages(): string[] {
-  const tool = readdirSync("dist")
+  const landing = readdirSync("dist")
     .filter((f) => f.endsWith(".html") && f !== "index.html")
-    .find((f) => readFileSync(`dist/${f}`, "utf8").includes('id="tool"'));
-  if (!tool) console.log("lighthouse: no live tool page besides the home page yet; using /pricing");
-  return ["/", tool ? `/${tool.replace(/\.html$/, "")}` : "/pricing"];
+    .find((f) => readFileSync(`dist/${f}`, "utf8").includes('id="make"'));
+  return ["/", ...(landing ? [`/${landing.replace(/\.html$/, "")}`] : []), "/pricing"];
 }
-
-/** Draft pages exist only in the preview build; these are measured there after the production pass. */
-const PREVIEW_PAGES = ["/heic-to-jpg", "/color-picker-from-image"];
 
 async function serve(): Promise<ChildProcess> {
   const server = spawn("pnpm", ["exec", "astro", "preview", "--port", String(PORT)], {
@@ -106,10 +102,7 @@ async function report(port: number, path: string, failures: string[]) {
 
 async function main() {
   const failures: string[] = [];
-  for (const [script, paths] of [
-    ["build:production", pages],
-    ["build", () => PREVIEW_PAGES],
-  ] as const) {
+  for (const [script, paths] of [["build:production", pages]] as const) {
     const build = spawnSync("pnpm", [script], { stdio: "inherit" });
     if (build.status !== 0) throw new Error(`${script} failed`);
     const server = await serve();

@@ -11,7 +11,7 @@ import GradeWipe from "../components/GradeWipe.tsx";
 import PackRows from "../components/pricing/PackRows.tsx";
 import StoryTool from "../components/story/StoryTool.tsx";
 import { sampleImage } from "../lib/sample-images.ts";
-import { HERO_PAIR, SAMPLE_PAIRS, sampleAlt, sampleFile } from "../lib/samples.ts";
+import { HERO_PAIR, HERO_SIZES, SAMPLE_PAIRS, sampleAlt, sampleFile } from "../lib/samples.ts";
 
 interface Props {
   locale: LocaleId;
@@ -27,7 +27,6 @@ const d = entry.data;
 const hero = SAMPLE_PAIRS.find((p) => p.id === HERO_PAIR) ?? SAMPLE_PAIRS[0];
 if (!hero) throw new Error("no sample pair");
 
-const HERO_SIZES = "(min-width: 900px) 420px, 82vw";
 const heroA = await sampleImage(sampleFile(hero.id, "A"), HERO_SIZES);
 const heroC = await sampleImage(sampleFile(hero.id, "C"), HERO_SIZES);
 const BEAT_SIZES = "(min-width: 900px) 300px, 62vw";

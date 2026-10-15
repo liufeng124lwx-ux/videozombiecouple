@@ -5,6 +5,8 @@ import F from "../components/F.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { pageContent } from "../lib/content.ts";
 import { type RouteProps, staticPaths } from "../lib/routes.ts";
+import { sampleImage } from "../lib/sample-images.ts";
+import { HERO_PAIR, HERO_SIZES, sampleFile } from "../lib/samples.ts";
 import { alternateLinks, ogImagePath, pageSchemas } from "../lib/seo.ts";
 import { absoluteUrl, buildMode } from "../lib/site.ts";
 import AccountPage from "../templates/AccountPage.astro";
@@ -36,6 +38,11 @@ const schemas = pageSchemas({
   content: entry?.data ?? null,
 });
 const links = alternateLinks(page, buildMode(), absoluteUrl);
+// Start the hero image with the HTML, not after the stylesheets (LCP on phones).
+const hero =
+  page.kind === "home" || page.kind === "landing"
+    ? await sampleImage(sampleFile(HERO_PAIR, "A"), HERO_SIZES)
+    : null;
 ---
 <BaseLayout
   title={entry?.data.title ?? `${h1} (draft) | VideoZombieCouple`}
@@ -48,6 +55,19 @@ const links = alternateLinks(page, buildMode(), absoluteUrl);
   ogImage={ogImagePath(locale, page.id)}
   page={page}
 >
+  {
+    hero && (
+      <link
+        slot="head"
+        rel="preload"
+        as="image"
+        href={hero.src}
+        imagesrcset={hero.srcset}
+        imagesizes={HERO_SIZES}
+        fetchpriority="high"
+      />
+    )
+  }
   {
     (page.kind === "home" || page.kind === "landing") && entry ? (
       <HomePage locale={locale} h1={h1} page={page} entry={entry} variant={page.kind === "home" ? "home" : "landing"} />

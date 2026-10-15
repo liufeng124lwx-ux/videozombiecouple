@@ -42,3 +42,6 @@ export function sampleAlt(pair: SamplePair, frame: Frame): string {
       return `AI example photo: the one who turns, ${pair.who.split(" and ")[1] ?? pair.who}`;
   }
 }
+
+/** The hero's cold frame: the LCP image of the home and landing pages (preloaded in <head>). */
+export const HERO_SIZES = "(min-width: 900px) 420px, 82vw";

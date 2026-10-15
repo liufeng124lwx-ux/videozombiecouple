@@ -12,7 +12,6 @@
     "typecheck": "astro check",
     "test": "vitest run",
     "size": "size-limit",
-    "browser-check": "pnpm build && tsx scripts/browser-check.ts",
     "vendor": "tsx scripts/vendor.ts",
     "e2e": "tsx scripts/e2e.ts",
     "lighthouse": "tsx scripts/lighthouse.ts"
