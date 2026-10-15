@@ -114,7 +114,7 @@ export const en = {
   "story.tips.light": "Good light, no sunglasses",
   "story.tips.adults": "Adults who agreed to it",
   "story.privacy":
-    "Your photos are private. They are deleted within {photosDays} days and never used to train AI.",
+    "Your photos are private. They are deleted within {photosDays} days, and we never use them to train AI.",
   "story.scene.label": "Pick the scene",
   "story.scene.soon": "Soon",
   "story.scene.select": "Select",

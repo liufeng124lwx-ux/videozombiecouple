@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy – Your Photos | VideoZombieCouple
-description: What VideoZombieCouple collects, who processes your photos, how long photos and videos are kept, and your rights. Your photos are never used to train AI.
+description: What VideoZombieCouple collects, who processes your photos, how long photos and videos are kept, and your rights. We never use your photos to train AI.
 updated: 2026-10-15
 ---
 
@@ -13,7 +13,7 @@ VideoZombieCouple is operated by Arrayon Inc., a Wyoming corporation at 30 N Gou
 - Your photos are used only to check them and make your own video.
 - Original photos and keyframes are deleted within <F k="retention.photosDays" /> days. Finished films are deleted after <F k="retention.guestFilmDays" /> days if your email isn’t confirmed, or <F k="retention.memberFilmDays" /> days once it is.
 - Face features are computed in memory and never stored. They are used only to pick the best keyframe.
-- We don’t use your photos to train AI, and we pick AI providers that don’t allow training on them either.
+- We never use your photos to train AI. The AI services we send them to process them only to return a result to us.
 - Your photos and videos are private. We never show them publicly.
 - We don’t sell your personal information, and we don’t show ads.
 - Analytics cookies are optional. In the EU, EEA, UK and Switzerland they stay off unless you accept them.
@@ -48,9 +48,9 @@ Our legal bases under the GDPR are: performing our contract with you (running th
 
 **Face features.** To pick the keyframe that looks most like the people in your photos, we compute face features (numbers that describe a face) from your photos and from each candidate keyframe. This happens in memory only. The features are never stored, and never used to recognize you elsewhere or to train anything.
 
-**Photo check and age check.** Before you pay, we check your photos on our own servers: each photo of a person must show one adult face. We estimate the age of each person, and if someone looks under 18, we refuse the photo. This check generates nothing and sends nothing to AI providers. The estimate is used only for that check and is not stored.
+**Photo check, age check and nudity check.** Before you pay, we check your photos. On our own servers, each photo of a person must show one adult face: we estimate the age of each person, and because these estimates can be off by several years, we refuse a photo if someone looks younger than <F k="age.minEstimated" />. The estimate is used only for that check and is not stored. We also send each photo, through a short-lived private link, to our moderation provider SeeAPI, which tells us whether it contains nudity or sexual content; such photos are refused. This check generates no keyframe or video, and no AI model makes anything from your photos before you pay.
 
-**AI generation.** After you pay, to make keyframes and video shots, your photos are sent to AI models through kie.ai, which runs models from providers such as Google and ByteDance. They process the photos only to return the result to us. We don’t use your photos to train AI, and we pick AI providers that don’t allow training on them either.
+**AI generation.** After you pay, to make keyframes and video shots, your photos are sent to AI models through kie.ai, which runs models from OpenAI, Google, Kuaishou (Kling) and ByteDance (Seedance). They process the photos to return the result to us. We never use your photos to train AI.
 
 ## Who processes your data for us
 
@@ -58,7 +58,8 @@ Our legal bases under the GDPR are: performing our contract with you (running th
 |---|---|---|
 | Cloudflare | Hosting, file storage, compute for the photo check and video assembly, sending sign-in, film-ready and reminder emails | Everything you send to the site, including photos |
 | Cloudflare Turnstile | Checking that a visitor is human | Browser and connection signals |
-| kie.ai, and the model providers behind it such as Google and ByteDance | Running the AI models that make keyframes and video shots | Your photos and the instructions for that job |
+| SeeAPI | Checking uploaded photos for nudity before you pay | Each uploaded photo, through a short-lived private link |
+| kie.ai, and the model providers behind it: OpenAI, Google, Kuaishou (Kling) and ByteDance (Seedance) | Running the AI models that make keyframes and video shots | Your photos and the instructions for that job |
 | Stripe | Payments, as merchant of record (Stripe Managed Payments) | Your email, what you buy, payment details |
 | Google | Sign-in with Google, if you choose it | Your Google account ID and email |
 | Google Analytics | Visit statistics, only with consent where required | Pages viewed, events, a random browser ID |
@@ -96,7 +97,7 @@ If you are in the EU, EEA, UK or Switzerland, analytics cookies stay off until y
 
 ## Children
 
-VideoZombieCouple is only for adults 18 and over. You may not upload photos of anyone under 18, and we refuse photos where someone looks under 18. We don’t knowingly collect personal information from children, including children under the age of 13. If you believe a child’s information or photo reached us, write to us and we will delete it.
+VideoZombieCouple is only for adults 18 and over. You may not upload photos of anyone under 18, and we refuse photos where someone looks younger than <F k="age.minEstimated" />. We don’t knowingly collect personal information from children, including children under the age of 13. If you believe a child’s information or photo reached us, write to us and we will delete it.
 
 ## Your rights
 

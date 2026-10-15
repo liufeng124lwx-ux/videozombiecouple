@@ -4,8 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const page = (id: string) =>
   readFileSync(join(import.meta.dirname, "pages/en", `${id}.mdx`), "utf8");
-const TRAINING =
-  "We don’t use your photos to train AI, and we pick AI providers that don’t allow training on them either.";
+const TRAINING = "We never use your photos to train AI.";
 const ADDRESS = "30 N Gould St Ste R, Sheridan, WY 82801";
 const HELLO = "hello@videozombiecouple.com";
 const DMCA = "dmca@videozombiecouple.com";
@@ -18,6 +17,9 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
       "kie.ai",
       "Google",
       "ByteDance",
+      "OpenAI",
+      "Kuaishou",
+      "SeeAPI",
       "Stripe",
       "Google Analytics",
       "Microsoft Clarity",
@@ -26,6 +28,9 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
     expect(text).toContain(TRAINING);
     expect(text).toMatch(/[Ff]ace features[^.]*never stored/);
     expect(text).toMatch(/under 18/);
+    // The age margin and the nudity check are stated as they run.
+    expect(text).toContain('looks younger than <F k="age.minEstimated" />');
+    expect(text).not.toContain("sends nothing to AI providers");
     expect(text).toContain('<F k="retention.photosDays" />');
     expect(text).toContain('<F k="retention.guestFilmDays" />');
     expect(text).toContain('<F k="retention.memberFilmDays" />');

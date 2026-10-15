@@ -1,4 +1,4 @@
-import { FILE_LIMITS, REFUND_POLICY, REMAKES_PER_FILM, RETENTION } from "./limits.ts";
+import { ABUSE, FILE_LIMITS, REFUND_POLICY, REMAKES_PER_FILM, RETENTION } from "./limits.ts";
 import { PACKS } from "./plans.ts";
 import { CANDIDATES_PER_FRAME, CAPTION_SEC, STORYBOARD, VIDEO } from "./story.ts";
 import { TIERS } from "./tiers.ts";
@@ -24,6 +24,7 @@ function build(): Record<string, string> {
     "retention.linkMinutes": count(RETENTION.signedUrlSeconds / 60),
     "file.maxMb": count(FILE_LIMITS.maxBytes / 1_000_000),
     "refund.packDays": count(REFUND_POLICY.packDays),
+    "age.minEstimated": count(ABUSE.minEstimatedAge),
   };
   let cheapest = Number.POSITIVE_INFINITY;
   for (const pack of PACKS) {
