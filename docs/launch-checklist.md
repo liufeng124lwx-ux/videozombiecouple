@@ -55,7 +55,7 @@ VideoZombieCouple 已于 2026-10-14 上线（正式站 videozombiecouple.com，�
 
 1. **收款（阻塞）**：Waffo 的禁止清单明确包括「把两个真人合成到亲吻、拥抱等亲密场景，不论是上传合照还是两张单人照，不论是否同意」（docs.waffo.ai/zh/mor/account-reviews/aigc-compliance#deepfake）。真人情侣版的拥抱帧正好落在这一条，商业资质审核（KYB）没有提交。Arrayon Inc 也是 video2mp4 的签约主体，被判违规可能牵连。可选方向见交付说明。
 2. **DMCA 登记加别名**：登录 dmca.copyright.gov（Login.gov，需要你的双重验证），对 Arrayon Inc（DMCA-1082308）做 Amend，别名加 `VideoZombieCouple`、`videozombiecouple.com`，联系邮箱加 `dmca@videozombiecouple.com`，Pay.gov 付约 $6。完成后把登记号写进 DMCA 页面。
-3. **音乐授权**：三首配乐是通过 kie 调 Suno 生成的。kie 的条款没有授予商用权；Suno 的条款只给生成时持有付费订阅的用户商用权。建议开一个月 Suno Pro，在 suno.com 重新生成三首后替换 `assets/music/`。
+3. ~~音乐授权~~：2026-10-15 已在 Suno Pro 订阅期内于 suno.com 重新生成三首并替换（记录见 `assets/music/README.md`）。
 4. **KIE**：调高正式使用的密钥的每小时消费上限。
 5. **怀俄明年审**：2026-12-01 前（见 Obsidian「Arrayon Inc」）。
 
