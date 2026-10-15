@@ -80,7 +80,9 @@ describe("deployable configs (spec 1.4)", () => {
     expect(rules.every((r: Config) => r.enabled === true)).toBe(true);
     // Applied on every deploy: production once kept films 15 days while the site promised 30.
     const deploy = readFileSync(new URL("../../../scripts/deploy.sh", import.meta.url), "utf8");
-    expect(deploy).toMatch(/r2 bucket lifecycle set "\$bucket" --file "\$root\/infra\/r2-lifecycle\.json"/);
+    expect(deploy).toMatch(
+      /r2 bucket lifecycle set "\$bucket" --file "\$root\/infra\/r2-lifecycle\.json"/,
+    );
   });
 
   it("lets only the site upload to and read from the bucket", () => {

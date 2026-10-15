@@ -9,6 +9,7 @@ const ACCOUNT = {
   email: "ann@example.com",
   hasPassword: false,
   google: true,
+  verified: true,
   createdAt: 0,
   balance: { total: 25, subscription: null, permanent: 25 },
 };
@@ -46,6 +47,13 @@ describe("AccountPanel (spec 5.5, design S15)", () => {
     expect(screen.queryByRole("button", { name: /plan/i })).toBeNull();
     expect(screen.queryByText("Plan")).toBeNull();
     expect(screen.queryByText(/unblur/i)).toBeNull();
+  });
+
+  it("asks a guest checkout account to prove its email before it can set a password", async () => {
+    mockApi({ ...member(), "GET /v1/account": { body: { ...ACCOUNT, verified: false } } });
+    render(<AccountPanel navigate={vi.fn()} />);
+    expect(await screen.findByText(/Sign in once with the emailed code/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Set a password" })).toBeNull();
   });
 
   it("says one video in the singular", async () => {
@@ -142,6 +150,43 @@ describe("AccountPanel (spec 5.5, design S15)", () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/pricing?buy=pack3"));
     expect(calls.find((c) => c.path === "/v1/auth/link")?.body).toEqual({ token });
     expect(location.search).toBe("");
+  });
+
+  it("a link from another browser names the account and signs in only after a click", async () => {
+    const { calls } = mockApi({
+      ...member(),
+      "POST /v1/auth/link": (body) =>
+        (body as { confirm?: boolean }).confirm
+          ? { body: { ok: true, created: false } }
+          : { body: { ok: false, confirm: "zed@example.com" } },
+      "GET /v1/me": {
+        body: { user: { id: "u", email: "zed@example.com", hasPassword: false, google: false } },
+      },
+    });
+    const token = "d".repeat(64);
+    history.replaceState(null, "", `/account?login=${token}`);
+    render(<AccountPanel navigate={vi.fn()} />);
+    expect(await screen.findByText(/Sign in as zed@example.com\?/)).toBeTruthy();
+    expect(calls.filter((c) => c.path === "/v1/auth/link")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() =>
+      expect(calls.filter((c) => c.path === "/v1/auth/link").at(-1)?.body).toEqual({
+        token,
+        confirm: true,
+      }),
+    );
+  });
+
+  it("a declined link from another browser signs nobody in", async () => {
+    const { calls } = mockApi({
+      ...member(),
+      "POST /v1/auth/link": { body: { ok: false, confirm: "zed@example.com" } },
+    });
+    history.replaceState(null, "", `/account?login=${"e".repeat(64)}`);
+    render(<AccountPanel navigate={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Not me" }));
+    await waitFor(() => expect(screen.queryByText(/Sign in as/)).toBeNull());
+    expect(calls.filter((c) => c.path === "/v1/auth/link")).toHaveLength(1);
   });
 
   it("explains an expired email link", async () => {

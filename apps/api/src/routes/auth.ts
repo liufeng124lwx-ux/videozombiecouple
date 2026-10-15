@@ -57,7 +57,7 @@ export async function requestEmailLogin(c: Context<AppEnv>) {
   if (!(await userByEmail(c.env.DB, email)) && (await isDisposable(c.env, email)))
     return fail(c, "EMAIL_REJECTED");
   const code = await issueCode(c.env, email);
-  const token = await issueLinkToken(c.env, email);
+  const token = await issueLinkToken(c.env, email, undefined, c.get("visitorHash"));
   const next = encodeURIComponent(safeNext(parsed.data.next));
   await sendMail(c.env, {
     to: email,
@@ -124,9 +124,17 @@ export async function linkLogin(c: Context<AppEnv>) {
     RATE_LIMITS.codeAttemptsPerIpHour,
   );
   if (limited) return limited;
-  const email = await redeemLinkToken(c.env, parsed.data.token);
-  if (!email) return fail(c, "CODE_EXPIRED");
-  const result = await completeLogin(c, email);
+  const link = await redeemLinkToken(
+    c.env,
+    parsed.data.token,
+    c.get("visitorHash"),
+    parsed.data.confirm === true,
+  );
+  if (link.kind === "expired") return fail(c, "CODE_EXPIRED");
+  c.header("cache-control", "no-store");
+  if (link.kind === "confirm") return c.json({ ok: false, confirm: link.email });
+  // Another browser's guest stories stay where they are: only the browser that asked brings them.
+  const result = await completeLogin(c, link.email, undefined, { merge: link.sameBrowser });
   c.header("cache-control", "no-store");
   return c.json({ ok: true, created: result.created });
 }

@@ -51,16 +51,20 @@ export default function SignInMethods({ account, onSignedOut }: Props) {
       </div>
       <div class="kv">
         <span>{t("account.password")}</span>
-        <button
-          type="button"
-          class="link"
-          onClick={() => {
-            setEditing(!editing);
-            setSaved(false);
-          }}
-        >
-          {hasPassword ? t("account.changePassword") : t("account.setPassword")}
-        </button>
+        {!account.verified ? (
+          <span class="small muted">{t("account.verifyFirst")}</span>
+        ) : (
+          <button
+            type="button"
+            class="link"
+            onClick={() => {
+              setEditing(!editing);
+              setSaved(false);
+            }}
+          >
+            {hasPassword ? t("account.changePassword") : t("account.setPassword")}
+          </button>
+        )}
       </div>
       {editing && (
         <form class="actions" onSubmit={(e) => void save(e)}>

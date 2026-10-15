@@ -21,6 +21,8 @@ export function requireUser(c: Context<AppEnv>): string | null {
 export async function setPassword(c: Context<AppEnv>) {
   const userId = requireUser(c);
   if (!userId) return fail(c, "UNAUTHORIZED");
+  // A guest checkout account is anyone's typed address until its owner proves the email.
+  if (!(await userById(c.env.DB, userId))?.verified) return fail(c, "FORBIDDEN");
   const parsed = SetPasswordSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return fail(c, "WEAK_PASSWORD");
   await c.env.DB.prepare("UPDATE users SET password_hash=? WHERE id=?")
@@ -39,6 +41,7 @@ export async function account(c: Context<AppEnv>) {
   const wallet = c.env.WALLET.get(c.env.WALLET.idFromName(userId));
   const view: AccountView = {
     email: user.email,
+    verified: user.verified,
     hasPassword: user.hasPassword,
     google: user.googleSub !== null,
     createdAt: user.createdAt,

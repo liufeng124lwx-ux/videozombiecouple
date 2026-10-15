@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import type { AppEnv } from "../types.ts";
 import { grantSignupBonus } from "./bonus.ts";
 import { keepFilmsLonger, mergeGuest } from "./merge.ts";
-import { startSession } from "./session.ts";
+import { endAllSessions, startSession } from "./session.ts";
 import { createUser, userByEmail, userByGoogleSub } from "./users.ts";
 
 export type LoginResult = { userId: string; created: boolean; bonus: boolean };
@@ -21,6 +21,7 @@ export async function completeLogin(
   c: Context<AppEnv>,
   email: string,
   google?: { sub: string },
+  { merge = true }: { merge?: boolean } = {},
 ): Promise<LoginResult> {
   const db = c.env.DB;
   const existing =
@@ -42,12 +43,17 @@ export async function completeLogin(
     ));
   }
   // Every way in here proves the email: an account made at a guest checkout becomes verified.
-  await db
-    .prepare("UPDATE users SET email_verified_at=? WHERE id=? AND email_verified_at IS NULL")
+  // Anyone can type an address at a guest checkout, so whoever did may still hold a session (or a
+  // password) on it: the owner's first proof of the email ends both before the owner moves in.
+  const proven = await db
+    .prepare(
+      "UPDATE users SET email_verified_at=?, password_hash=NULL WHERE id=? AND email_verified_at IS NULL",
+    )
     .bind(Date.now(), userId)
     .run();
+  if (proven.meta.changes > 0) await endAllSessions(db, userId);
   await startSession(c, userId);
-  await mergeGuest(c, userId);
+  if (merge) await mergeGuest(c, userId);
   await keepFilmsLonger(c.env, userId);
   const bonus = created ? await grantSignupBonus(c, userId) : false;
   return { userId, created, bonus };

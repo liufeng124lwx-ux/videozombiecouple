@@ -7,7 +7,8 @@ export const CODE_TTL_MS = 10 * 60_000;
 export const LINK_TTL_MS = 15 * 60_000;
 
 type StoredCode = { hash: string; attempts: number; expiresAt: number };
-type StoredLink = { email: string; expiresAt: number };
+/** visitor: the browser that asked for the link (absent on film emails, which nobody asked for). */
+type StoredLink = { email: string; expiresAt: number; visitor?: string };
 
 const codeKey = async (email: string) => `code:login:${await sha256Hex(email)}`;
 const digest = (email: string, code: string) => sha256Hex(`${email}:${code}`);
@@ -72,21 +73,44 @@ export async function issueLinkToken(
   env: Bindings,
   email: string,
   ttlMs: number = LINK_TTL_MS,
+  visitor?: string,
 ): Promise<string> {
   const token = randomHex(32);
-  const stored: StoredLink = { email, expiresAt: Date.now() + ttlMs };
+  const stored: StoredLink = {
+    email,
+    expiresAt: Date.now() + ttlMs,
+    ...(visitor ? { visitor } : {}),
+  };
   await env.KV.put(`login:${await sha256Hex(token)}`, JSON.stringify(stored), {
     expirationTtl: ttlSec(ttlMs),
   });
   return token;
 }
 
-/** The page redeems the token with a POST, so mail scanners that open links cannot use it up. */
-export async function redeemLinkToken(env: Bindings, token: string): Promise<string | null> {
+export type LinkRedeem =
+  | { kind: "ok"; email: string; sameBrowser: boolean }
+  | { kind: "confirm"; email: string }
+  | { kind: "expired" };
+
+/**
+ * The page redeems the token with a POST, so mail scanners that open links cannot use it up. A link
+ * opened in a browser other than the one that asked for it is not used up until the person there
+ * confirms whose account it opens: otherwise anyone could mail their own link to someone and sign
+ * them into the sender's account (login CSRF).
+ */
+export async function redeemLinkToken(
+  env: Bindings,
+  token: string,
+  visitor: string,
+  confirmed: boolean,
+): Promise<LinkRedeem> {
   const key = `login:${await sha256Hex(token)}`;
   const raw = await env.KV.get(key);
-  if (!raw) return null;
-  await env.KV.delete(key);
+  if (!raw) return { kind: "expired" };
   const stored = JSON.parse(raw) as StoredLink;
-  return Date.now() < stored.expiresAt ? stored.email : null;
+  if (Date.now() >= stored.expiresAt) return { kind: "expired" };
+  const sameBrowser = stored.visitor === visitor;
+  if (!sameBrowser && !confirmed) return { kind: "confirm", email: stored.email };
+  await env.KV.delete(key);
+  return { kind: "ok", email: stored.email, sameBrowser };
 }

@@ -36,6 +36,7 @@ describe("account (spec 5.5)", () => {
     const response = await h.call("/v1/account", { session });
     expect(response.body).toEqual({
       email: "ann@example.com",
+      verified: true,
       hasPassword: false,
       google: false,
       createdAt: NOON,

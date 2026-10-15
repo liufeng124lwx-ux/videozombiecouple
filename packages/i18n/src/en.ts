@@ -287,6 +287,11 @@ export const en = {
   "account.on": "On",
   "account.password": "Password",
   "account.setPassword": "Set a password",
+  "account.linkConfirm.title": "Sign in as {email}?",
+  "account.linkConfirm.text":
+    "This sign-in link was opened in a different browser from the one that asked for it. Only continue if this is your email.",
+  "account.linkConfirm.notMe": "Not me",
+  "account.verifyFirst": "Sign in once with the emailed code to add a password.",
   "account.changePassword": "Change password",
   "account.newPassword": "New password",
   "account.savePassword": "Save password",

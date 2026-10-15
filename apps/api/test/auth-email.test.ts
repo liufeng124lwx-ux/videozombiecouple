@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setup } from "./harness.ts";
+import { hashIdentity } from "../src/services/crypto.ts";
+import { HMAC_KEY, setup } from "./harness.ts";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -47,6 +48,75 @@ describe("email sign-in (spec 5.1)", () => {
     expect(response.body).toEqual({ ok: true, created: true });
     const session = sessionOf(response.headers);
     expect((await h.call("/v1/me", { session })).body.user).toMatchObject({ email: EMAIL });
+  });
+
+  it("an unverified guest account cannot be pre-claimed: no password before the email is proven, and the owner's first sign-in ends every earlier session", async () => {
+    const { h, ask, codeOf, sessionOf } = await ready();
+    // Someone types the victim's address at a guest checkout and keeps that browser signed in.
+    const guest = await h.call("/v1/auth/guest", { method: "POST", body: { email: EMAIL } });
+    expect(guest.status).toBe(201);
+    const squatter = guest.cookies.upx_sess as string;
+    const setPw = await h.call("/v1/account/password", {
+      method: "POST",
+      session: squatter,
+      body: { password: "correct horse battery staple" },
+    });
+    expect(setPw.body.error?.code).toBe("FORBIDDEN");
+    // A password set some other way before verification is wiped too.
+    h.db.prepare("UPDATE users SET password_hash='x' WHERE email=?").run(EMAIL);
+    // The real owner signs in with the emailed code.
+    await ask();
+    const owner = await h.call("/v1/auth/code", {
+      method: "POST",
+      body: { email: EMAIL, code: codeOf() },
+    });
+    expect(owner.status).toBe(200);
+    expect((await h.call("/v1/me", { session: squatter })).body.user).toBeNull();
+    expect((await h.call("/v1/me", { session: sessionOf(owner.headers) })).body.user).toMatchObject(
+      { email: EMAIL },
+    );
+    expect(h.db.prepare("SELECT password_hash FROM users WHERE email=?").get(EMAIL)).toEqual({
+      password_hash: null,
+    });
+  });
+
+  it("a verified account's later sign-ins keep its other sessions", async () => {
+    const { h, ask, codeOf } = await ready();
+    const { session } = await h.signIn(EMAIL);
+    await ask();
+    await h.call("/v1/auth/code", { method: "POST", body: { email: EMAIL, code: codeOf() } });
+    expect((await h.call("/v1/me", { session })).body.user).toMatchObject({ email: EMAIL });
+  });
+
+  it("a link opened in another browser asks first, and never takes that browser's guest stories", async () => {
+    const { h, ask, tokenOf, sessionOf } = await ready();
+    await h.signIn(EMAIL);
+    await ask(); // requested in this browser (the default visitor)
+    const token = tokenOf();
+    const other = "fedcba9876543210fedcba9876543210";
+    const asked = await h.call("/v1/auth/link", {
+      method: "POST",
+      body: { token },
+      visitor: other,
+    });
+    expect(asked.body).toEqual({ ok: false, confirm: EMAIL });
+    expect(sessionOf(asked.headers)).toBeUndefined();
+    // Asking does not use the link up; confirming signs in without merging this browser's stories.
+    h.db
+      .prepare(
+        "INSERT INTO stories(id,owner,user_id,visitor_hash,ip_hash,kind,scene,prompt_version,survivor_key,infected_key,status,idempotency_key,created_at,expires_at) VALUES('S1',?,'','v','i','human','cabin-wheat','h1','a','b','preview_ready','k',0,?)",
+      )
+      .run(`g:${await hashIdentity(`visitor:${other}`, HMAC_KEY)}`, Date.now() + 86_400_000);
+    const confirmed = await h.call("/v1/auth/link", {
+      method: "POST",
+      body: { token, confirm: true },
+      visitor: other,
+    });
+    expect(confirmed.body).toEqual({ ok: true, created: false });
+    expect(sessionOf(confirmed.headers)).toBeDefined();
+    expect(h.db.prepare("SELECT user_id FROM stories WHERE id='S1'").get()).toEqual({
+      user_id: "",
+    });
   });
 
   it("signs in an existing account by link, once", async () => {

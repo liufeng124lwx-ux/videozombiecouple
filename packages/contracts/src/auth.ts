@@ -12,7 +12,11 @@ export const EmailLoginSchema = z.object({
 export const GuestSignUpSchema = z.object({ email: EmailSchema });
 
 export const CodeLoginSchema = z.object({ email: EmailSchema, code: z.string().regex(/^\d{6}$/) });
-export const LinkLoginSchema = z.object({ token: z.string().regex(/^[a-f0-9]{64}$/) });
+export const LinkLoginSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/),
+  /** The person in a browser other than the one that asked agreed to sign in as this email. */
+  confirm: z.boolean().optional(),
+});
 
 export const PasswordSchema = z.string().min(8).max(128);
 export const PasswordLoginSchema = z.object({
@@ -64,6 +68,8 @@ export type LedgerEntryView = {
 
 export type AccountView = {
   email: string;
+  /** False for an account made at a guest checkout until its owner proves the email. */
+  verified: boolean;
   hasPassword: boolean;
   google: boolean;
   createdAt: number;

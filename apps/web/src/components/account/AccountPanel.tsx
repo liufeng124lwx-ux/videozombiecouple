@@ -62,6 +62,31 @@ function StoryRow({ story }: { story: StorySummary }) {
 export default function AccountPanel({ navigate = (url: string) => location.assign(url) }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [notice, setNotice] = useState<string | null>(null);
+  /** A sign-in link opened in a browser other than the one that asked for it: whose account? */
+  const [confirmLink, setConfirmLink] = useState<{
+    token: string;
+    email: string;
+    next: string | null;
+  } | null>(null);
+
+  /** Signs in with an emailed link; false when the person here must confirm the account first. */
+  async function redeem(token: string, next: string | null, confirm: boolean): Promise<boolean> {
+    const result = await post<{ ok: boolean; created?: boolean; confirm?: string }>(
+      "/v1/auth/link",
+      confirm ? { token, confirm: true } : { token },
+    );
+    if (!result.ok && result.confirm) {
+      setConfirmLink({ token, email: result.confirm, next });
+      return false;
+    }
+    await refreshMe();
+    notifySignedIn(result.created === true);
+    if (sameSite(next) && next !== "/account") {
+      navigate(next);
+      return false;
+    }
+    return true;
+  }
 
   async function load() {
     setState({ kind: "loading" });
@@ -94,13 +119,7 @@ export default function AccountPanel({ navigate = (url: string) => location.assi
     void (async () => {
       if (token) {
         try {
-          const result = await post<{ created: boolean }>("/v1/auth/link", { token });
-          await refreshMe();
-          notifySignedIn(result.created);
-          if (sameSite(next) && next !== "/account") {
-            navigate(next);
-            return;
-          }
+          if (!(await redeem(token, next, false))) return;
         } catch (failure) {
           setNotice(messageOf(failure));
         }
@@ -117,6 +136,41 @@ export default function AccountPanel({ navigate = (url: string) => location.assi
     </div>
   );
 
+  if (confirmLink)
+    return (
+      <section class="account-section">
+        <h2>{t("account.linkConfirm.title", { email: confirmLink.email })}</h2>
+        <p class="muted">{t("account.linkConfirm.text")}</p>
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            onClick={() => {
+              const { token, next } = confirmLink;
+              setConfirmLink(null);
+              void redeem(token, next, true)
+                .then((stay) => stay && load())
+                .catch((failure) => {
+                  setNotice(messageOf(failure));
+                  void load();
+                });
+            }}
+          >
+            {t("nav.signIn")}
+          </button>
+          <button
+            type="button"
+            class="btn"
+            onClick={() => {
+              setConfirmLink(null);
+              void load();
+            }}
+          >
+            {t("account.linkConfirm.notMe")}
+          </button>
+        </div>
+      </section>
+    );
   if (state.kind === "loading")
     return (
       <div aria-busy="true">
