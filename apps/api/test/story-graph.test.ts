@@ -132,6 +132,15 @@ describe("story graph", () => {
     expect(shot4.last).toBeUndefined();
   });
 
+  it("the pet version's shot 3 starts from keyframe B, with no last frame", async () => {
+    const s = state({ status: "rendering", picks: { A: "kf/S/a.jpg", C: "kf/S/c.jpg" } });
+    s.spec.kind = "pet";
+    (s.steps["kf:B"] as { outputKey: string | null }).outputKey = "kf/S/kf-B.jpg";
+    const shot3 = await kieInputFor(s.steps["shot:3"]!, s, async (k) => `https://r2/${k}`);
+    expect(shot3.first).toBe("https://r2/kf/S/kf-B.jpg");
+    expect(shot3.last).toBeUndefined();
+  });
+
   it("names outputs by story and step", () => {
     expect(outputKeyFor("S", "kf:A:1", "jpg")).toBe("kf/S/kf-A-1.jpg");
     expect(outputKeyFor("S", "shot:3", "mp4")).toBe("shot/S/shot-3.mp4");

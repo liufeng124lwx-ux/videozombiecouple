@@ -57,14 +57,16 @@ export const REQUIRED_FACES: Record<FrameId, Face[]> = {
   C: ["survivor", "infected"],
 };
 
-export const STORYBOARD: {
+export type Shot = {
   id: ShotId;
   targetSec: number;
   first: FrameId;
   last?: FrameId;
   faces: Face[];
   grade: Grade;
-}[] = [
+};
+
+export const STORYBOARD: Shot[] = [
   { id: 1, targetSec: 3, first: "A", faces: ["infected"], grade: "cold" },
   { id: 2, targetSec: 2, first: "A", faces: [], grade: "cold" },
   { id: 3, targetSec: 3, first: "A", last: "B", faces: ["survivor", "infected"], grade: "cold" },
@@ -72,6 +74,20 @@ export const STORYBOARD: {
   // The ending: back in the ruins, still holding each other as first light comes in.
   { id: 5, targetSec: 3, first: "B", faces: ["survivor", "infected"], grade: "dawn" },
 ];
+
+/**
+ * The storyboard for a kind. Pets: shot 3 starts already in the arms (keyframe B) instead of
+ * running A→B — a pet crossing the room and being picked up across a camera swing morphs through
+ * the person (sample film, 2026-10-15). The cut from the lowered flashlight to the hug does the work.
+ */
+export function storyboard(kind: Kind): Shot[] {
+  if (kind === "human") return STORYBOARD;
+  return STORYBOARD.map((shot) =>
+    shot.id === 3
+      ? { id: 3, targetSec: shot.targetSec, first: "B", faces: shot.faces, grade: shot.grade }
+      : shot,
+  );
+}
 
 export const CANDIDATES_PER_FRAME = 2;
 /** The last frame is held this long under the end title. */
@@ -129,8 +145,8 @@ export function keyframePrompt(sceneId: SceneId, frame: FrameId, kind: Kind): st
   return [
     "Cinematic film still, vertical 9:16.",
     "IMAGE 1 is the survivor. IMAGE 2 is the one who turned. IMAGE 3 is the scene reference. IMAGE 4 is the pose reference.",
-    "Use exactly the same pose, framing and camera angle as IMAGE 4.",
-    "Use the setting, lighting and the infected look from IMAGE 3.",
+    "Use exactly the same pose, framing and camera angle as IMAGE 4, but take only the pose from IMAGE 4, not its clothes or light.",
+    "Use the setting, lighting and the infected look from IMAGE 3. Both wear exactly the same clothes as in IMAGE 3 (the survivor's worn olive jacket), so the outfit never changes between shots.",
     `Person from IMAGE 1 embraces the ${w.other} from IMAGE 2, identities exact.`,
     SAFE,
   ].join(" ");
@@ -141,7 +157,10 @@ export function shotPrompt(_sceneId: SceneId, shot: ShotId, kind: Kind): string 
   const body = {
     1: `Slow push-in from behind the survivor's shoulder. The survivor keeps ${w.holds}, trembling slightly. The ${w.other} slowly turns its head toward camera. Dust particles drift in the cold light. No lunging, no camera shake.`,
     2: `Slow push-in to a close-up of ${w.hands}. Shallow depth of field, cold blue light.`,
-    3: `The survivor ${w.lowers}, and opens both arms. The ${w.other} steps forward into the embrace; they hold each other tightly. Slow orbit camera. Emotional, gentle.`,
+    3:
+      kind === "human"
+        ? `The survivor ${w.lowers}, and opens both arms. The ${w.other} steps forward into the embrace; they hold each other tightly. Slow orbit camera. Emotional, gentle.`
+        : `The survivor holds the ${w.other} close against the chest with both arms. The pet nuzzles in under the chin and the survivor rests a cheek on its head, eyes closing. The pet stays in the survivor's arms the whole time and keeps the same fur colour and markings. Very slow orbit camera. Emotional, gentle.`,
     4: "Slow-motion pull back. They laugh while hugging, wind moves their hair. Golden hour sunlight, warm glow. Natural, joyful motion.",
     5: `Back in the same ruined place as the first frame. The survivor and the ${w.other} keep holding each other, perfectly still, eyes closed. The first light of dawn slowly spreads through the broken windows and turns from cold blue to soft gold on them. The camera slowly pulls back and rises, revealing the empty room around them, dust floating in the light. Quiet, peaceful, bittersweet. No sudden movement.`,
   }[shot];

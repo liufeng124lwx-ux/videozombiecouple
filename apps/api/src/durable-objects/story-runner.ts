@@ -7,7 +7,7 @@ import {
   REQUIRED_FACES,
   RETENTION,
   SCENES,
-  STORYBOARD,
+  storyboard,
   TIERS,
 } from "@vzc/catalog";
 import type { ErrorCode, StoryView } from "@vzc/contracts";
@@ -562,7 +562,7 @@ export class StoryRunner extends DurableObject<Bindings> {
 
   #fakeSource(state: StoryState, step: StepRecord): string {
     if (step.capability !== "shot") return state.spec.survivorKey;
-    const shot = STORYBOARD.find((s) => `shot:${s.id}` === step.id);
+    const shot = storyboard(state.spec.kind).find((s) => `shot:${s.id}` === step.id);
     return (shot && state.picks[shot.first === "B" ? "A" : shot.first]) ?? state.spec.survivorKey;
   }
 
@@ -708,7 +708,7 @@ export class StoryRunner extends DurableObject<Bindings> {
 
   async #compose(state: StoryState, step: StepRecord): Promise<void> {
     const { spec } = state;
-    const shots = STORYBOARD.map((shot) => {
+    const shots = storyboard(spec.kind).map((shot) => {
       const key = state.steps[`shot:${shot.id}`]?.outputKey;
       if (!key) throw new Error(`shot ${shot.id} has no output`);
       return {

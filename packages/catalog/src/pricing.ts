@@ -1,4 +1,4 @@
-import { PACKS, PLAN_IDS, PLANS, SELL_PLANS } from "./plans.ts";
+import { PACKS, type Pack, PLAN_IDS, PLANS, SELL_PLANS } from "./plans.ts";
 import { ROUTES, type RouteSeed } from "./routes.ts";
 import { CANDIDATES_PER_FRAME, STORYBOARD } from "./story.ts";
 import { TIERS } from "./tiers.ts";
@@ -40,17 +40,41 @@ export function storyCostUsd(routes: readonly RouteSeed[] = ROUTES): { video: nu
   };
 }
 
-export type GuardViolation = { rule: "video_margin"; revenueUsd: number; costUsd: number };
+/** Waffo, merchant of record: 5% + $0.50 a payment (list rate; 4.5% is a promotion), 1% at payout. */
+export const WAFFO_FEE = { rate: 0.05, fixedUsd: 0.5, payoutRate: 0.01 } as const;
+/** Share of paid films we expect to be remade once for free (owner's assumption, 2026-10-15). */
+export const REMAKE_RATE = 0.3;
+/** Evals, example films and staging runs, spread over each paid film (≈ $30 a month at 100 films). */
+export const TESTING_PER_FILM_USD = 0.3;
 
-/** A paid video must pay for itself with margin, at the cheapest credit price. */
+/** What one video of a pack brings in after Waffo's fees. */
+export function netPerVideoUsd(pack: Pack): number {
+  const net = pack.usd * (1 - WAFFO_FEE.rate) - WAFFO_FEE.fixedUsd;
+  return (net * (1 - WAFFO_FEE.payoutRate)) / (pack.credits / TIERS.video.credits);
+}
+
+/** The full cost of one paid film: models, the expected free remakes and testing. */
+export function filmCostUsd(routes: readonly RouteSeed[] = ROUTES): number {
+  return storyCostUsd(routes).video * (1 + REMAKE_RATE) + TESTING_PER_FILM_USD;
+}
+
+export type GuardViolation = {
+  rule: "video_margin";
+  pack: string;
+  revenueUsd: number;
+  costUsd: number;
+};
+
+/** Every pack must net at least MARGIN_FACTOR times the full cost of a film, per video. */
 export function pricingGuard(
   routes: readonly RouteSeed[] = ROUTES,
-  pMin = minCreditPrice(),
+  packs: readonly Pack[] = PACKS,
 ): GuardViolation[] {
-  const cost = storyCostUsd(routes);
-  const revenueUsd = TIERS.video.credits * pMin;
-  const costUsd = cost.video;
-  return revenueUsd < costUsd * MARGIN_FACTOR
-    ? [{ rule: "video_margin", revenueUsd, costUsd }]
-    : [];
+  const costUsd = filmCostUsd(routes);
+  return packs.flatMap((pack) => {
+    const revenueUsd = netPerVideoUsd(pack);
+    return revenueUsd < costUsd * MARGIN_FACTOR
+      ? [{ rule: "video_margin" as const, pack: pack.id, revenueUsd, costUsd }]
+      : [];
+  });
 }

@@ -10,6 +10,7 @@ import {
   SCENES,
   STORYBOARD,
   shotPrompt,
+  storyboard,
   TIERS,
 } from "../src/index.ts";
 
@@ -31,6 +32,26 @@ describe("story catalog", () => {
     });
     // Kling's shortest clip is 3 s: the embrace shot fits without a cut.
     expect(STORYBOARD.map((s) => s.targetSec)).toEqual([3, 2, 3, 3, 3]);
+  });
+
+  it("the pet version's embrace starts in the arms: a cat crossing the room into a hug morphs", () => {
+    expect(storyboard("human")).toEqual(STORYBOARD);
+    const pet = storyboard("pet");
+    expect(pet.map((s) => s.targetSec)).toEqual(STORYBOARD.map((s) => s.targetSec));
+    const shot3 = pet.find((s) => s.id === 3);
+    expect(shot3).toMatchObject({ first: "B", grade: "cold", targetSec: 3 });
+    expect(shot3?.last).toBeUndefined();
+    const p = shotPrompt("cabin-wheat", 3, "pet");
+    expect(p).not.toMatch(/steps forward|walks|opens both arms/i);
+    expect(p).toMatch(/stays in (her|their|the survivor's) arms/i);
+  });
+
+  it("keyframe B keeps the clothes from the standoff (A), taking only the pose from C", () => {
+    for (const kind of KINDS) {
+      const p = keyframePrompt("cabin-wheat", "B", kind);
+      expect(p).toMatch(/same clothes as in IMAGE 3/i);
+      expect(p).toMatch(/only the pose/i);
+    }
   });
 
   it("every prompt carries the safety line for every scene and kind", () => {
@@ -70,8 +91,8 @@ describe("story catalog", () => {
     expect(TIERS.video.credits).toBe(10);
     expect(PACKS.map((p) => [p.id, p.credits, p.usd])).toEqual([
       ["pack1", 10, 4.99],
-      ["pack3", 30, 11.99],
-      ["pack10", 100, 29.99],
+      ["pack3", 30, 13.99],
+      ["pack5", 50, 21.99],
     ]);
     expect(SALE_PRODUCTS.every((p) => p.kind === "pack")).toBe(true);
     expect(CANDIDATES_PER_FRAME).toBe(2);

@@ -340,7 +340,7 @@ export default function StoryTool({
         <div class="tool-setup">
           <div class="tool-step cast">
             <p class="step-title">
-              {t(s.kind === "pet" ? "story.step.castPet" : "story.step.cast")}
+              {t(s.kind === "pet" ? "story.step.castPet" : "story.step.cast", { n: 1 })}
             </p>
             <div class="kind-toggle" role="radiogroup" aria-label={t("story.kind.label")}>
               {(["human", "pet"] as const).map((k) => (
@@ -393,7 +393,7 @@ export default function StoryTool({
             </ul>
           </div>
           <div class="tool-step set">
-            <p class="step-title">{t("story.step.scene")}</p>
+            <p class="step-title">{t("story.step.scene", { n: 2 })}</p>
             <ScenePicker
               scene={s.scene}
               posters={posters}

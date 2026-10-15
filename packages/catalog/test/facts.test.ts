@@ -4,10 +4,11 @@ import { fact, facts, interpolate } from "../src/index.ts";
 describe("page facts", () => {
   it("formats prices and per-video prices from the packs", () => {
     expect(fact("pack.pack1.usd")).toBe("$4.99");
-    expect(fact("pack.pack3.usd")).toBe("$11.99");
+    expect(fact("pack.pack3.usd")).toBe("$13.99");
     expect(fact("pack.pack3.videos")).toBe("3");
-    expect(fact("pack.pack10.perVideo")).toBe("$3.00");
-    expect(fact("price.fromPerVideo")).toBe("$3.00");
+    expect(fact("pack.pack5.perVideo")).toBe("$4.40");
+    expect(fact("price.fromPerVideo")).toBe("$4.40");
+    expect(() => fact("pack.pack10.usd")).toThrow();
   });
 
   it("knows the story numbers", () => {
@@ -23,7 +24,7 @@ describe("page facts", () => {
   });
 
   it("fills {{key}} and fails on unknown keys", () => {
-    expect(interpolate("From {{ price.fromPerVideo }} a video")).toBe("From $3.00 a video");
+    expect(interpolate("From {{ price.fromPerVideo }} a video")).toBe("From $4.40 a video");
     expect(() => interpolate("{{nope}}")).toThrow(/Unknown fact/);
   });
 

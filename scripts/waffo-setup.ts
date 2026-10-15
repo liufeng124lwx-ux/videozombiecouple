@@ -29,9 +29,19 @@ const [merchantId, storeId] = readFileSync(
 if (!merchantId?.startsWith("MER_") || !storeId?.startsWith("STO_"))
   throw new Error("bad waffo ids file");
 const statePath = join(dir, `waffo-${mode}-state.json`);
-const state: { products: Record<string, string>; webhook?: string } = existsSync(statePath)
-  ? JSON.parse(readFileSync(statePath, "utf8"))
-  : { products: {} };
+const state: {
+  products: Record<string, string>;
+  /** The USD price each product was created with; a catalog price change creates a new product. */
+  prices?: Record<string, number>;
+  webhook?: string;
+} = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : { products: {} };
+// Products created before prices were recorded carry the launch prices (catalog, 2026-10-14).
+state.prices ??= Object.fromEntries(
+  Object.keys(state.products).map((key) => [
+    key,
+    { pack1: 4.99, pack3: 11.99, pack10: 29.99 }[key] ?? 0,
+  ]),
+);
 
 const API =
   mode === "test"
@@ -105,12 +115,13 @@ const idOf = (data: Record<string, unknown>) => {
 };
 
 for (const item of items) {
-  if (state.products[item.key]) {
+  if (state.products[item.key] && state.prices?.[item.key] === item.usd) {
     console.log(`  have    ${item.key} → ${state.products[item.key]}`);
     continue;
   }
+  const verb = state.products[item.key] ? "reprice" : "create ";
   console.log(
-    `  ${apply ? "create " : "missing"} ${item.key}: ${item.name}, $${item.usd}${item.period ? `, ${item.period}` : ""}`,
+    `  ${apply ? verb : "missing"} ${item.key}: ${item.name}, $${item.usd}${item.period ? `, ${item.period}` : ""}`,
   );
   if (!apply) continue;
   const common = {
@@ -127,6 +138,7 @@ for (const item of items) {
       })
     : await call("/v1/actions/onetime-product/create-product", common);
   state.products[item.key] = idOf(data);
+  state.prices = { ...state.prices, [item.key]: item.usd };
   writeFileSync(statePath, JSON.stringify(state, null, 2), { mode: 0o600 });
 }
 
@@ -151,5 +163,7 @@ else {
 }
 
 console.log(
-  `\nWAFFO_MERCHANT_ID=${merchantId}\nWAFFO_STORE_ID=${storeId}\nWAFFO_PRODUCTS=${JSON.stringify(state.products)}`,
+  `\nWAFFO_MERCHANT_ID=${merchantId}\nWAFFO_STORE_ID=${storeId}\nWAFFO_PRODUCTS=${JSON.stringify(
+    Object.fromEntries(items.map((i) => [i.key, state.products[i.key] ?? "(missing)"])),
+  )}`,
 );

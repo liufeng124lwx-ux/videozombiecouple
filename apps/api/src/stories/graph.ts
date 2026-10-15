@@ -4,6 +4,7 @@ import {
   keyframePrompt,
   STORYBOARD,
   shotPrompt,
+  storyboard,
 } from "@vzc/catalog";
 import type { Phase, StepRecord, StoryState } from "./types.ts";
 
@@ -149,7 +150,7 @@ export async function kieInputFor(
     if (!a || !c) throw new Error("keyframe B needs the picked A and C");
     return { prompt, images: [...photos, await url(a), await url(c)] };
   }
-  const shot = STORYBOARD.find((s) => `shot:${s.id}` === step.id);
+  const shot = storyboard(spec.kind).find((s) => `shot:${s.id}` === step.id);
   if (!shot) throw new Error(`no kie input for step ${step.id}`);
   const frameKey = (frame: FrameId) => {
     const key = frame === "B" ? state.steps["kf:B"]?.outputKey : picks[frame];

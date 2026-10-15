@@ -43,11 +43,11 @@ export type Pack = {
   badge?: "popular";
 };
 
-/** Spec §7: one-time video packs (10 credits = 1 video); credits never expire. */
+/** Spec §7: one-time video packs (10 credits = 1 video); credits never expire. Prices: owner, 2026-10-15. */
 export const PACKS: readonly Pack[] = [
   { id: "pack1", credits: 10, usd: 4.99, productKey: "pack1" },
-  { id: "pack3", credits: 30, usd: 11.99, productKey: "pack3", badge: "popular" },
-  { id: "pack10", credits: 100, usd: 29.99, productKey: "pack10" },
+  { id: "pack3", credits: 30, usd: 13.99, productKey: "pack3", badge: "popular" },
+  { id: "pack5", credits: 50, usd: 21.99, productKey: "pack5" },
 ];
 
 /** Spec §7: no subscriptions. The plan types stay because the billing code still reads them. */

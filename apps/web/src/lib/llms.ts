@@ -11,7 +11,7 @@ export function llmsTxt(origin: string): string {
     "## Facts",
     "- No free previews: nothing is generated before payment. The example films on the site show what you get. Photos are checked first (one adult face per photo, free).",
     `- Video: ${fact("video.seconds")} seconds, vertical ${fact("video.width")}×${fact("video.height")} MP4 with music and an optional end title.`,
-    `- Price: ${fact("pack.pack1.usd")} for one video, ${fact("pack.pack3.usd")} for ${fact("pack.pack3.videos")}, ${fact("pack.pack10.usd")} for ${fact("pack.pack10.videos")}. One-time packs, no subscription.`,
+    `- Price: ${fact("pack.pack1.usd")} for one video, ${fact("pack.pack3.usd")} for ${fact("pack.pack3.videos")}, ${fact("pack.pack5.usd")} for ${fact("pack.pack5.videos")}. One-time packs, no subscription.`,
     "- Buy without signing up: the email typed at checkout becomes the account (no password) and receives the film and receipt.",
     "- If the faces don't come out right, each paid film can be remade once for free while the photos still exist.",
     `- Privacy: photos deleted within ${fact("retention.photosDays")} days; films kept ${fact("retention.guestFilmDays")} days for unconfirmed emails and ${fact("retention.memberFilmDays")} days once the email is confirmed; face features are never stored or used for training.`,
