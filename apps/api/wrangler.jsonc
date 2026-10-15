@@ -53,6 +53,8 @@
   // Spec 8.2: every 5 minutes, hourly, daily (03:30 UTC) and weekly (Monday 04:00 UTC).
   "triggers": { "crons": ["*/5 * * * *", "0 * * * *", "30 3 * * *", "0 4 * * 1"] },
   "vars": {
+    // A photo the moderation provider could not check is refused (retried first), not let through.
+    "MODERATION_FAIL": "closed",
     "ENVIRONMENT": "staging",
     "ALLOWED_ORIGIN": "https://staging.videozombiecouple.com",
     "API_ORIGIN": "https://api-staging.videozombiecouple.com",

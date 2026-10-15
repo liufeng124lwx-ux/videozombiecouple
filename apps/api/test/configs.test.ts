@@ -16,6 +16,11 @@ describe("deployable configs (spec 1.4)", () => {
   const staging = read("../wrangler.jsonc");
   const production = read("../wrangler.production.jsonc");
 
+  it("refuses photos that moderation could not check, in both environments", () => {
+    expect(staging.vars.MODERATION_FAIL).toBe("closed");
+    expect(production.vars.MODERATION_FAIL).toBe("closed");
+  });
+
   it("binds the same things in both environments, to different resources", () => {
     const shape = (c: Config) => ({
       main: c.main,
