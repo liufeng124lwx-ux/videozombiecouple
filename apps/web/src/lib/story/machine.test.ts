@@ -19,6 +19,7 @@ const view = (status: StoryView["status"], over: Partial<StoryView> = {}): Story
   progress: { done: 0, total: 5, etaMs: null },
   errorCode: null,
   recomposeLeft: 1,
+  videoAttempts: 0,
   createdAt: 0,
   ...over,
 });

@@ -27,7 +27,13 @@ const page = (
   status: "live" | "draft",
   related: string[],
   preset?: PageConfig["preset"],
-): PageConfig => ({ id, kind, preset, locales: { en: { slug, status, h1 } }, related });
+): PageConfig => ({
+  id,
+  kind,
+  ...(preset ? { preset } : {}),
+  locales: { en: { slug, status, h1 } },
+  related,
+});
 
 const legal = (id: string, slug: string, h1: string): PageConfig => ({
   id,

@@ -148,6 +148,11 @@ export const en = {
   "story.failed.preview": "We couldn't make your preview. Your free preview was not used.",
   "story.failed.video": "We couldn't finish your film. The video went back to your balance.",
   "story.failed.retry": "Try again",
+  "story.failed.again": "Make it again",
+  "story.failed.newPhotos": "Start over with new photos",
+  "story.pay.confirming": "Confirming your payment…",
+  "story.pay.slow":
+    "Your payment is taking longer than usual. Refresh this page in a minute — you won't be charged twice.",
   "story.sample": "Example frames show AI-generated people.",
   "cookie.label": "Cookie choices",
   // Keep it short: a longer text than the hero lede becomes the LCP element (scripts/lighthouse.ts).

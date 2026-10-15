@@ -46,6 +46,7 @@ const view = (status: StoryView["status"], over: Partial<StoryView> = {}): Story
   progress: { done: 1, total: 5, etaMs: 60_000 },
   errorCode: null,
   recomposeLeft: 1,
+  videoAttempts: 0,
   createdAt: 0,
   ...over,
 });
@@ -60,6 +61,8 @@ function addPhotos() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
+  localStorage.clear();
   me.user = { id: "u1" };
   me.credits = 0;
   history.replaceState(null, "", "/");
@@ -98,6 +101,37 @@ describe("StoryTool", () => {
     );
   });
 
+  it("after checkout waits for the payment's credits instead of offering packs again", async () => {
+    history.replaceState(null, "", "/story?id=S1&render=1");
+    sessionStorage.setItem("upx-checkout", JSON.stringify({ credits: 0, at: Date.now() }));
+    client.getStory.mockResolvedValue(view("preview_ready", { preview: { A: "a", C: "c" } }));
+    client.render.mockRejectedValueOnce(new ApiError("CREDITS_LOW"));
+    render(<StoryTool posters={{}} mode="story" pollMs={10} />);
+    await screen.findByText("Confirming your payment…");
+    expect(screen.queryByTestId("packs")).toBeNull();
+    me.credits = 10;
+    await waitFor(() => expect(client.render).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId("packs")).toBeNull();
+    expect(sessionStorage.getItem("upx-checkout")).toBeNull();
+  });
+
+  it("makes a failed film again from the same preview", async () => {
+    localStorage.setItem("vzc-story", "S1");
+    client.getStory.mockResolvedValue(
+      view("failed", {
+        errorCode: "COMPOSE_FAILED",
+        videoAttempts: 1,
+        preview: { A: "a", C: "c" },
+      }),
+    );
+    render(<StoryTool posters={{}} pollMs={10} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Make it again" }));
+    await waitFor(() =>
+      expect(client.render).toHaveBeenCalledWith("S1", expect.any(String), expect.any(Function)),
+    );
+    expect(client.createStory).not.toHaveBeenCalled();
+  });
+
   it("resumes a running story after reload", async () => {
     localStorage.setItem("vzc-story", "S1");
     client.getStory.mockResolvedValue(view("rendering", { preview: { A: "a", C: "c" } }));
@@ -108,10 +142,16 @@ describe("StoryTool", () => {
 
   it("shows a refund message when the video fails", async () => {
     localStorage.setItem("vzc-story", "S1");
-    client.getStory.mockResolvedValue(view("failed", { errorCode: "COMPOSE_FAILED" }));
+    client.getStory.mockResolvedValue(
+      view("failed", {
+        errorCode: "COMPOSE_FAILED",
+        videoAttempts: 1,
+        preview: { A: "a", C: "c" },
+      }),
+    );
     render(<StoryTool posters={{}} pollMs={10} />);
     await screen.findByText(/went back to your balance/);
-    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Make it again" })).toBeTruthy();
   });
 
   it("asks guests to sign in before the preview", async () => {

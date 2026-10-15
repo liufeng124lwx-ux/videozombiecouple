@@ -4,6 +4,7 @@ import { useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { track } from "../../lib/analytics.ts";
 import { ApiError } from "../../lib/api.ts";
 import { onSignedIn, openSignIn } from "../../lib/bus.ts";
+import { clearCheckout, pendingCheckout } from "../../lib/checkout.ts";
 import { loadMe, refreshMe } from "../../lib/me.ts";
 import {
   createStory,
@@ -37,6 +38,10 @@ export type StoryToolProps = {
 };
 
 const POLL_MS = 3_000;
+/** A checkout started this recently may still be on its way (webhook not yet in). */
+const CHECKOUT_FRESH_MS = 30 * 60_000;
+/** How long to wait for a payment's credits before asking the buyer to refresh. */
+const CONFIRM_WAIT_MS = 60_000;
 const PREVIEW_STAGES = [
   "story.previewing.stage1",
   "story.previewing.stage2",
@@ -70,6 +75,7 @@ export default function StoryTool({
   const [previewsLeft, setPreviewsLeft] = useState<number | null>(null);
   const [title, setTitle] = useState({ names: "", date: "", open: false });
   const [copied, setCopied] = useState(false);
+  const [payment, setPayment] = useState<"confirming" | "slow" | null>(null);
   const turnstile = useRef<HTMLDivElement>(null);
   const waitingForSignIn = useRef(false);
   const autoRender = useRef(false);
@@ -189,20 +195,43 @@ export default function StoryTool({
     }
   }
 
-  async function startRender() {
+  async function startRender(): Promise<void> {
     const id = s.storyId;
     if (!id) return;
     try {
       await render(id, renderKey(id, newIdempotencyKey), token);
+      clearCheckout();
       track("video_purchase", {});
       dispatch({ type: "rendering" });
     } catch (error) {
-      if (error instanceof ApiError && error.code === "CREDITS_LOW")
+      if (error instanceof ApiError && error.code === "CREDITS_LOW") {
+        // Back from checkout: the payment's credits may not have landed yet. Wait for them
+        // rather than offering packs again (a second payment).
+        const pending = pendingCheckout();
+        if (pending && Date.now() - pending.at < CHECKOUT_FRESH_MS)
+          return confirmPayment(pending.credits);
         return dispatch({ type: "pay" });
+      }
       if (error instanceof ApiError && error.code === "LOGIN_REQUIRED")
         return openSignIn({ heading: t("story.signIn") });
       dispatch({ type: "error", code: error instanceof ApiError ? error.code : "INTERNAL" });
     }
+  }
+
+  async function confirmPayment(before: number): Promise<void> {
+    setPayment("confirming");
+    const until = Date.now() + CONFIRM_WAIT_MS;
+    while (Date.now() < until) {
+      await new Promise((r) => setTimeout(r, pollMs));
+      const now = await refreshMe().catch(() => null);
+      if ((now?.credits ?? 0) > before) {
+        setCredits(now?.credits ?? null);
+        setPayment(null);
+        clearCheckout();
+        return startRender();
+      }
+    }
+    setPayment("slow");
   }
 
   async function saveTitle() {
@@ -347,7 +376,11 @@ export default function StoryTool({
           <div class="ready-side">
             <h3>{t("story.ready.title")}</h3>
             <p class="small muted">{t("story.ready.drag")}</p>
-            {s.phase === "preview_ready" ? (
+            {payment !== null ? (
+              <p class="notice" role="status">
+                {payment === "confirming" ? t("story.pay.confirming") : t("story.pay.slow")}
+              </p>
+            ) : s.phase === "preview_ready" ? (
               <div class="actions">
                 <button
                   type="button"
@@ -501,9 +534,20 @@ export default function StoryTool({
         <div class="tool-failed" role="alert">
           <p>{s.phase === "failed" ? t("story.failed.video") : t("story.failed.preview")}</p>
           {message(s.error) && <p class="small muted">{message(s.error)}</p>}
-          <button type="button" class="btn btn-primary" onClick={startOver}>
-            {t("story.failed.retry")}
-          </button>
+          {s.phase === "failed" && s.story?.preview ? (
+            <>
+              <button type="button" class="btn btn-primary" onClick={() => void startRender()}>
+                {t("story.failed.again")}
+              </button>
+              <button type="button" class="link small" onClick={startOver}>
+                {t("story.failed.newPhotos")}
+              </button>
+            </>
+          ) : (
+            <button type="button" class="btn btn-primary" onClick={startOver}>
+              {t("story.failed.retry")}
+            </button>
+          )}
         </div>
       )}
 
