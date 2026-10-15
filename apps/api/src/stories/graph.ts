@@ -2,6 +2,7 @@ import {
   CANDIDATES_PER_FRAME,
   type FrameId,
   keyframePrompt,
+  portraitPrompt,
   STORYBOARD,
   shotPrompt,
   storyboard,
@@ -34,6 +35,21 @@ const step = (
 export function previewSteps(): StepRecord[] {
   return [step("score:sources", "score", "preview", [])];
 }
+
+/**
+ * The free AI zombie filter (SEO review 2026-10-15): check the one photo, make one zombie portrait
+ * on the free pool, stamp it with the AI mark. All of it in the preview phase, so the free budget
+ * counts it; nothing is charged.
+ */
+export function photoSteps(): StepRecord[] {
+  return [
+    step("score:sources", "score", "preview", []),
+    step("kf:Z", "kie", "preview", ["score:sources"], "keyframe"),
+    step("mark", "mark", "preview", ["kf:Z"]),
+  ];
+}
+
+export const isPhoto = (state: StoryState) => state.spec.product === "photo";
 
 /**
  * After payment (owner, 2026-10-15: nothing is generated for free): two candidates each for
@@ -105,6 +121,11 @@ export function readySteps(state: StoryState): StepRecord[] {
 }
 
 export function phaseOutcome(state: StoryState, phase: Phase): "running" | "succeeded" | "failed" {
+  if (phase === "preview" && isPhoto(state)) {
+    const steps = Object.values(state.steps).filter((s) => s.phase === "preview");
+    if (steps.some((s) => s.state === "failed")) return "failed";
+    return state.steps.mark?.state === "succeeded" ? "succeeded" : "running";
+  }
   if (phase === "preview") {
     const check = state.steps["score:sources"];
     if (check?.state === "failed") return "failed";
@@ -140,6 +161,8 @@ export async function kieInputFor(
   url: (key: string) => Promise<string>,
 ): Promise<KieStepInput> {
   const { spec, picks } = state;
+  if (step.id === "kf:Z")
+    return { prompt: portraitPrompt(), images: [await url(spec.survivorKey)] };
   const photos = [await url(spec.survivorKey), await url(spec.infectedKey)];
   if (step.id.startsWith("kf:")) {
     const frame = step.id.split(":")[1] as FrameId;

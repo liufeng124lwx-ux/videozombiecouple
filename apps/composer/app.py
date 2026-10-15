@@ -1,4 +1,4 @@
-"""VideoZombieCouple composer: POST /score and POST /compose (spec §3, §4.2). Stateless.
+"""VideoZombieCouple composer: POST /score, /compose and /watermark (spec §3, §4.2). Stateless.
 
 Inputs and outputs travel through short-lived signed R2 URLs; nothing is kept after a request.
 """
@@ -9,6 +9,8 @@ import tempfile
 import threading
 from contextlib import contextmanager
 from pathlib import Path
+
+import io
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -152,3 +154,31 @@ def _compose(body: ComposeBody):
         put_file(body.outUrl, out, "video/mp4")
         put_file(body.posterUrl, poster, "image/jpeg")
         return {"ok": True, "durationSec": round(duration(out), 2)}
+
+
+class WatermarkBody(BaseModel):
+    imageUrl: str
+    outUrl: str
+
+
+@app.post("/watermark")
+def watermark_route(body: WatermarkBody):
+    with job_slot():
+        return _watermark(body)
+
+
+def _watermark(body: WatermarkBody):
+    """The free zombie photo: the corner mark (AI and the site) and "AI-generated" in the file."""
+    from PIL import Image
+
+    image = Image.open(io.BytesIO(fetch_bytes(body.imageUrl))).convert("RGB")
+    with tempfile.TemporaryDirectory() as tmp:
+        d = Path(tmp)
+        mark = Image.open(render_mark(str(d / "mark.png"), scale=max(1.0, image.width / 720)))
+        image.paste(mark, (image.width - mark.width - 24, image.height - mark.height - 28), mark)
+        exif = image.getexif()
+        exif[0x010E] = "AI-generated image, made with VideoZombieCouple"  # ImageDescription
+        out = d / "photo.jpg"
+        image.save(out, "JPEG", quality=90, exif=exif, comment=b"AI-generated image, made with VideoZombieCouple")
+        put_file(body.outUrl, out, "image/jpeg")
+    return {"ok": True}

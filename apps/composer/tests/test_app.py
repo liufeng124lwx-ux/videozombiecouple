@@ -103,3 +103,21 @@ def test_busy_instance_answers_503_instead_of_queueing(monkeypatch):
     finally:
         for _ in range(composer.MAX_JOBS):
             composer.JOBS.release()
+
+
+def test_watermark_marks_the_photo_as_ai_and_uploads_a_jpeg(files):
+    from PIL import Image
+
+    tmp, uploads = files
+    src = tmp / "zombie.png"
+    Image.new("RGB", (768, 1024), (40, 60, 80)).save(src)
+    r = TestClient(composer.app).post("/watermark", json={"imageUrl": str(src), "outUrl": "out.jpg"})
+    assert r.status_code == 200
+    out = Image.open(uploads / "out.jpg")
+    assert out.format == "JPEG"
+    assert out.size == (768, 1024)
+    # The corner mark is drawn: the bottom-right corner is no longer the flat source colour.
+    corner = np.asarray(out.convert("RGB"))[-60:, -320:]
+    assert np.abs(corner.astype(int) - np.array([40, 60, 80])).max() > 40
+    # EU AI Act art. 50: machine-readable "AI-generated" in the file itself.
+    assert "AI-generated" in out.info.get("comment", b"").decode() or "AI-generated" in str(out.getexif())

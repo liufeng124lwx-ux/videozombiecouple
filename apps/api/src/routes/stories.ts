@@ -27,7 +27,11 @@ export function runnerFor(c: Context<AppEnv>, storyId: string) {
   return c.env.STORY_RUNNER.get(c.env.STORY_RUNNER.idFromName(storyId));
 }
 
-async function storyByKey(db: D1Database, owner: string, key: string): Promise<string | null> {
+export async function storyByKey(
+  db: D1Database,
+  owner: string,
+  key: string,
+): Promise<string | null> {
   const row = await db
     .prepare("SELECT id FROM stories WHERE owner=? AND idempotency_key=?")
     .bind(owner, key)
@@ -47,7 +51,7 @@ async function ownedStory(c: Context<AppEnv>, id: string): Promise<boolean> {
 }
 
 /** "US-IL": the visitor's country and region (Cloudflare's visitor location), or null. */
-function regionOf(c: Context<AppEnv>): string | null {
+export function regionOf(c: Context<AppEnv>): string | null {
   const cf = (c.req.raw as { cf?: { country?: string; regionCode?: string } }).cf;
   const country = (c.req.header("cf-ipcountry") ?? cf?.country ?? "").toUpperCase();
   const region = (c.req.header("cf-region-code") ?? cf?.regionCode ?? "").toUpperCase();
@@ -219,7 +223,7 @@ export async function listStories(c: Context<AppEnv>) {
   const userId = c.get("userId");
   if (!userId) return fail(c, "LOGIN_REQUIRED");
   const { results } = await c.env.DB.prepare(
-    "SELECT id, status, kind, scene, created_at FROM stories WHERE owner=? AND status!='expired' ORDER BY created_at DESC LIMIT 30",
+    "SELECT id, status, kind, scene, created_at FROM stories WHERE owner=? AND status!='expired' AND product='film' ORDER BY created_at DESC LIMIT 30",
   )
     .bind(c.get("owner"))
     .all<{ id: string; status: string; kind: string; scene: string; created_at: number }>();

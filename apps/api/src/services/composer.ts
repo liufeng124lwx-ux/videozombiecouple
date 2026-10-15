@@ -27,9 +27,17 @@ export type ComposeRequest = {
   keys: { shots: string[]; out: string; poster: string };
 };
 
+/** The free zombie photo: stamp the AI mark; keys let the fake copy within R2. */
+export type WatermarkRequest = {
+  imageUrl: string;
+  outUrl: string;
+  keys: { image: string; out: string };
+};
+
 export interface ComposerApi {
   score(request: ScoreRequest): Promise<ScoreResponse>;
   compose(request: ComposeRequest): Promise<{ ok: true; durationSec: number }>;
+  watermark(request: WatermarkRequest): Promise<{ ok: true }>;
 }
 
 /** FAKE_COMPOSER=1: no container; the first candidate of each frame wins, the video is shot 1. */
@@ -58,6 +66,14 @@ export function fakeComposer(env: Bindings): ComposerApi {
         httpMetadata: { contentType: "image/jpeg" },
       });
       return { ok: true, durationSec: 12 };
+    },
+    async watermark(request) {
+      const image = await env.BUCKET.get(request.keys.image);
+      if (!image) throw new Error("fake composer: the photo is missing");
+      await env.BUCKET.put(request.keys.out, await image.arrayBuffer(), {
+        httpMetadata: { contentType: "image/jpeg" },
+      });
+      return { ok: true };
     },
   };
 }
@@ -106,6 +122,10 @@ export function composerFor(env: Bindings, storyId = ""): ComposerApi {
     compose: (request) => {
       const { keys: _keys, ...body } = request;
       return call<{ ok: true; durationSec: number }>("/compose", body, COMPOSE_TIMEOUT_MS);
+    },
+    watermark: (request) => {
+      const { keys: _keys, ...body } = request;
+      return call<{ ok: true }>("/watermark", body, SCORE_TIMEOUT_MS);
     },
   };
 }

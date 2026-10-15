@@ -17,9 +17,11 @@ export type StorySpec = {
   survivorKey: string;
   infectedKey: string;
   createdAt: number;
+  /** "photo": the free AI zombie filter, one portrait from survivorKey. A film when absent. */
+  product?: "film" | "photo";
 };
 
-export type StepKind = "kie" | "score" | "compose";
+export type StepKind = "kie" | "score" | "compose" | "mark";
 export type Phase = "preview" | "video";
 
 /** waiting: deps not met or not started · queued/submitting/pending: a kie attempt is running. */
@@ -92,6 +94,8 @@ export type StoryState = {
   /** Free remakes left (owner, 2026-10-15); absent on stories made before the change. */
   remakeLeft?: number;
   output: { videoKey: string; posterKey: string } | null;
+  /** The finished zombie photo (product "photo"), watermarked. */
+  photo?: string | null;
   errorCode: ErrorCode | null;
   finishedAt: number | null;
   /** Last summary written to D1, to skip identical writes. */

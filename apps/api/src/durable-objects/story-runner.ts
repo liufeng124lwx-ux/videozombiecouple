@@ -34,9 +34,11 @@ import { report } from "../services/sentry.ts";
 import { type ChargeHold, settle } from "../services/settle.ts";
 import {
   activePhase,
+  isPhoto,
   kieInputFor,
   outputKeyFor,
   phaseOutcome,
+  photoSteps,
   previewSteps,
   readySteps,
   videoSteps,
@@ -159,14 +161,19 @@ export class StoryRunner extends DurableObject<Bindings> {
       const state: StoryState = {
         spec,
         status: "previewing",
-        steps: Object.fromEntries([...previewSteps(), ...videoSteps()].map((s) => [s.id, s])),
+        steps: Object.fromEntries(
+          (spec.product === "photo" ? photoSteps() : [...previewSteps(), ...videoSteps()]).map(
+            (s) => [s.id, s],
+          ),
+        ),
         picks: {},
         previewCharge,
         videoCharge: null,
         previewSettled: false,
         videoSettled: false,
-        recomposeLeft: 1,
-        remakeLeft: REMAKES_PER_FILM,
+        // A photo is never retitled or remade: it is not a film.
+        recomposeLeft: spec.product === "photo" ? 0 : 1,
+        remakeLeft: spec.product === "photo" ? 0 : REMAKES_PER_FILM,
         output: null,
         errorCode: null,
         finishedAt: null,
@@ -647,6 +654,7 @@ export class StoryRunner extends DurableObject<Bindings> {
     if (step.nextRunAt !== null && now < step.nextRunAt) return;
     try {
       if (step.id === "score:sources") await this.#checkSources(state, step);
+      else if (step.kind === "mark") await this.#mark(state, step);
       else if (step.kind === "score") await this.#score(state, step);
       else await this.#compose(state, step);
     } catch (error) {
@@ -666,7 +674,7 @@ export class StoryRunner extends DurableObject<Bindings> {
   /** Spec §4.2 S0b: one face in each photo (the pet photo is not checked) and no one under 18. */
   async #checkSources(state: StoryState, step: StepRecord): Promise<void> {
     const { spec } = state;
-    const pet = spec.kind === "pet";
+    const pet = spec.kind === "pet" || spec.product === "photo";
     const sources = {
       survivor: await this.#url(spec.survivorKey),
       infected: pet ? null : await this.#url(spec.infectedKey),
@@ -784,6 +792,22 @@ export class StoryRunner extends DurableObject<Bindings> {
     step.state = "succeeded";
   }
 
+  /** The free zombie photo: the AI mark in the corner and "AI-generated" in the file. */
+  async #mark(state: StoryState, step: StepRecord): Promise<void> {
+    const image = state.steps["kf:Z"]?.outputKey;
+    if (!image) throw new Error("mark needs the zombie keyframe");
+    const outKey = `out/${state.spec.id}/zombie.jpg`;
+    await this.#composer().watermark({
+      imageUrl: await this.#url(image),
+      outUrl: await presign(this.env, outKey, "PUT", INPUT_URL_SEC),
+      keys: { image, out: outKey },
+    });
+    step.state = "succeeded";
+    step.outputKey = outKey;
+    step.nextRunAt = null;
+    state.photo = outKey;
+  }
+
   async #compose(state: StoryState, step: StepRecord): Promise<void> {
     const { spec } = state;
     const shots = storyboard(spec.kind).map((shot) => {
@@ -829,7 +853,10 @@ export class StoryRunner extends DurableObject<Bindings> {
       if (outcome === "running") return;
       await this.#abandonPhase(state, phase, "phase ended");
       const ok = outcome === "succeeded";
-      if (phase === "preview") {
+      if (phase === "preview" && isPhoto(state)) {
+        state.status = ok ? "done" : "preview_failed";
+        if (!ok) state.errorCode = this.#errorCode(state, phase);
+      } else if (phase === "preview") {
         state.status = ok ? "preview_ready" : "preview_failed";
         if (!ok) state.errorCode = this.#errorCode(state, phase);
       } else if (state.videoSettled) {
@@ -843,7 +870,8 @@ export class StoryRunner extends DurableObject<Bindings> {
       state.finishedAt = Date.now();
     }
     await this.#settleOpen(state, true);
-    if (state.status === "done" && !state.notified) await this.#notify(state);
+    // A free photo is shown on the page that made it; only films are emailed.
+    if (state.status === "done" && !state.notified && !isPhoto(state)) await this.#notify(state);
   }
 
   /**
@@ -992,6 +1020,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       state.status,
       state.picks,
       state.output,
+      state.photo ?? null,
       state.errorCode,
       steps,
     ]);
@@ -1004,14 +1033,15 @@ export class StoryRunner extends DurableObject<Bindings> {
         state.status,
         JSON.stringify(state.picks),
         JSON.stringify(steps),
-        state.output?.videoKey ?? null,
+        state.output?.videoKey ?? state.photo ?? null,
         state.output?.posterKey ?? null,
         state.errorCode,
         Math.round(costUsd * 1e6) / 1e6,
         state.spec.names,
         state.spec.date,
         state.finishedAt,
-        state.status,
+        // A photo keeps the expiry it was created with (PHOTO.keepHours).
+        isPhoto(state) ? "photo" : state.status,
         state.finishedAt ?? Date.now(),
         RETENTION.memberFilmDays * 86_400_000,
         RETENTION.guestFilmDays * 86_400_000,
@@ -1081,6 +1111,9 @@ export class StoryRunner extends DurableObject<Bindings> {
       preview: showPreview
         ? { A: await sign(snap.picks.A as string), C: await sign(snap.picks.C as string) }
         : null,
+      ...(isPhoto(snap)
+        ? { photo: snap.status === "done" && snap.photo ? await sign(snap.photo) : null }
+        : {}),
       video: output
         ? {
             url: await sign(output.videoKey),

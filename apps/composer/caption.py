@@ -48,13 +48,18 @@ def render_caption(line1: str, line2: str | None, out: str) -> str:
 MARK_TEXT = "AI · videozombiecouple.com"
 
 
-def render_mark(out: str) -> str:
-    """The small corner mark (spec §4.2 S5): AI and the site's name, quiet enough not to spoil the film."""
-    font = ImageFont.truetype(str(FONTS / "CourierPrime-Regular.ttf"), 18)
+def render_mark(out: str, scale: float = 1.0) -> str:
+    """The small corner mark (spec §4.2 S5): AI and the site's name, quiet enough not to spoil the film.
+    On a photo it is scaled with the image and drawn a little stronger, over a soft shadow."""
+    size = round(18 * scale)
+    font = ImageFont.truetype(str(FONTS / "CourierPrime-Regular.ttf"), size)
     text = MARK_TEXT
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     w = int(probe.textlength(text, font=font)) + 4
-    img = Image.new("RGBA", (w, 26), (0, 0, 0, 0))
-    ImageDraw.Draw(img).text((2, 2), text, font=font, fill=(255, 255, 255, 120))
+    img = Image.new("RGBA", (w, size + 8), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    if scale > 1.0:
+        draw.text((3, 3), text, font=font, fill=(0, 0, 0, 140))
+    draw.text((2, 2), text, font=font, fill=(255, 255, 255, 120 if scale == 1.0 else 200))
     img.save(out, "PNG")
     return out

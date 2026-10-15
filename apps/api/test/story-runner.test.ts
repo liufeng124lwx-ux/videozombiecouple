@@ -22,7 +22,7 @@ function scripted(
   over: { scoreErrors?: number; composeErrors?: number; score?: Partial<ScoreResponse> } = {},
 ) {
   const base = fakeComposer(h.env as never);
-  const calls = { score: 0, compose: 0, composeRequests: [] as ComposeRequest[] };
+  const calls = { score: 0, compose: 0, watermark: 0, composeRequests: [] as ComposeRequest[] };
   let scoreErrors = over.scoreErrors ?? 0;
   let composeErrors = over.composeErrors ?? 0;
   const api: ComposerApi = {
@@ -33,6 +33,10 @@ function scripted(
         throw new Error("composer 503");
       }
       return { ...(await base.score(request)), ...over.score };
+    },
+    async watermark(request) {
+      calls.watermark += 1;
+      return base.watermark(request);
     },
     async compose(request) {
       calls.compose += 1;
@@ -94,6 +98,50 @@ async function readyStory(h: Awaited<ReturnType<typeof setup>>) {
   await untilStatus(h, runner, "preview_ready");
   return { spec, runner };
 }
+
+describe("StoryRunner: the free zombie photo", () => {
+  it("checks the photo, makes one zombie portrait for free and stamps it; nothing is charged", async () => {
+    const h = await setup();
+    const calls = scripted(h);
+    const { spec, runner } = await h.story({ product: "photo" });
+    await runner.start(spec);
+    const view = (await untilStatus(h, runner, "done")) as StoryView;
+    expect(calls.score).toBe(1);
+    expect(calls.watermark).toBe(1);
+    expect(calls.compose).toBe(0);
+    expect(view.photo).toContain(`out/${spec.id}/zombie.jpg`);
+    expect(view.video).toBeNull();
+    expect(await h.r2.BUCKET.head(`out/${spec.id}/zombie.jpg`)).not.toBeNull();
+    // One keyframe call on the free pool, with the portrait prompt and only the one photo.
+    const steps = stepAttempts(h, spec.id);
+    expect(steps.map((s) => s.id)).toEqual(["score:sources", "kf:Z", "mark"]);
+    expect(h.wallet.calls).toEqual([]);
+    const row = h.db.prepare("SELECT status, output_key FROM stories WHERE id=?").get(spec.id);
+    expect(row).toEqual({ status: "done", output_key: `out/${spec.id}/zombie.jpg` });
+  });
+
+  it("a photo is never rendered into a film, remade or retitled", async () => {
+    const h = await setup();
+    scripted(h);
+    const { spec, runner } = await h.story({ product: "photo" });
+    await runner.start(spec);
+    await untilStatus(h, runner, "done");
+    expect((await runner.render(h.noCharge)).ok).toBe(false);
+    expect((await runner.remake()).ok).toBe(false);
+    expect((await runner.recompose("A", "B")).ok).toBe(false);
+  });
+
+  it("refuses a photo that looks under age before generating anything", async () => {
+    const h = await setup();
+    const calls = scripted(h, { score: { minAge: 16 } });
+    const { spec, runner } = await h.story({ product: "photo" });
+    await runner.start(spec);
+    const view = (await untilStatus(h, runner, "preview_failed")) as StoryView;
+    expect(view.errorCode).toBe("UNDERAGE");
+    expect(calls.watermark).toBe(0);
+    expect(stepAttempts(h, spec.id).find((s) => s.id === "kf:Z")?.attempts).toEqual([]);
+  });
+});
 
 describe("StoryRunner", () => {
   it("before payment only the photos are checked: no keyframe, no model call", async () => {

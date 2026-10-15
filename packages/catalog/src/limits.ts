@@ -127,7 +127,7 @@ export const CONSENT_COUNTRIES: ReadonlySet<string> = new Set([
 /** Cost guardrails spec 3: daily model-spend lines per category; ops checks them every 5 minutes. */
 export const BUDGETS = {
   /** Free jobs' spend that pauses free jobs until 00:00 UTC (spec 4.2). */
-  free: { dailyUsd: 20 },
+  free: { dailyUsd: 5 },
   /** Paid jobs pause at max(7-day daily average × avgFactor, floorUsd); only an admin resumes them. */
   paid: { avgFactor: 3, floorUsd: 30 },
   /** Chat turns; enforced once the chat workspace ships (live: false until then). */

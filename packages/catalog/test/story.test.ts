@@ -5,6 +5,8 @@ import {
   KINDS,
   keyframePrompt,
   PACKS,
+  PHOTO,
+  portraitPrompt,
   SALE_PRODUCTS,
   SCENE_IDS,
   SCENES,
@@ -96,5 +98,23 @@ describe("story catalog", () => {
     ]);
     expect(SALE_PRODUCTS.every((p) => p.kind === "pack")).toBe(true);
     expect(CANDIDATES_PER_FRAME).toBe(2);
+  });
+});
+
+describe("the zombie photo (AI zombie filter)", () => {
+  it("uses the prompt tested in 即梦 on 2026-10-15 (v5): the same person, own skin tone, restrained", () => {
+    const p = portraitPrompt();
+    expect(p).toContain("The person from the reference image, turned into a zombie");
+    expect(p).toContain("over their own natural skin tone");
+    expect(p).toContain("never lighten or darken it");
+    expect(p).toContain("instantly recognizable as the same person");
+    expect(p).toContain("No blood, no gore, no wounds");
+    expect(PHOTO.promptVersion).toBe("z1");
+  });
+
+  it("is one free photo a day per browser, three per network, kept a day", () => {
+    expect(PHOTO.freePerVisitorDay).toBe(1);
+    expect(PHOTO.freePerIpDay).toBe(3);
+    expect(PHOTO.keepHours).toBe(24);
   });
 });

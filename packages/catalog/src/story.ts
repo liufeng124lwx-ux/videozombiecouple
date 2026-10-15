@@ -166,3 +166,28 @@ export function shotPrompt(_sceneId: SceneId, shot: ShotId, kind: Kind): string 
   }[shot];
   return `${body} ${MOTION} ${SAFE}`;
 }
+
+/** The AI zombie filter: one free photo of one person turned into a zombie (SEO review 2026-10-15). */
+export const PHOTO = {
+  /** Bump whenever portraitPrompt changes; stored on every photo. */
+  promptVersion: "z1",
+  freePerVisitorDay: 1,
+  freePerIpDay: 3,
+  /** The upload and the result are deleted after this long. */
+  keepHours: 24,
+} as const;
+
+/**
+ * Tested in 即梦 (Seedream) on 2026-10-15, version 5 of 5: the person stays recognizable, the skin
+ * keeps its own tone under the grey-green tint (v4 lightened darker skin), nothing gory. A stronger
+ * look (sunken eyes, hollow cheeks) lost the person's identity.
+ */
+export function portraitPrompt(): string {
+  return [
+    "Photorealistic cinematic portrait, vertical 3:4.",
+    "The person from the reference image, turned into a zombie: a sickly grey-green tint over their own natural skin tone (keep the skin exactly as dark or as light as in the reference, never lighten or darken it), dark shadows around the eyes, cloudy white eyes, visible dark veins at the temples, cheeks and neck, slightly dusty hair and clothes, a blank expression with the mouth closed.",
+    "Keep the exact same face shape, features, hairstyle, age and gender, so they are instantly recognizable as the same person. Same head pose and framing as the reference.",
+    "Cold blue moody light, a ruined room softly out of focus behind them.",
+    "No blood, no gore, no wounds, no open mouth, no teeth, no text.",
+  ].join(" ");
+}

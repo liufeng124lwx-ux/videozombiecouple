@@ -29,6 +29,15 @@ export const CreateStorySchema = z.object({
 });
 export type CreateStoryRequest = z.infer<typeof CreateStorySchema>;
 
+/** POST /v1/photos: the free AI zombie filter, one photo of one person. */
+export const CreatePhotoSchema = z.object({
+  photoKey: UploadKeySchema,
+  idempotencyKey: IdempotencyKey,
+  /** UPLOAD_CONSENT_VERSION; anything else is answered CONSENT_REQUIRED. */
+  consent: z.string().max(32).optional(),
+});
+export type CreatePhotoRequest = z.infer<typeof CreatePhotoSchema>;
+
 export const RenderSchema = z.object({ idempotencyKey: IdempotencyKey });
 
 /** Spec §7: one free change of the end title per paid video. */
@@ -57,6 +66,8 @@ export type StoryView = {
   date: string | null;
   preview: { A: string; C: string } | null;
   video: { url: string; poster: string; expiresAt: number } | null;
+  /** The free AI zombie filter: the watermarked photo once it is done (absent on films). */
+  photo?: string | null;
   progress: { done: number; total: number; etaMs: number | null };
   /** While the film renders: keyframes ("frames"), each shot, then the final cut. Else empty. */
   stages?: StageView[];

@@ -21,6 +21,7 @@ import {
 import { billing, cancelPlan, changePlan, checkout, resumePlan } from "./routes/billing.ts";
 import { googleCallback, googleStart } from "./routes/google.ts";
 import { me } from "./routes/me.ts";
+import { createPhoto } from "./routes/photos.ts";
 import {
   createStory,
   getSharedFilm,
@@ -74,6 +75,7 @@ app.get("/auth/google/start", googleStart);
 app.get("/auth/google/callback", googleCallback);
 app.post("/v1/uploads", createUpload);
 app.post("/v1/stories", createStory);
+app.post("/v1/photos", createPhoto);
 app.get("/v1/stories", listStories);
 app.get("/v1/stories/:id", getStory);
 app.post("/v1/stories/:id/render", renderStory);
