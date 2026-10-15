@@ -44,10 +44,14 @@ def render_caption(line1: str, line2: str | None, out: str) -> str:
     return out
 
 
+# Says the film is AI-made (EU AI Act art. 50, platform AI labels) and where it came from.
+MARK_TEXT = "AI · videozombiecouple.com"
+
+
 def render_mark(out: str) -> str:
-    """The small corner mark (spec §4.2 S5): the site's name, quiet enough not to spoil the film."""
+    """The small corner mark (spec §4.2 S5): AI and the site's name, quiet enough not to spoil the film."""
     font = ImageFont.truetype(str(FONTS / "CourierPrime-Regular.ttf"), 18)
-    text = "videozombiecouple.com"
+    text = MARK_TEXT
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     w = int(probe.textlength(text, font=font)) + 4
     img = Image.new("RGBA", (w, 26), (0, 0, 0, 0))

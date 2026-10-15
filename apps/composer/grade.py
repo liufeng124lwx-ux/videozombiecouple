@@ -77,7 +77,10 @@ def build_compose_cmd(
     )
     cmd += ["-filter_complex", ";".join(chains), "-map", "[vout]", "-map", "[aout]"]
     cmd += ["-c:v", "libx264", "-crf", "20", "-preset", "veryfast", "-pix_fmt", "yuv420p"]
-    cmd += ["-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-t", fmt(total), out]
+    # EU AI Act art. 50: the film says, in its own metadata, that it is AI-generated.
+    cmd += ["-metadata", "comment=AI-generated video, made with VideoZombieCouple"]
+    cmd += ["-metadata", "ai_generated=true"]
+    cmd += ["-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart+use_metadata_tags", "-t", fmt(total), out]
     return cmd
 
 

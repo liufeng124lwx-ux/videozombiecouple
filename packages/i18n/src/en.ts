@@ -192,7 +192,7 @@ export const en = {
   "story.done.download": "Download the video",
   "story.done.share": "Share",
   "story.done.copied": "Link copied",
-  "story.done.caption": "Even at the end of the world. #zombielovestory #zombiecouple",
+  "story.done.caption": "Even at the end of the world. #zombielovestory #zombiecouple #AIgenerated",
   "story.done.copyCaption": "Copy caption",
   "story.done.retitle": "Change the end title (one free change)",
   "story.done.retitleSave": "Save and recut",

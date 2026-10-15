@@ -55,3 +55,23 @@ def test_a_small_mark_sits_in_the_corner_of_the_film():
     joined = " ".join(cmd)
     assert "-i mark.png" in joined
     assert "overlay=W-w-24:H-h-28" in joined
+
+
+def test_every_film_says_it_is_ai_generated_in_its_metadata():
+    # EU AI Act art. 50: synthetic video carries a machine-readable mark.
+    cmd = build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4")
+    i = cmd.index("-metadata")
+    tags = [cmd[j + 1] for j, a in enumerate(cmd) if a == "-metadata"]
+    assert i < len(cmd) - 1
+    assert "comment=AI-generated video, made with VideoZombieCouple" in tags
+    assert "ai_generated=true" in tags
+
+
+def test_the_corner_mark_says_ai(tmp_path):
+    from PIL import Image
+
+    from caption import MARK_TEXT, render_mark
+
+    assert MARK_TEXT.startswith("AI")
+    out = render_mark(str(tmp_path / "mark.png"))
+    assert Image.open(out).size[0] > 200
