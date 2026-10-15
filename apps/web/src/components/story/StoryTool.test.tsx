@@ -7,6 +7,7 @@ const client = vi.hoisted(() => ({
   uploadPhoto: vi.fn(async () => "in/K.jpg"),
   createStory: vi.fn(async () => "S1"),
   getStory: vi.fn(),
+  getSharedFilm: vi.fn(),
   render: vi.fn(async () => undefined),
   recompose: vi.fn(async () => undefined),
   getQuota: vi.fn(async () => ({ remaining: 3, limit: 3, resetAt: 0 })),
@@ -130,6 +131,39 @@ describe("StoryTool", () => {
       expect(client.render).toHaveBeenCalledWith("S1", expect.any(String), expect.any(Function)),
     );
     expect(client.createStory).not.toHaveBeenCalled();
+  });
+
+  it("shows a shared film read-only to anyone with the link", async () => {
+    history.replaceState(null, "", `/story?id=S1&t=${"a".repeat(32)}`);
+    client.getSharedFilm.mockResolvedValue({
+      scene: "cabin-wheat",
+      names: "Ana & Leo",
+      date: null,
+      video: { url: "https://f/v.mp4", poster: "https://f/p.jpg", expiresAt: 0 },
+    });
+    render(<StoryTool posters={{}} mode="story" pollMs={10} />);
+    await screen.findByText("Ana & Leo");
+    expect(document.querySelector("video")?.getAttribute("src")).toBe("https://f/v.mp4");
+    expect(screen.getByRole("link", { name: "Make your own" }).getAttribute("href")).toBe("/");
+    expect(client.getStory).not.toHaveBeenCalled();
+  });
+
+  it("shares the film's public link", async () => {
+    localStorage.setItem("vzc-story", "S1");
+    client.getStory.mockResolvedValue(
+      view("done", {
+        preview: { A: "a", C: "c" },
+        video: { url: "v", poster: "p", expiresAt: 0 },
+        shareToken: "b".repeat(32),
+      }),
+    );
+    const writeText = vi.fn(async () => undefined);
+    Object.assign(navigator, { clipboard: { writeText }, share: undefined });
+    render(<StoryTool posters={{}} pollMs={10} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Share" }));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(`${location.origin}/story?id=S1&t=${"b".repeat(32)}`),
+    );
   });
 
   it("resumes a running story after reload", async () => {

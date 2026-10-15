@@ -49,5 +49,15 @@ export type StoryView = {
   recomposeLeft: number;
   /** Paid render attempts started (a failed video can be rendered again with a new hold). */
   videoAttempts: number;
+  /** Owner only, once the film is done: the token of its public link (/story?id=…&t=…). */
+  shareToken?: string | null;
   createdAt: number;
+};
+
+/** GET /v1/share/:id?t=… — what anyone holding the share link sees. */
+export type SharedFilm = {
+  scene: SceneId;
+  names: string | null;
+  date: string | null;
+  video: { url: string; poster: string; expiresAt: number };
 };

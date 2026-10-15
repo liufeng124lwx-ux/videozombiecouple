@@ -17,6 +17,7 @@ import { me } from "./routes/me.ts";
 import { quota } from "./routes/quota.ts";
 import {
   createStory,
+  getSharedFilm,
   getStory,
   listStories,
   recomposeStory,
@@ -62,6 +63,7 @@ app.get("/v1/stories", listStories);
 app.get("/v1/stories/:id", getStory);
 app.post("/v1/stories/:id/render", renderStory);
 app.post("/v1/stories/:id/recompose", recomposeStory);
+app.get("/v1/share/:id", getSharedFilm);
 app.post("/webhooks/kie/:storyId", kieCallback);
 app.post("/webhooks/waffo", waffoWebhook);
 

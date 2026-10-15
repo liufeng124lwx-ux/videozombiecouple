@@ -1,4 +1,4 @@
-import type { CreateStoryRequest, StoryView } from "@vzc/contracts";
+import type { CreateStoryRequest, SharedFilm, StoryView } from "@vzc/contracts";
 import { ApiError, api, post } from "../api.ts";
 import { withHumanCheck } from "../human-pass.ts";
 
@@ -48,6 +48,11 @@ export async function createStory(request: CreateStoryRequest, token: Token): Pr
 
 export function getStory(id: string): Promise<StoryView> {
   return api<StoryView>(`/v1/stories/${encodeURIComponent(id)}`);
+}
+
+/** A finished film behind its public share link (no sign-in). */
+export function getSharedFilm(id: string, token: string): Promise<SharedFilm> {
+  return api<SharedFilm>(`/v1/share/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`);
 }
 
 export async function render(id: string, idempotencyKey: string, token: Token): Promise<void> {

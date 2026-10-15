@@ -1,9 +1,10 @@
 import { MODES, RATE_LIMITS, RETENTION } from "@vzc/catalog";
-import { CreateStorySchema, RecomposeSchema, RenderSchema } from "@vzc/contracts";
+import { CreateStorySchema, RecomposeSchema, RenderSchema, type SharedFilm } from "@vzc/contracts";
 import type { Context } from "hono";
 import { fail } from "../http.ts";
 import { readFlags } from "../middleware/flags.ts";
 import { holdPreview, holdVideo, moveToKeep } from "../services/charge.ts";
+import { hmacHex, safeEqual } from "../services/crypto.ts";
 import { requireHuman } from "../services/human-pass.ts";
 import { ulid } from "../services/ids.ts";
 import { hitRate } from "../services/limits.ts";
@@ -11,7 +12,7 @@ import { settle } from "../services/settle.ts";
 import { noteRejections } from "../services/suspicion.ts";
 import { checkUpload } from "../services/upload-check.ts";
 import type { StorySpec } from "../stories/types.ts";
-import type { AppEnv } from "../types.ts";
+import type { AppEnv, Bindings } from "../types.ts";
 
 export const STORY_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
@@ -149,7 +150,41 @@ export async function getStory(c: Context<AppEnv>) {
   if (!(await ownedStory(c, id))) return fail(c, "NOT_FOUND");
   const view = await runnerFor(c, id).view();
   if (!view) return fail(c, "NOT_FOUND");
-  return c.json(view);
+  const share = view.status === "done" && view.video ? await shareToken(c.env, id) : null;
+  return c.json({ ...view, shareToken: share });
+}
+
+/** The public link of a finished film: it names the story and cannot be guessed from the id. */
+export async function shareToken(env: Bindings, storyId: string): Promise<string> {
+  return (await hmacHex(`share:${storyId}`, env.HMAC_KEY)).slice(0, 32);
+}
+
+/** Spec: a finished film is shareable (the page is noindex). Only the film, never the photos. */
+export async function getSharedFilm(c: Context<AppEnv>) {
+  const rate = await hitRate(
+    c.env,
+    `rate:status:${c.get("visitorHash")}`,
+    RATE_LIMITS.statusPerSecond,
+    1_000,
+  );
+  if (!rate.allowed) return fail(c, "RATE_LIMITED", rate.retryAfterSec);
+  const id = c.req.param("id") ?? "";
+  const token = c.req.query("t") ?? "";
+  if (!STORY_ID.test(id) || !/^[0-9a-f]{32}$/.test(token)) return fail(c, "NOT_FOUND");
+  if (!safeEqual(token, await shareToken(c.env, id))) return fail(c, "NOT_FOUND");
+  const row = await c.env.DB.prepare("SELECT status, expires_at FROM stories WHERE id=?")
+    .bind(id)
+    .first<{ status: string; expires_at: number }>();
+  if (!row || row.status === "expired" || row.expires_at <= Date.now()) return fail(c, "NOT_FOUND");
+  const view = await runnerFor(c, id).view();
+  if (!view || view.status !== "done" || !view.video) return fail(c, "NOT_FOUND");
+  const film: SharedFilm = {
+    scene: view.scene,
+    names: view.names,
+    date: view.date,
+    video: view.video,
+  };
+  return c.json(film);
 }
 
 /** The account's recent stories, newest first (account page). */

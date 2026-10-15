@@ -1,4 +1,5 @@
 import { fact, type Kind, type SceneId, TIERS } from "@vzc/catalog";
+import type { SharedFilm } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { track } from "../../lib/analytics.ts";
@@ -9,6 +10,7 @@ import { loadMe, refreshMe } from "../../lib/me.ts";
 import {
   createStory,
   getQuota,
+  getSharedFilm,
   getStory,
   newIdempotencyKey,
   recompose,
@@ -76,6 +78,7 @@ export default function StoryTool({
   const [title, setTitle] = useState({ names: "", date: "", open: false });
   const [copied, setCopied] = useState(false);
   const [payment, setPayment] = useState<"confirming" | "slow" | null>(null);
+  const [shared, setShared] = useState<SharedFilm | "gone" | null>(null);
   const turnstile = useRef<HTMLDivElement>(null);
   const waitingForSignIn = useRef(false);
   const autoRender = useRef(false);
@@ -88,6 +91,15 @@ export default function StoryTool({
   // Resume: /story?id=…, or the story this browser was working on.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const shareId = params.get("id");
+    const shareKey = params.get("t");
+    if (shareId && shareKey) {
+      // Someone else's film, opened from its share link: read-only.
+      void getSharedFilm(shareId, shareKey)
+        .then(setShared)
+        .catch(() => setShared("gone"));
+      return;
+    }
     const id =
       params.get("id") ?? params.get("story") ?? (mode === "home" ? rememberedStory() : null);
     autoRender.current = params.get("render") === "1" || params.get("paid") === "1";
@@ -254,6 +266,39 @@ export default function StoryTool({
   const busy = s.phase !== "setup";
   const story = s.story;
   const videos = credits === null ? null : Math.floor(credits / TIERS.video.credits);
+
+  if (shared)
+    return (
+      <div class="tool tool-shared">
+        {shared === "gone" ? (
+          <p class="notice">{t("story.shared.gone")}</p>
+        ) : (
+          <div class="tool-done">
+            <div class="player">
+              <video
+                src={shared.video.url}
+                poster={shared.video.poster}
+                controls
+                playsInline
+                muted
+                autoPlay
+                loop
+                preload="metadata"
+              />
+            </div>
+            <div class="done-side">
+              <p class="scene">{t("story.shared.title")}</p>
+              {shared.names && <h3>{shared.names}</h3>}
+              {shared.date && <p class="small muted">{shared.date}</p>}
+              <p class="small muted">{t("story.shared.note")}</p>
+            </div>
+          </div>
+        )}
+        <a class="btn btn-primary btn-lg btn-block" href="/">
+          {t("story.shared.cta")}
+        </a>
+      </div>
+    );
 
   return (
     <div class="tool" data-phase={s.phase}>
@@ -478,7 +523,9 @@ export default function StoryTool({
                 type="button"
                 class="btn btn-sm"
                 onClick={async () => {
-                  const url = `${location.origin}/story?id=${story.id}`;
+                  const url = story.shareToken
+                    ? `${location.origin}/story?id=${story.id}&t=${story.shareToken}`
+                    : `${location.origin}/story?id=${story.id}`;
                   if (navigator.share)
                     await navigator
                       .share({ url, text: t("story.done.caption") })

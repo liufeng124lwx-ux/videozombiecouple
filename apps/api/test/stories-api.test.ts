@@ -208,15 +208,13 @@ describe("story API", () => {
   it("a title change restarts the stuck clock (rendered_at)", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { userId, session } = await signedIn(h);
-    await h.wallets
-      .instance(userId)
-      .grant(userId, {
-        kind: "pack",
-        credits: 10,
-        expiresAt: null,
-        sourceRef: "order-t",
-        reason: "test",
-      });
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: "order-t",
+      reason: "test",
+    });
     const id = (await create(h, session)).body.storyId as string;
     await h.untilStory(id, "preview_ready");
     await h.call(`/v1/stories/${id}/render`, {
@@ -236,6 +234,36 @@ describe("story API", () => {
       rendered_at: number;
     };
     expect(row.rendered_at).toBeGreaterThanOrEqual(at);
+  });
+
+  it("a finished film can be watched by anyone holding its share link, and only that", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { userId, session } = await signedIn(h);
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: "order-s",
+      reason: "test",
+    });
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    // No share link before the film exists.
+    expect((await h.call(`/v1/stories/${id}`, { session })).body.shareToken).toBeNull();
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-s" },
+    });
+    await h.untilStory(id, "done");
+    const token = (await h.call(`/v1/stories/${id}`, { session })).body.shareToken as string;
+    expect(token).toMatch(/^[0-9a-f]{32}$/);
+    const shared = await h.call(`/v1/share/${id}?t=${token}`);
+    expect(shared.status).toBe(200);
+    expect(Object.keys(shared.body).sort()).toEqual(["date", "names", "scene", "video"]);
+    expect((shared.body.video as { url: string }).url).toBeTruthy();
+    expect((await h.call(`/v1/share/${id}?t=${"0".repeat(32)}`)).status).toBe(404);
+    expect((await h.call(`/v1/share/${id}`)).status).toBe(404);
   });
 
   it("only the owner can read a story", async () => {
