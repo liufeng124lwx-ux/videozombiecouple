@@ -175,15 +175,13 @@ describe("story API", () => {
   it("an expired preview can no longer be read or rendered", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { userId, session } = await signedIn(h);
-    await h.wallets
-      .instance(userId)
-      .grant(userId, {
-        kind: "pack",
-        credits: 10,
-        expiresAt: null,
-        sourceRef: "order-z",
-        reason: "test",
-      });
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: "order-z",
+      reason: "test",
+    });
     const id = (await create(h, session)).body.storyId as string;
     await h.untilStory(id, "preview_ready");
     vi.setSystemTime(Date.now() + 3 * 86_400_000 + 60_000);
@@ -205,6 +203,39 @@ describe("story API", () => {
     const { deleteAccount } = await import("../src/services/delete-account.ts");
     await deleteAccount(h.env as never, userId);
     expect(await h.runners.instance(id).view()).toBeNull();
+  });
+
+  it("a title change restarts the stuck clock (rendered_at)", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { userId, session } = await signedIn(h);
+    await h.wallets
+      .instance(userId)
+      .grant(userId, {
+        kind: "pack",
+        credits: 10,
+        expiresAt: null,
+        sourceRef: "order-t",
+        reason: "test",
+      });
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-t" },
+    });
+    await h.untilStory(id, "done");
+    vi.setSystemTime(Date.now() + 2 * 86_400_000);
+    const at = Date.now();
+    await h.call(`/v1/stories/${id}/recompose`, {
+      method: "POST",
+      session,
+      body: { names: "A", date: "B" },
+    });
+    const row = h.db.prepare("SELECT rendered_at FROM stories WHERE id=?").get(id) as {
+      rendered_at: number;
+    };
+    expect(row.rendered_at).toBeGreaterThanOrEqual(at);
   });
 
   it("only the owner can read a story", async () => {

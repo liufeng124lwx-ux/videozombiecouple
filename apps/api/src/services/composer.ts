@@ -65,8 +65,18 @@ export function fakeComposer(env: Bindings): ComposerApi {
 const SCORE_TIMEOUT_MS = 120_000;
 const COMPOSE_TIMEOUT_MS = 300_000;
 
+/** Container instances to spread stories over; matches `max_instances` in wrangler*.jsonc. */
+export const COMPOSER_SHARDS = 3;
+
+/** One story always reaches the same instance; different stories spread over all of them. */
+function shardOf(storyId: string): number {
+  let h = 0;
+  for (const ch of storyId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % COMPOSER_SHARDS;
+}
+
 /** The container (COMPOSER binding), a local URL (COMPOSER_URL), a test double, or the fake. */
-export function composerFor(env: Bindings): ComposerApi {
+export function composerFor(env: Bindings, storyId = ""): ComposerApi {
   if (env.COMPOSER_IMPL) return env.COMPOSER_IMPL;
   if (env.FAKE_COMPOSER === "1") return fakeComposer(env);
   const call = async <T>(path: string, body: unknown, timeoutMs: number): Promise<T> => {
@@ -79,10 +89,9 @@ export function composerFor(env: Bindings): ComposerApi {
     let response: Response;
     if (env.COMPOSER_URL) response = await fetch(`${env.COMPOSER_URL}${path}`, init);
     else if (env.COMPOSER)
-      response = await env.COMPOSER.get(env.COMPOSER.idFromName("composer")).fetch(
-        `http://composer${path}`,
-        init,
-      );
+      response = await env.COMPOSER.get(
+        env.COMPOSER.idFromName(`composer-${shardOf(storyId)}`),
+      ).fetch(`http://composer${path}`, init);
     else throw new Error("no composer configured");
     if (!response.ok) throw new Error(`composer ${path}: HTTP ${response.status}`);
     return (await response.json()) as T;

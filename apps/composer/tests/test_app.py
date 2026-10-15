@@ -90,3 +90,16 @@ def test_score_reports_missing_faces_without_crashing(files):
     res = TestClient(composer.app).post("/score", json=body)
     assert res.status_code == 200
     assert res.json() == {"scores": {"kf:A:1": None}, "sourceFaces": {"survivor": False, "infected": False}, "minAge": None}
+
+
+def test_busy_instance_answers_503_instead_of_queueing(monkeypatch):
+    monkeypatch.setattr(composer, "BUSY_WAIT_SEC", 0.01)
+    client = TestClient(composer.app)
+    for _ in range(composer.MAX_JOBS):
+        composer.JOBS.acquire()
+    try:
+        r = client.post("/compose", json={"shots": [], "musicUrl": "m", "caption": {"line1": "a", "line2": "b"}, "outUrl": "o", "posterUrl": "p"})
+        assert r.status_code == 503
+    finally:
+        for _ in range(composer.MAX_JOBS):
+            composer.JOBS.release()

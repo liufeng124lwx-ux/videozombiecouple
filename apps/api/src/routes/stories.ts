@@ -216,5 +216,7 @@ export async function recomposeStory(c: Context<AppEnv>) {
   if (!(await ownedStory(c, id))) return fail(c, "NOT_FOUND");
   const outcome = await runnerFor(c, id).recompose(parsed.data.names, parsed.data.date);
   if (!outcome.ok) return fail(c, outcome.reason === "used" ? "RECOMPOSE_USED" : "NOT_READY");
+  // The stuck-story cron measures from rendered_at: a title change starts a new clock.
+  await c.env.DB.prepare("UPDATE stories SET rendered_at=? WHERE id=?").bind(Date.now(), id).run();
   return c.json({ ok: true }, 202);
 }

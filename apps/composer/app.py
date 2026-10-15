@@ -6,6 +6,8 @@ Inputs and outputs travel through short-lived signed R2 URLs; nothing is kept af
 import json
 import subprocess
 import tempfile
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 
 import httpx
@@ -84,6 +86,23 @@ class ComposeBody(BaseModel):
     posterUrl: str
 
 
+# A standard-1 instance runs two jobs at once; more would only time out. The Worker retries a 503
+# with backoff (and other stories go to other instances).
+MAX_JOBS = 2
+BUSY_WAIT_SEC = 20.0
+JOBS = threading.BoundedSemaphore(MAX_JOBS)
+
+
+@contextmanager
+def job_slot():
+    if not JOBS.acquire(timeout=BUSY_WAIT_SEC):
+        raise HTTPException(503, "busy")
+    try:
+        yield
+    finally:
+        JOBS.release()
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -91,6 +110,11 @@ def health():
 
 @app.post("/score")
 def score_route(body: ScoreBody):
+    with job_slot():
+        return _score(body)
+
+
+def _score(body: ScoreBody):
     from score import score
 
     sources = {
@@ -103,6 +127,11 @@ def score_route(body: ScoreBody):
 
 @app.post("/compose")
 def compose_route(body: ComposeBody):
+    with job_slot():
+        return _compose(body)
+
+
+def _compose(body: ComposeBody):
     if not body.shots or any(s.grade not in ("cold", "warm") or s.anchor not in ("start", "end") for s in body.shots):
         raise HTTPException(400, "bad shots")
     with tempfile.TemporaryDirectory() as tmp:

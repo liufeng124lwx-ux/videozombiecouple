@@ -302,7 +302,7 @@ export class StoryRunner extends DurableObject<Bindings> {
   }
 
   #composer(): ComposerApi {
-    return composerFor(this.env);
+    return composerFor(this.env, this.#state?.spec.id ?? "");
   }
 
   #dispatcher(capability: CapabilityId) {
