@@ -11,12 +11,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-04",
   "routes": [{ "pattern": "api-staging.videozombiecouple.com", "custom_domain": true }],
-  "kv_namespaces": [{ "binding": "KV", "id": "REPLACE_BY_SETUP" }],
+  "kv_namespaces": [{ "binding": "KV", "id": "4524be5b7c27442084b9932d84b818ff" }],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "vzc-staging",
-      "database_id": "REPLACE_BY_SETUP",
+      "database_id": "37004cec-8c07-4358-8fb3-eabff38088b7",
       "migrations_dir": "migrations"
     }
   ],

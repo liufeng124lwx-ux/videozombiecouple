@@ -8,12 +8,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-04",
   "routes": [{ "pattern": "api.videozombiecouple.com", "custom_domain": true }],
-  "kv_namespaces": [{ "binding": "KV", "id": "REPLACE_BY_SETUP" }],
+  "kv_namespaces": [{ "binding": "KV", "id": "6dbebd4f0fc24c55a63308827c4facef" }],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "vzc",
-      "database_id": "REPLACE_BY_SETUP",
+      "database_id": "f15134d9-1016-4d34-98b7-4fa16c159e6f",
       "migrations_dir": "migrations"
     }
   ],

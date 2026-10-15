@@ -45,12 +45,23 @@ const set = (s: StoryState, id: string, st: StepState) => {
 const ids = (s: StoryState) => readySteps(s).map((x) => x.id);
 
 describe("story graph", () => {
-  it("preview starts with four keyframe candidates", () => {
-    expect(ids(state())).toEqual(["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"]);
+  it("checks the two photos (faces, age) before any keyframe is made", () => {
+    const s = state();
+    expect(ids(s)).toEqual(["score:sources"]);
+    set(s, "score:sources", "succeeded");
+    expect(ids(s)).toEqual(["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"]);
+  });
+
+  it("fails the preview when the photo check fails, before spending anything", () => {
+    const s = state();
+    set(s, "score:sources", "failed");
+    expect(phaseOutcome(s, "preview")).toBe("failed");
+    expect(ids(s)).toEqual([]);
   });
 
   it("scoring waits for all candidates to end, and needs one A and one C", () => {
     const s = state();
+    set(s, "score:sources", "succeeded");
     set(s, "kf:A:1", "succeeded");
     set(s, "kf:C:1", "succeeded");
     set(s, "kf:A:2", "pending");
@@ -62,6 +73,7 @@ describe("story graph", () => {
 
   it("preview fails as soon as every candidate of one frame failed", () => {
     const s = state();
+    set(s, "score:sources", "succeeded");
     for (const id of ["kf:A:1", "kf:A:2"]) set(s, id, "failed");
     set(s, "kf:C:1", "pending");
     expect(phaseOutcome(s, "preview")).toBe("failed");
@@ -69,6 +81,7 @@ describe("story graph", () => {
 
   it("preview succeeds once scoring succeeded", () => {
     const s = state();
+    set(s, "score:sources", "succeeded");
     for (const id of ["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"]) set(s, id, "succeeded");
     expect(phaseOutcome(s, "preview")).toBe("running");
     set(s, "score:AC", "succeeded");
@@ -81,7 +94,8 @@ describe("story graph", () => {
 
   it("in the video phase shot 3 waits for keyframe B and compose waits for every shot", () => {
     const s = state({ status: "rendering", picks: { A: "kf/S/a.jpg", C: "kf/S/c.jpg" } });
-    for (const id of ["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2", "score:AC"]) set(s, id, "succeeded");
+    for (const id of ["score:sources", "kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2", "score:AC"])
+      set(s, id, "succeeded");
     expect(ids(s).sort()).toEqual(["kf:B", "shot:1", "shot:2", "shot:4"]);
     set(s, "kf:B", "succeeded");
     expect(ids(s)).toContain("shot:3");

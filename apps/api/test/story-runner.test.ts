@@ -76,6 +76,14 @@ async function creditHold(
   return { kind: "credits", userId: "test", reservationId: storyId, reserved: TIERS.video.credits };
 }
 
+const stepAttempts = (h: Awaited<ReturnType<typeof setup>>, id: string) =>
+  JSON.parse(
+    (h.db.prepare("SELECT steps FROM stories WHERE id=?").get(id) as { steps: string }).steps,
+  ) as {
+    id: string;
+    attempts: unknown[];
+  }[];
+
 const quotaUsed = (h: Awaited<ReturnType<typeof setup>>) =>
   h.limiters.instance("quota:preview:user:test").used();
 
@@ -111,7 +119,8 @@ describe("StoryRunner", () => {
     };
     expect(view.preview?.A).toContain(`kf/${spec.id}/kf-A-1.jpg`);
     expect(view.preview?.C).toContain(`kf/${spec.id}/kf-C-1.jpg`);
-    expect(calls.score).toBe(1);
+    // One check of the two photos, then one scoring of the candidates.
+    expect(calls.score).toBe(2);
     expect(await quotaUsed(h)).toBe(1);
     const row = h.db.prepare("SELECT status FROM stories WHERE id=?").get(spec.id) as {
       status: string;
@@ -271,6 +280,8 @@ describe("StoryRunner", () => {
     const view = (await untilStatus(h, runner, "preview_failed")) as { errorCode: string };
     expect(view.errorCode).toBe("FACE_NOT_FOUND");
     expect(await quotaUsed(h)).toBe(0);
+    // Checked before any model call: no keyframe was made.
+    expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);
   });
 
   it("fails the preview with UNDERAGE when a source looks under 18", async () => {
@@ -280,6 +291,7 @@ describe("StoryRunner", () => {
     await runner.start(spec, await previewHold(h, spec.id));
     const view = (await untilStatus(h, runner, "preview_failed")) as { errorCode: string };
     expect(view.errorCode).toBe("UNDERAGE");
+    expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);
   });
 
   it("render twice reserves once", async () => {

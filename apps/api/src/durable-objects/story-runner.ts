@@ -518,7 +518,8 @@ export class StoryRunner extends DurableObject<Bindings> {
     const now = Date.now();
     if (step.nextRunAt !== null && now < step.nextRunAt) return;
     try {
-      if (step.kind === "score") await this.#score(state, step);
+      if (step.id === "score:sources") await this.#checkSources(state, step);
+      else if (step.kind === "score") await this.#score(state, step);
       else await this.#compose(state, step);
     } catch (error) {
       step.failures += 1;
@@ -532,6 +533,33 @@ export class StoryRunner extends DurableObject<Bindings> {
       step.nextRunAt =
         now + Math.min(COMPOSER_RETRY_MAX_MS, COMPOSER_RETRY_MS * 2 ** (step.failures - 1));
     }
+  }
+
+  /** Spec §4.2 S0b: one face in each photo (the pet photo is not checked) and no one under 18. */
+  async #checkSources(state: StoryState, step: StepRecord): Promise<void> {
+    const { spec } = state;
+    const pet = spec.kind === "pet";
+    const result = await this.#composer().score({
+      sources: {
+        survivor: await this.#url(spec.survivorKey),
+        infected: pet ? null : await this.#url(spec.infectedKey),
+      },
+      candidates: [],
+      requiredFaces: { A: [], B: [], C: [] },
+      checkAge: true,
+    });
+    step.nextRunAt = null;
+    if (!result.sourceFaces.survivor || (!pet && result.sourceFaces.infected === false)) {
+      step.state = "failed";
+      step.error = "FACE_NOT_FOUND";
+      return;
+    }
+    if (result.minAge !== null && result.minAge < 18) {
+      step.state = "failed";
+      step.error = "UNDERAGE";
+      return;
+    }
+    step.state = "succeeded";
   }
 
   async #score(state: StoryState, step: StepRecord): Promise<void> {

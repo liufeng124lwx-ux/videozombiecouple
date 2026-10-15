@@ -29,14 +29,19 @@ const step = (
   failKind: null,
 });
 
-/** Spec §4.2 S1–S2: two candidates each for keyframes A and C, then one scoring call. */
+/**
+ * Spec §4.2 S0b–S2: check the two photos (one face each, adults) before any model sees them, then
+ * two candidates each for keyframes A and C, then one scoring call to pick the best of each.
+ */
 export function previewSteps(): StepRecord[] {
+  const sources = step("score:sources", "score", "preview", []);
   const kf = (["A", "C"] as const).flatMap((frame) =>
     Array.from({ length: CANDIDATES_PER_FRAME }, (_, i) =>
-      step(`kf:${frame}:${i + 1}`, "kie", "preview", [], "keyframe"),
+      step(`kf:${frame}:${i + 1}`, "kie", "preview", [sources.id], "keyframe"),
     ),
   );
   return [
+    sources,
     ...kf,
     step(
       "score:AC",
@@ -94,6 +99,7 @@ export function readySteps(state: StoryState): StepRecord[] {
 
 export function phaseOutcome(state: StoryState, phase: Phase): "running" | "succeeded" | "failed" {
   if (phase === "preview") {
+    if (state.steps["score:sources"]?.state === "failed") return "failed";
     for (const frame of ["A", "C"] as const)
       if (candidates(state, frame).every((s) => s.state === "failed")) return "failed";
     const score = state.steps["score:AC"];
