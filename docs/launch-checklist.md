@@ -23,7 +23,7 @@ VideoZombieCouple 已于 2026-10-14 上线（正式站 videozombiecouple.com，�
 | Microsoft Clarity | 项目 VideoZombieCouple（与 UnblurPix 项目同一登录） | `yxv3ilksct`；故事工具整块屏蔽录制 |
 | Sentry | 组织 `videozombiecouple`，项目 `api`、`web` | DSN 在 secret / GitHub variable；峰值告警规则还没建（API 返回 404，请在后台建：同一问题 5 分钟 > 50 次 → 邮件） |
 | KIE | 正式和测试都用 `~/.vzc-secrets/eval.env` 里的密钥 | 每小时消费上限由你在 kie.ai 调高 |
-| Waffo | VideoZombieCouple 自己的商户（`hello@videozombiecouple.com` 邮件登录，与 video2mp4 的商户分开），商户 `MER_1SdGCEox55PQKKNgdbg97B`，店铺 `STO_7L3CiID9qG2ID9S6LdSRqp` | 测试模式：三个积分包和 webhook 已建，测试站沙箱付款到账已验证。**正式模式未开通，见下文「收款」** |
+| Stripe | Arrayon 登录下单独新建的账号 **VideoZombieCouple**（`acct_1UQlpkK1NmwsUaE9`，选的是“独立账号”，不和 video2mp4 的 Arrayon 账号共享数据），沙盒 `acct_1UQlqEGZhLcYFqqh`。开了 **Managed Payments**：Stripe 当代收方，负责销售税/VAT、欺诈和争议，每笔另收 3.5%。商品税码 `txcd_10105001`（AI 云服务，个人使用）。登录用 AdsPower（SunBrowser）里固定美国 IP 的配置。 | 沙盒：三个商品、webhook 已建，测试站已实测付款到账和全额退款扣回积分。**正式账号还没激活，见下文「收款」**。Waffo 已停用。 |
 | GitHub | 仓库 `liufeng124lwx-ux/videozombiecouple`（**公开**） | secrets：`CLOUDFLARE_API_TOKEN`、`STAGING_SMOKE_KEY`、`STAGING_SMOKE_SESSION`；variables：账号 ID、Turnstile、Sentry web DSN、GA4、Clarity、`ADS_ENABLED=false` |
 
 ## 已完成
@@ -40,7 +40,7 @@ VideoZombieCouple 已于 2026-10-14 上线（正式站 videozombiecouple.com，�
 - [x] **setup-cloudflare.sh**：两个环境都跑过，D1、KV、R2 和 `vzc-backups` 都在，id 已填进 wrangler 配置。
 - [x] **真实照片评测**：用 AI 生成的成人示例照片做过评测（`docs/model-eval.md`）。真实用户照片的误判率要在上线后从运营数据看。
 - [x] **第二供应商**：暂不接，备用路由都是 kie 上的其他模型（Veo 3.1 Lite、Seedance 2 Mini）。
-- [ ] **Waffo 正式模式**：未提交商业资质审核（KYB），见下文「收款」。测试卡在测试站走通了一次购买，积分已到账；退款还没演练。
+- [ ] **Stripe 正式账号**：VideoZombieCouple 账号要先激活（业务资料、代表人验证，最后的“Agree and submit”由本人点），再接受正式环境的 Managed Payments 条款。之后：建受限密钥（只给 Checkout Sessions 写权限）写入 `~/.vzc-secrets/stripe-live-secret.txt`，运行 `node scripts/stripe-setup.ts live --yes`（建商品、webhook，签名密钥写入 `stripe-live-whsec.txt`），把输出的 `STRIPE_PRICES` 填进 `wrangler.production.jsonc`，再部署。
 - [ ] **法律页**：Terms、Privacy、Refund、DMCA 已上线；DMCA 登记还没加本站别名。
 - [ ] **密钥**：`scripts/launch-secrets.sh production` 仍缺 `WAFFO_PRIVATE_KEY`（等正式商户）、`TELEGRAM_*`（可选）、`ACCESS_*` 和 `ADMIN_EMAILS`（不设时管理后台是 404，等于关闭）、`CF_ANALYTICS_TOKEN`（每周用量报告）、R2 S3 key（不需要，文件走 `/files` 代理）。`ALERT_EMAIL` 已设。
 - [x] **GSC**：网域资源已验证，sitemap 已提交。
@@ -53,7 +53,7 @@ VideoZombieCouple 已于 2026-10-14 上线（正式站 videozombiecouple.com，�
 
 ## 还需要你处理
 
-1. **收款（阻塞）**：Waffo 的禁止清单明确包括「把两个真人合成到亲吻、拥抱等亲密场景，不论是上传合照还是两张单人照，不论是否同意」（docs.waffo.ai/zh/mor/account-reviews/aigc-compliance#deepfake）。真人情侣版的拥抱帧正好落在这一条，商业资质审核（KYB）没有提交。Arrayon Inc 也是 video2mp4 的签约主体，被判违规可能牵连。可选方向见交付说明。
+1. **收款（阻塞）**：已改用 Stripe Managed Payments（Waffo 的禁止清单不允许把两个真人合成到拥抱场景，所以不接 Waffo）。Stripe 的禁止清单没有这类限制，我们的产品属于 Managed Payments 支持的「AI 云服务」类别。剩下的是激活正式账号，步骤见上面。
 2. **DMCA 登记加别名**：登录 dmca.copyright.gov（Login.gov，需要你的双重验证），对 Arrayon Inc（DMCA-1082308）做 Amend，别名加 `VideoZombieCouple`、`videozombiecouple.com`，联系邮箱加 `dmca@videozombiecouple.com`，Pay.gov 付约 $6。完成后把登记号写进 DMCA 页面。
 3. ~~音乐授权~~：2026-10-15 已在 Suno Pro 订阅期内于 suno.com 重新生成三首并替换（记录见 `assets/music/README.md`）。
 4. **KIE**：调高正式使用的密钥的每小时消费上限。

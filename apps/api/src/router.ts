@@ -31,7 +31,7 @@ import {
   renderStory,
 } from "./routes/stories.ts";
 import { createUpload } from "./routes/uploads.ts";
-import { kieCallback, waffoWebhook } from "./routes/webhooks.ts";
+import { kieCallback, stripeWebhook, waffoWebhook } from "./routes/webhooks.ts";
 import { reportRequest } from "./services/sentry.ts";
 import type { AppEnv } from "./types.ts";
 
@@ -74,6 +74,7 @@ app.post("/v1/stories/:id/remake", remakeStory);
 app.get("/v1/share/:id", getSharedFilm);
 app.post("/webhooks/kie/:storyId", kieCallback);
 app.post("/webhooks/waffo", waffoWebhook);
+app.post("/webhooks/stripe", stripeWebhook);
 
 app.route("/local-r2", localR2);
 app.route("/files", files);

@@ -53,6 +53,10 @@ export interface Bindings {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   /** Waffo Pancake (spec 6.1): payments are off unless mode, merchant, key and store are set. */
+  /** Stripe (Managed Payments): secret or restricted key, webhook signing secret, productKey → price id JSON. */
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICES?: string;
   WAFFO_MODE?: string;
   WAFFO_MERCHANT_ID?: string;
   WAFFO_PRIVATE_KEY?: string;

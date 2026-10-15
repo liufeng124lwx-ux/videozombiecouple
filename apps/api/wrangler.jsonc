@@ -3,7 +3,7 @@
 // scripts/launch-secrets.sh staging lists every secret and which are still missing.
 // Secrets (wrangler secret put): HMAC_KEY, TURNSTILE_SECRET, R2_ACCESS_KEY_ID,
 // R2_SECRET_ACCESS_KEY, KIE_API_KEY (a kie sub-key with a spend cap on staging, spec 1.4),
-// GOOGLE_CLIENT_SECRET, WAFFO_PRIVATE_KEY, GA4_API_SECRET.
+// GOOGLE_CLIENT_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, GA4_API_SECRET.
 // Waffo (test mode): VideoZombieCouple's own merchant, separate from video2mp4; products made by scripts/waffo-setup.ts.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
@@ -62,10 +62,7 @@
     "R2_BUCKET_NAME": "vzc-staging",
     "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
     "GOOGLE_CLIENT_ID": "876510837060-62rgai18m99a6ofgs4rvricmd19pc42u.apps.googleusercontent.com",
-    "WAFFO_MODE": "test",
-    "WAFFO_MERCHANT_ID": "MER_1SdGCEox55PQKKNgdbg97B",
-    "WAFFO_STORE_ID": "STO_7L3CiID9qG2ID9S6LdSRqp",
-    "WAFFO_PRODUCTS": "{\"pack1\":\"PROD_6ZnSPMK5EZkUSMCeEZMUlN\",\"pack3\":\"PROD_4ImvgEeoKNH1YwELRpLXeJ\",\"pack5\":\"PROD_1K6VqJ9p5YQFrZk2355sfs\"}",
+    "STRIPE_PRICES": "{\"pack1\":\"price_1UQlzzGZhLcYFqqhY9Z0iFUw\",\"pack3\":\"price_1UQlzzGZhLcYFqqhDovYNhtI\",\"pack5\":\"price_1UQm00GZhLcYFqqhKZKBSZwK\"}",
     "GA4_MEASUREMENT_ID": ""
   }
 }

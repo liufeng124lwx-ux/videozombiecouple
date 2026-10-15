@@ -59,10 +59,8 @@
     "R2_BUCKET_NAME": "vzc",
     "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
     "GOOGLE_CLIENT_ID": "876510837060-62rgai18m99a6ofgs4rvricmd19pc42u.apps.googleusercontent.com",
-    "WAFFO_MODE": "prod",
-    "WAFFO_MERCHANT_ID": "",
-    "WAFFO_STORE_ID": "",
-    "WAFFO_PRODUCTS": "{}",
+    // Filled by scripts/stripe-setup.ts live once the Stripe account is activated.
+    "STRIPE_PRICES": "{}",
     "GA4_MEASUREMENT_ID": "G-PHDSR4556T"
   }
 }

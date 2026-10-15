@@ -1,6 +1,8 @@
 import type { Bindings } from "../types.ts";
 import { applyEvent } from "./apply.ts";
 import type { BillingEvent } from "./events.ts";
+import type { StripeEvent } from "./stripe.ts";
+import { fromStripe } from "./stripe-events.ts";
 import type { WaffoWebhookEvent } from "./waffo.ts";
 import { fromWaffo } from "./waffo-events.ts";
 
@@ -13,6 +15,7 @@ export type Outcome = "done" | "busy" | "failed";
 
 function toEvent(provider: string, payload: string): BillingEvent {
   if (provider === "waffo") return fromWaffo(JSON.parse(payload) as WaffoWebhookEvent);
+  if (provider === "stripe") return fromStripe(JSON.parse(payload) as StripeEvent);
   throw new Error(`unknown billing provider ${provider}`);
 }
 
@@ -58,7 +61,7 @@ export async function processStored(env: Bindings, id: string): Promise<Outcome>
 }
 
 /**
- * Waffo retries a failed delivery only 3 times. The hourly ops cron (ops/cron.ts) calls this for deliveries
+ * Waffo retries a failed delivery only 3 times (Stripe for 3 days). The hourly ops cron (ops/cron.ts) calls this for deliveries
  * that failed or were never finished, oldest first.
  */
 export async function replayPending(

@@ -15,7 +15,7 @@ type Props = {
   returnPath?: string;
 };
 
-/** Spec 6.4: sign in first if needed, then straight to Waffo's checkout; the API adds ?paid=1 to the way back. */
+/** Spec 6.4: sign in first if needed, then straight to Stripe Checkout; the API adds ?paid=1 to the way back. */
 export default function BuyButton({
   productKey,
   label,

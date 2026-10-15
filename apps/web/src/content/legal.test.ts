@@ -18,7 +18,7 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
       "kie.ai",
       "Google",
       "ByteDance",
-      "Waffo",
+      "Stripe",
       "Google Analytics",
       "Microsoft Clarity",
     ])

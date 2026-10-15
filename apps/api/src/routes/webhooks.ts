@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { stripeConfig, verifyStripeWebhook } from "../billing/stripe.ts";
 import { verifyWebhook, waffoConfig } from "../billing/waffo.ts";
 import { processStored } from "../billing/webhook.ts";
 import { fail } from "../http.ts";
@@ -46,6 +47,35 @@ export async function waffoWebhook(c: Context<AppEnv>) {
     "INSERT OR IGNORE INTO billing_events(id,provider,type,mode,payload,received_at) VALUES(?,?,?,?,?,?)",
   )
     .bind(event.id, "waffo", event.eventType, event.mode, raw, Date.now())
+    .run();
+  const outcome = await processStored(c.env, event.id);
+  if (outcome === "failed") return c.text("retry", 500);
+  if (outcome === "busy") return c.text("in progress", 409);
+  return c.text("OK");
+}
+
+/** Stripe: verify, drop the other mode's events, keep the raw delivery, then apply it once. */
+export async function stripeWebhook(c: Context<AppEnv>) {
+  const config = stripeConfig(c.env);
+  if (!config?.webhookSecret) return c.text("payments disabled", 503);
+  const raw = await c.req.text();
+  if (raw.length > MAX_WEBHOOK_BYTES) return c.text("too large", 413);
+  const event = await verifyStripeWebhook(
+    raw,
+    c.req.header("stripe-signature"),
+    config.webhookSecret,
+  );
+  if (!event) {
+    await countBadSignature(c.env, Date.now());
+    return c.text("invalid signature", 401);
+  }
+  await clearBadSignatures(c.env, Date.now());
+  // A test event must never reach the live ledger, nor the other way round.
+  if (event.livemode !== config.live) return c.text("OK");
+  await c.env.DB.prepare(
+    "INSERT OR IGNORE INTO billing_events(id,provider,type,mode,payload,received_at) VALUES(?,?,?,?,?,?)",
+  )
+    .bind(event.id, "stripe", event.type, event.livemode ? "live" : "test", raw, Date.now())
     .run();
   const outcome = await processStored(c.env, event.id);
   if (outcome === "failed") return c.text("retry", 500);

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
-import { RETENTION } from "@vzc/catalog";
+import { RETENTION, SALE_PRODUCTS } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
-import { waffoConfig } from "../src/billing/waffo.ts";
+import { stripeConfig } from "../src/billing/stripe.ts";
 import type { Bindings } from "../src/types.ts";
 
 type Config = any;
@@ -87,13 +87,14 @@ describe("deployable configs (spec 1.4)", () => {
     expect(rules[0].allowed.methods.sort()).toEqual(["GET", "HEAD", "PUT"]);
   });
 
-  it("runs production's vars through the real parsers: payments switch on once the ids are filled in", () => {
-    const env = {
-      ...production.vars,
-      WAFFO_MERCHANT_ID: "MER_filled_in_at_launch",
-      WAFFO_STORE_ID: "STO_filled_in_at_launch",
-      WAFFO_PRIVATE_KEY: "secret",
-    } as unknown as Bindings;
-    expect(waffoConfig(env)?.mode).toBe("prod");
+  it("runs the vars through the real parsers: staging sells every pack through Stripe, production once its key is set", () => {
+    const parse = (vars: Config, key: string) =>
+      stripeConfig({ ...vars, STRIPE_SECRET_KEY: key } as unknown as Bindings);
+    expect(Object.keys(parse(staging.vars, "sk_test_x")?.prices ?? {}).sort()).toEqual(
+      SALE_PRODUCTS.map((p) => p.key).sort(),
+    );
+    expect(parse(production.vars, "rk_live_x")?.live).toBe(true);
+    expect(staging.vars.WAFFO_MODE).toBeUndefined();
+    expect(production.vars.WAFFO_MODE).toBeUndefined();
   });
 });

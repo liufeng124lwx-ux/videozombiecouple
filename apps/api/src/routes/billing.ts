@@ -1,6 +1,7 @@
 import { PLANS, type PlanId, productByKey } from "@vzc/catalog";
 import { type BillingView, ChangePlanSchema, CheckoutSchema } from "@vzc/contracts";
 import type { Context } from "hono";
+import { createStripeCheckout, StripeError, stripeConfig } from "../billing/stripe.ts";
 import {
   cancelSubscription,
   createCheckout,
@@ -57,8 +58,11 @@ export async function checkout(c: Context<AppEnv>) {
   if (!parsed.success) return fail(c, "BAD_REQUEST");
   const product = productByKey(parsed.data.productKey);
   if (!product) return fail(c, "BAD_REQUEST");
-  const config = waffoConfig(c.env);
-  if (!config || !config.products[product.key]) return fail(c, "PAYMENTS_UNAVAILABLE");
+  // Stripe (Managed Payments) when it is configured; Waffo stays as the fallback provider.
+  const stripe = stripeConfig(c.env);
+  const config = stripe ? null : waffoConfig(c.env);
+  if (stripe ? !stripe.prices[product.key] : !config?.products[product.key])
+    return fail(c, "PAYMENTS_UNAVAILABLE");
   const rate = await hitRate(c.env, `rate:checkout:${userId}`, CHECKOUTS_PER_HOUR, 3_600_000);
   if (!rate.allowed) return fail(c, "RATE_LIMITED", rate.retryAfterSec);
   const user = await c.env.DB.prepare("SELECT email, paid_paused_at FROM users WHERE id=?")
@@ -72,12 +76,36 @@ export async function checkout(c: Context<AppEnv>) {
   const back = safeNext(parsed.data.returnPath);
   const metadata: Record<string, string> = { userId, productKey: product.key };
   if (parsed.data.clientId) metadata.clientId = parsed.data.clientId;
+  const successUrl = `${c.env.ALLOWED_ORIGIN}${back}${back.includes("?") ? "&" : "?"}paid=1`;
+  if (stripe) {
+    if (product.kind !== "pack") return fail(c, "BAD_REQUEST");
+    try {
+      const url = await createStripeCheckout(stripe, {
+        productKey: product.key,
+        userId,
+        email: user.email,
+        successUrl,
+        cancelUrl: `${c.env.ALLOWED_ORIGIN}${back}`,
+        metadata,
+        idempotencyKey: `vzc-${ulid()}`,
+      });
+      c.header("cache-control", "no-store");
+      return c.json({ url });
+    } catch (error) {
+      if (!(error instanceof StripeError)) throw error;
+      console.error(
+        JSON.stringify({ level: "error", requestId: c.get("requestId"), stripe: error.message }),
+      );
+      return fail(c, "PAYMENTS_UNAVAILABLE");
+    }
+  }
+  if (!config) return fail(c, "PAYMENTS_UNAVAILABLE");
   return viaWaffo(c, async () => {
     const url = await createCheckout(config, {
       productKey: product.key,
       userId,
       email: user.email,
-      successUrl: `${c.env.ALLOWED_ORIGIN}${back}${back.includes("?") ? "&" : "?"}paid=1`,
+      successUrl,
       metadata,
       externalId: `upx-${ulid()}`,
     });

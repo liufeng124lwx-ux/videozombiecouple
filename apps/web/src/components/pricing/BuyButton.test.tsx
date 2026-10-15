@@ -27,7 +27,7 @@ const MEMBER = {
     paid: false,
   },
 };
-const CHECKOUT = { body: { url: "https://checkout.waffo.example/s#token=abc" } };
+const CHECKOUT = { body: { url: "https://checkout.stripe.com/c/pay/cs_test_abc" } };
 
 function buy(navigate = vi.fn()) {
   render(<BuyButton productKey="pack60" label="Buy" navigate={navigate} />);
@@ -42,7 +42,7 @@ describe("BuyButton (spec 6.4)", () => {
     await refreshMe();
     const navigate = buy();
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith("https://checkout.waffo.example/s#token=abc"),
+      expect(navigate).toHaveBeenCalledWith("https://checkout.stripe.com/c/pay/cs_test_abc"),
     );
     expect(calls.find((c) => c.path === "/v1/billing/checkout")?.body).toEqual({
       productKey: "pack60",
