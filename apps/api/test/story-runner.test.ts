@@ -167,6 +167,34 @@ describe("StoryRunner", () => {
     expect(h.wallet.calls).toContainEqual(["commit", "test", spec.id, 10, spec.id]);
   });
 
+  it("while rendering, shows the shot list and the chosen keyframes as they come in", async () => {
+    const h = await setup();
+    scripted(h);
+    const { spec, runner } = await readyStory(h);
+    const ids = ["frames", "shot:1", "shot:2", "shot:3", "shot:4", "shot:5", "compose"];
+    expect((await runner.view()) as StoryView).toMatchObject({ stages: [], frames: [] });
+    await runner.render(await creditHold(h, spec.id));
+    let view = (await runner.view()) as StoryView;
+    expect(view.stages?.map((s) => s.id)).toEqual(ids);
+    expect(view.stages?.[0]?.state).not.toBe("done");
+    expect(view.frames).toEqual([]);
+    for (
+      let i = 0;
+      i < 720 && !view.stages?.some((s) => s.id.startsWith("shot:") && s.state === "done");
+      i++
+    ) {
+      await h.advance(10_000);
+      view = (await runner.view()) as StoryView;
+    }
+    expect(view.status).toBe("rendering");
+    expect(view.stages?.[0]?.state).toBe("done");
+    // A and C after scoring, then B: signed links to this story's own keyframes.
+    expect(view.frames?.length).toBe(3);
+    for (const url of view.frames ?? []) expect(url).toContain(spec.id);
+    const done = await untilStatus(h, runner, "done");
+    expect(done.stages?.every((s) => s.state === "done")).toBe(true);
+  });
+
   it("emails the owner once when the film is ready, not again after a title change", async () => {
     const h = await setup();
     scripted(h);

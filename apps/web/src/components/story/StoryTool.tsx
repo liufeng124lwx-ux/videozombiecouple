@@ -25,10 +25,10 @@ import { getToken } from "../../lib/turnstile.ts";
 import PackRows from "../pricing/PackRows.tsx";
 import {
   PhotoSlot,
+  RenderMonitor,
   ScenePicker,
   type ScenePoster,
   TitleCardFields,
-  WaitingFrames,
 } from "./parts.tsx";
 
 export type StoryToolProps = {
@@ -44,13 +44,6 @@ const POLL_MS = 3_000;
 const CHECKOUT_FRESH_MS = 30 * 60_000;
 /** How long to wait for a payment's credits before asking the buyer to refresh. */
 const CONFIRM_WAIT_MS = 60_000;
-const RENDER_STAGES = [
-  "story.rendering.stage1",
-  "story.rendering.stage2",
-  "story.rendering.stage3",
-  "story.rendering.stage4",
-  "story.rendering.stage5",
-] as const;
 
 const deleteDate = (ms: number) =>
   new Date(ms).toLocaleDateString("en-US", { month: "long", day: "numeric" });
@@ -537,32 +530,14 @@ export default function StoryTool({
       {s.phase === "rendering" && (
         <div class="tool-render">
           <h3>{t("story.rendering.title")}</h3>
-          <div
-            class="render-bar"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(
-              story?.progress.total ? (story.progress.done / story.progress.total) * 100 : 3,
-            )}
-          >
-            <span
-              style={{
-                width: `${Math.max(3, story?.progress.total ? (story.progress.done / story.progress.total) * 100 : 3)}%`,
-              }}
-            />
-          </div>
-          <div class="timeline scene" aria-hidden="true">
-            <span>00:00</span>
-            <span>00:{fact("video.seconds")}</span>
-          </div>
-          <WaitingFrames
-            stages={RENDER_STAGES.map((k) => t(k))}
+          <RenderMonitor
+            stages={story?.stages}
+            frames={story?.frames}
             done={story?.progress.done ?? 0}
-            total={story?.progress.total ?? 6}
+            total={story?.progress.total ?? 0}
             etaMs={story?.progress.etaMs ?? null}
+            scene={story?.scene ?? s.scene}
           />
-          <p class="fine">{t("story.rendering.email")}</p>
         </div>
       )}
 

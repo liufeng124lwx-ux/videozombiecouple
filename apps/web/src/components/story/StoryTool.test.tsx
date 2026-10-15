@@ -242,6 +242,54 @@ describe("StoryTool", () => {
     expect(client.createStory).not.toHaveBeenCalled();
   });
 
+  it("while rendering: a monitor with the film's own stills, the real shot list, one progress bar", async () => {
+    localStorage.setItem("vzc-story", "S1");
+    client.getStory.mockResolvedValue(
+      view("rendering", {
+        progress: { done: 7, total: 13, etaMs: 150_000 },
+        stages: [
+          { id: "frames", state: "done" },
+          { id: "shot:1", state: "done" },
+          { id: "shot:2", state: "running" },
+          { id: "shot:3", state: "waiting" },
+          { id: "shot:4", state: "waiting" },
+          { id: "shot:5", state: "waiting" },
+          { id: "compose", state: "waiting" },
+        ],
+        frames: ["https://r2/kfA.jpg", "https://r2/kfC.jpg"],
+      }),
+    );
+    const { container } = render(<StoryTool posters={{}} pollMs={10} />);
+    await screen.findByText("Rolling camera");
+    expect(screen.getAllByRole("progressbar")).toHaveLength(1);
+    const stills = [...container.querySelectorAll<HTMLImageElement>(".monitor img")];
+    expect(stills.map((i) => i.getAttribute("src"))).toEqual([
+      "https://r2/kfA.jpg",
+      "https://r2/kfC.jpg",
+    ]);
+    const rows = [...container.querySelectorAll(".shot-list li")];
+    expect(rows.map((r) => r.getAttribute("data-state"))).toEqual([
+      "done",
+      "done",
+      "running",
+      "waiting",
+      "waiting",
+      "waiting",
+      "waiting",
+    ]);
+    expect(rows[2]?.textContent).toContain("The trembling hand");
+    expect(screen.getByText(/About 3 min left/)).toBeTruthy();
+  });
+
+  it("before any still is ready the monitor shows a slate, not empty boxes", async () => {
+    localStorage.setItem("vzc-story", "S1");
+    client.getStory.mockResolvedValue(view("rendering", { stages: [], frames: [] }));
+    const { container } = render(<StoryTool posters={{}} pollMs={10} />);
+    await screen.findByText("Rolling camera");
+    expect(container.querySelector(".monitor .slate")).toBeTruthy();
+    expect(container.querySelector(".waiting-frames")).toBeNull();
+  });
+
   it("shows a refund message when the video fails", async () => {
     localStorage.setItem("vzc-story", "S1");
     client.getStory.mockResolvedValue(

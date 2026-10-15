@@ -10,7 +10,7 @@ import {
   storyboard,
   TIERS,
 } from "@vzc/catalog";
-import type { ErrorCode, StoryView } from "@vzc/contracts";
+import type { ErrorCode, StageView, StoryView } from "@vzc/contracts";
 import {
   type FailKind,
   ProviderError,
@@ -51,6 +51,26 @@ const MAX_FALLBACKS = 2;
 const COMPOSER_RETRY_MS = 30_000;
 const COMPOSER_RETRY_MAX_MS = 15 * 60_000;
 export const COMPOSER_MAX_FAILURES = 5;
+
+/** The shot list a renter watches: keyframes (and their scoring), each shot, the final cut. */
+export function stagesOf(steps: StepRecord[]): StageView[] {
+  const groups = new Map<string, StepRecord[]>();
+  for (const step of steps) {
+    const id = step.id.startsWith("shot:") || step.id === "compose" ? step.id : "frames";
+    groups.set(id, [...(groups.get(id) ?? []), step]);
+  }
+  const order = (id: string) => (id === "frames" ? 0 : id === "compose" ? 99 : Number(id.slice(5)));
+  return [...groups.entries()]
+    .sort(([a], [b]) => order(a) - order(b))
+    .map(([id, group]) => {
+      const done = group.filter((s) => s.state === "succeeded").length;
+      const busy = group.some((s) => !["waiting", "succeeded", "failed"].includes(s.state));
+      return {
+        id,
+        state: done === group.length ? "done" : busy || done > 0 ? "running" : "waiting",
+      };
+    });
+}
 const SETTLE_RETRY_MS = 30_000;
 const SETTLE_RETRY_MAX_MS = 15 * 60_000;
 /** Only these say something about a model's health; a rejected photo does not. */
@@ -978,6 +998,19 @@ export class StoryRunner extends DurableObject<Bindings> {
       names: snap.spec.names,
       date: snap.spec.date,
       progress: { done, total: steps.length, etaMs: this.#eta(snap, phase, steps) },
+      stages: snap.status === "rendering" || snap.status === "done" ? stagesOf(steps) : [],
+      frames:
+        snap.status === "rendering"
+          ? await Promise.all(
+              [
+                snap.picks.A,
+                snap.picks.C,
+                snap.steps["kf:B"]?.state === "succeeded" ? snap.steps["kf:B"].outputKey : null,
+              ]
+                .filter((key): key is string => !!key)
+                .map(sign),
+            )
+          : [],
       errorCode: snap.errorCode,
       recomposeLeft: snap.recomposeLeft,
       remakeLeft: snap.remakeLeft ?? 0,

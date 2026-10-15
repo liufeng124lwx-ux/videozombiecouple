@@ -35,6 +35,11 @@ export type StoryStatus =
   | "failed";
 
 /** What GET /v1/stories/:id returns; URLs are signed and short-lived. */
+export type StageView = {
+  id: string;
+  state: "waiting" | "running" | "done";
+};
+
 export type StoryView = {
   id: string;
   status: StoryStatus;
@@ -45,6 +50,10 @@ export type StoryView = {
   preview: { A: string; C: string } | null;
   video: { url: string; poster: string; expiresAt: number } | null;
   progress: { done: number; total: number; etaMs: number | null };
+  /** While the film renders: keyframes ("frames"), each shot, then the final cut. Else empty. */
+  stages?: StageView[];
+  /** While the film renders: signed links to the chosen keyframes so far (A, C, then B). */
+  frames?: string[];
   errorCode: ErrorCode | null;
   recomposeLeft: number;
   /** Free remakes of the whole film left (the faces didn't come out right). */

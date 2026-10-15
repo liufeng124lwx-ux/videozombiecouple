@@ -1,4 +1,5 @@
 import { fact, type Kind, SCENE_IDS, SCENES, type SceneId } from "@vzc/catalog";
+import type { StageView } from "@vzc/contracts";
 import { t } from "@vzc/i18n";
 import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -206,41 +207,101 @@ export function TitleCardFields(props: {
 }
 
 /** Two empty frames sharpening while the keyframes are made (TikTok "blurred to sharp"). */
-export function WaitingFrames(props: {
-  stages: string[];
+const STAGE_LABEL = {
+  frames: "story.rendering.frames",
+  "shot:1": "story.rendering.shot1",
+  "shot:2": "story.rendering.shot2",
+  "shot:3": "story.rendering.shot3",
+  "shot:4": "story.rendering.shot4",
+  "shot:5": "story.rendering.shot5",
+  compose: "story.rendering.compose",
+} as const;
+/** Shown until the server reports its stages (an older story, or the first poll). */
+const DEFAULT_STAGES: StageView[] = Object.keys(STAGE_LABEL).map((id) => ({
+  id,
+  state: "waiting",
+}));
+const FILM_SECONDS = Number.parseInt(fact("video.seconds"), 10) || 15;
+const STILL_MS = 3_500;
+
+const timecode = (seconds: number) =>
+  `00:${String(Math.max(0, Math.min(99, Math.floor(seconds)))).padStart(2, "0")}`;
+
+/**
+ * Rendering, as a film set: a monitor shows the film's own stills as they are made (a slate until
+ * the first one), beside the shot list with each step's real state and one progress bar.
+ */
+export function RenderMonitor(props: {
+  stages: StageView[] | undefined;
+  frames: string[] | undefined;
   done: number;
   total: number;
   etaMs: number | null;
+  scene: SceneId;
 }) {
-  const share = props.total > 0 ? Math.round((props.done / props.total) * 100) : 0;
-  const stage =
-    props.stages[
-      Math.min(props.stages.length - 1, Math.floor((share / 100) * props.stages.length))
-    ];
+  const stages = props.stages?.length ? props.stages : DEFAULT_STAGES;
+  const frames = props.frames ?? [];
+  const share = props.total > 0 ? props.done / props.total : 0;
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (frames.length < 2) return;
+    const timer = setInterval(() => setShown((i) => i + 1), STILL_MS);
+    return () => clearInterval(timer);
+  }, [frames.length]);
+  const current = frames.length ? shown % frames.length : -1;
+  const eta =
+    props.etaMs !== null && props.etaMs > 60_000
+      ? t("story.eta", { min: Math.ceil(props.etaMs / 60_000) })
+      : t("story.etaSoon");
   return (
-    <div class="waiting">
-      <div class="waiting-frames" aria-hidden="true">
-        <span class="frame cold" />
-        <span class="frame warm" />
+    <div class="render-set">
+      <div class="monitor" aria-hidden="true">
+        {frames.length === 0 ? (
+          <div class="slate">
+            <span class="slate-stick" />
+            <span class="slate-board">
+              <b>{SCENES[props.scene]?.label ?? ""}</b>
+              <i>{t("story.rendering.slate")}</i>
+            </span>
+          </div>
+        ) : (
+          frames.map((src, i) => (
+            <img key={src} src={src} alt="" class={i === current ? "on" : undefined} />
+          ))
+        )}
+        <span class="rec">{"REC"}</span>
+        <span class="tc">
+          {timecode(share * FILM_SECONDS)} / {timecode(FILM_SECONDS)}
+        </span>
+        <span class="scan" />
       </div>
-      <div
-        class="progress-line"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={share}
-      >
-        <i style={{ transform: `scaleX(${Math.max(0.04, share / 100)})` }} />
+      <div class="render-side">
+        <p class="scene">{t("story.rendering.shotList")}</p>
+        <ol class="shot-list">
+          {stages.map((stage) => (
+            <li key={stage.id} data-state={stage.state}>
+              <span class="dot" aria-hidden="true" />
+              <span class="name">
+                {t(STAGE_LABEL[stage.id as keyof typeof STAGE_LABEL] ?? STAGE_LABEL.compose)}
+              </span>
+              <span class="state">{t(`story.rendering.${stage.state}`)}</span>
+            </li>
+          ))}
+        </ol>
+        <div
+          class="progress-line"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(share * 100)}
+        >
+          <i style={{ transform: `scaleX(${Math.max(0.04, share)})` }} />
+        </div>
+        <p class="small muted">
+          {eta} · {t("story.leave")}
+        </p>
+        <p class="fine">{t("story.rendering.email")}</p>
       </div>
-      <p class="scene">{`SC. ${Math.max(1, props.stages.indexOf(stage ?? "") + 1)} — ${stage ?? ""}`}</p>
-      <p class="small muted">
-        {props.etaMs !== null && props.etaMs > 0
-          ? props.etaMs > 60_000
-            ? t("story.eta", { min: Math.ceil(props.etaMs / 60_000) })
-            : t("story.etaSoon")
-          : t("story.etaSoon")}{" "}
-        · {t("story.leave")}
-      </p>
     </div>
   );
 }
