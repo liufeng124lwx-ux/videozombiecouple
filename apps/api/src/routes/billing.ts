@@ -11,6 +11,7 @@ import {
   waffoConfig,
 } from "../billing/waffo.ts";
 import { fail } from "../http.ts";
+import { paidBlock } from "../services/charge.ts";
 import { ulid } from "../services/ids.ts";
 import { hitRate } from "../services/limits.ts";
 import { safeNext } from "../services/login.ts";
@@ -65,11 +66,13 @@ export async function checkout(c: Context<AppEnv>) {
     return fail(c, "PAYMENTS_UNAVAILABLE");
   const rate = await hitRate(c.env, `rate:checkout:${userId}`, CHECKOUTS_PER_HOUR, 3_600_000);
   if (!rate.allowed) return fail(c, "RATE_LIMITED", rate.retryAfterSec);
-  const user = await c.env.DB.prepare("SELECT email, paid_paused_at FROM users WHERE id=?")
+  const user = await c.env.DB.prepare("SELECT email FROM users WHERE id=?")
     .bind(userId)
-    .first<{ email: string; paid_paused_at: number | null }>();
+    .first<{ email: string }>();
   if (!user) return fail(c, "UNAUTHORIZED");
-  if (user.paid_paused_at) return fail(c, "FORBIDDEN");
+  // No sale that could not be used now: a chargeback, an unpaid refund debt, or a paid pause.
+  const blocked = await paidBlock(c, userId);
+  if (blocked) return fail(c, blocked);
   // One subscription per account: switching plans is a plan change (spec 6.5).
   if (product.kind === "plan" && (await liveSubscription(c.env.DB, userId)))
     return fail(c, "SUBSCRIPTION_ACTIVE");

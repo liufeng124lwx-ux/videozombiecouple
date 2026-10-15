@@ -1,9 +1,10 @@
 import { MODES, RATE_LIMITS, RETENTION } from "@vzc/catalog";
 import { CreateStorySchema, RecomposeSchema, RenderSchema, type SharedFilm } from "@vzc/contracts";
 import type { Context } from "hono";
+import { MAX_PAID_ATTEMPTS } from "../durable-objects/story-runner.ts";
 import { fail } from "../http.ts";
 import { readFlags } from "../middleware/flags.ts";
-import { holdVideo, moveToKeep } from "../services/charge.ts";
+import { holdVideo, moveToKeep, paidBlock } from "../services/charge.ts";
 import { hmacHex, safeEqual } from "../services/crypto.ts";
 import { requireHuman } from "../services/human-pass.ts";
 import { ulid } from "../services/ids.ts";
@@ -222,6 +223,7 @@ export async function renderStory(c: Context<AppEnv>) {
   if (current.status === "rendering" || current.status === "done") return c.json({ ok: true }, 202);
   if (current.status !== "preview_ready" && current.status !== "failed")
     return fail(c, "NOT_READY");
+  if (current.videoAttempts >= MAX_PAID_ATTEMPTS) return fail(c, "RETRY_NOT_ALLOWED");
   // Each paid attempt holds credits under its own reservation id (a released one must not be reused).
   const reservationId = current.videoAttempts === 0 ? id : `${id}:v${current.videoAttempts + 1}`;
   const hold = await holdVideo(c, id, reservationId);
@@ -231,9 +233,10 @@ export async function renderStory(c: Context<AppEnv>) {
     // "already": a concurrent request won. If it holds the same reservation id, releasing would
     // undo the winner's hold — leave it; otherwise give this request's own hold back.
     const mine = hold.charge.kind === "credits" ? hold.charge.reservationId : null;
-    if (outcome.reason === "not_ready" || outcome.activeReservation !== mine)
+    if (outcome.reason !== "already" || outcome.activeReservation !== mine)
       await settle(c.env, id, hold.charge, null);
     if (outcome.reason === "not_ready") return fail(c, "NOT_READY");
+    if (outcome.reason === "attempts") return fail(c, "RETRY_NOT_ALLOWED");
     return c.json({ ok: true }, 202);
   }
   // The film is kept 30 days for a verified account, 3 for a buyer who never verified (owner).
@@ -249,6 +252,11 @@ export async function renderStory(c: Context<AppEnv>) {
 export async function remakeStory(c: Context<AppEnv>) {
   const id = c.req.param("id") ?? "";
   if (!(await ownedStory(c, id))) return fail(c, "NOT_FOUND");
+  // A remake is a whole new film on the models: the same gates as a paid render.
+  const userId = c.get("userId");
+  if (!userId) return fail(c, "LOGIN_REQUIRED");
+  const blocked = await paidBlock(c, userId);
+  if (blocked) return fail(c, blocked);
   const outcome = await runnerFor(c, id).remake();
   if (!outcome.ok)
     return fail(

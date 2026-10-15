@@ -253,6 +253,36 @@ describe("StoryRunner", () => {
     expect(calls.compose).toBe(COMPOSER_MAX_FAILURES + 1);
   });
 
+  it("a story gets at most three paid attempts", async () => {
+    const h = await setup();
+    scripted(h, { composeErrors: 1_000 });
+    const { spec, runner } = await readyStory(h);
+    const wallet = h.wallets.instance("test");
+    await wallet.grant("test", {
+      kind: "pack",
+      credits: 40,
+      expiresAt: null,
+      sourceRef: "order-x",
+      reason: "test",
+    });
+    for (let n = 1; n <= 4; n++) {
+      const reservationId = n === 1 ? spec.id : `${spec.id}:v${n}`;
+      expect((await wallet.reserve("test", reservationId, 10, spec.id)).ok).toBe(true);
+      const outcome = await runner.render({
+        kind: "credits",
+        userId: "test",
+        reservationId,
+        reserved: 10,
+      });
+      if (n === 4) {
+        expect(outcome).toEqual({ ok: false, reason: "attempts" });
+        break;
+      }
+      expect(outcome).toEqual({ ok: true });
+      await untilStatus(h, runner, "failed", 240);
+    }
+  });
+
   it("retries a failing composer with backoff, then succeeds", async () => {
     const h = await setup();
     const calls = scripted(h, { composeErrors: 2 });

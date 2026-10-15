@@ -21,6 +21,23 @@ export type Hold =
     };
 
 /**
+ * Why this account may not start paid work now (render, remake, buy), or null. A chargeback is open,
+ * or a refund came after the credits were spent (refund_debt): the film was had for free once. Or
+ * the cost guardrails (the daily paid line, or an admin) paused paid work site-wide.
+ */
+export async function paidBlock(
+  c: Context<AppEnv>,
+  userId: string,
+): Promise<"FORBIDDEN" | "PAUSED" | null> {
+  const user = await c.env.DB.prepare("SELECT paid_paused_at, refund_debt FROM users WHERE id=?")
+    .bind(userId)
+    .first<{ paid_paused_at: number | null; refund_debt: number }>();
+  if (user?.paid_paused_at || (user?.refund_debt ?? 0) > 0) return "FORBIDDEN";
+  if (c.get("paidPaused")) return "PAUSED";
+  return null;
+}
+
+/**
  * Spec §7: the video holds TIERS.video.credits from the wallet until it is delivered (commit) or
  * fails (release). Paused accounts and the per-account daily line still apply.
  */
@@ -31,13 +48,8 @@ export async function holdVideo(
 ): Promise<Hold> {
   const userId = c.get("userId");
   if (!userId) return { ok: false, code: "LOGIN_REQUIRED" };
-  const paused = await c.env.DB.prepare("SELECT paid_paused_at FROM users WHERE id=?")
-    .bind(userId)
-    .first<{ paid_paused_at: number | null }>();
-  // Paid features stay paused while a chargeback is open.
-  if (paused?.paid_paused_at) return { ok: false, code: "FORBIDDEN" };
-  // Cost guardrails: the daily paid line (or an admin) paused paid work.
-  if (c.get("paidPaused")) return { ok: false, code: "PAUSED" };
+  const blocked = await paidBlock(c, userId);
+  if (blocked) return { ok: false, code: blocked };
   const credits = TIERS.video.credits;
   const cap = await dailyCreditCap(c.env, userId, Date.now());
   if (!(await reserveSpend(c.env, userId, reservationId, credits, cap)))

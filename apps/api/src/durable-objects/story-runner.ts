@@ -55,6 +55,8 @@ const COMPOSER_RETRY_MAX_MS = 15 * 60_000;
 export const COMPOSER_MAX_FAILURES = 5;
 /** Moderation outages retried this many times before a photo is let through unchecked. */
 const MODERATION_RETRIES = 2;
+/** Paid tries per story: the first and two more after failures (each on a new hold). */
+export const MAX_PAID_ATTEMPTS = 3;
 
 /** The shot list a renter watches: keyframes (and their scoring), each shot, the final cut. */
 export function stagesOf(steps: StepRecord[]): StageView[] {
@@ -98,7 +100,7 @@ const message = (error: unknown) => (error instanceof Error ? error.message : St
 
 export type RenderOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_ready" | "already"; activeReservation?: string | null };
+  | { ok: false; reason: "not_ready" | "already" | "attempts"; activeReservation?: string | null };
 export type RecomposeOutcome = { ok: true } | { ok: false; reason: "used" | "not_done" };
 export type RemakeOutcome =
   | { ok: true }
@@ -203,6 +205,9 @@ export class StoryRunner extends DurableObject<Bindings> {
         reservation(videoCharge) === reservation(state.videoCharge)
       )
         return already;
+      // A film that keeps failing is not rendered forever on fresh holds: each try costs the models.
+      if (retry && (state.videoAttempts ?? 0) >= MAX_PAID_ATTEMPTS)
+        return { ok: false, reason: "attempts" };
       if (retry)
         for (const step of Object.values(state.steps))
           if (step.phase === "video" && step.state !== "succeeded")

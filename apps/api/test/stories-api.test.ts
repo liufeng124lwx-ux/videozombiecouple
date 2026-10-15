@@ -2,6 +2,7 @@ import { RETENTION, TIERS } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { callbackToken } from "../src/services/crypto.ts";
 import { HMAC_KEY, setup, storyBody } from "./harness.ts";
+import { stripeEnv } from "./stripe-kit.ts";
 
 const T0 = Date.UTC(2026, 9, 14, 12);
 
@@ -381,6 +382,50 @@ describe("story API", () => {
     expect((await h.wallets.instance(userId).balance(userId)).total).toBe(0);
     const again = await h.call(`/v1/stories/${id}/remake`, { method: "POST", session });
     expect(again.body.error?.code).toBe("REMAKE_USED");
+  });
+
+  it("a refund that could not take its credits back, a chargeback or a paid pause stops remakes, renders and checkouts", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1", ...stripeEnv() });
+    const { userId, session } = await signedIn(h);
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 20,
+      expiresAt: null,
+      sourceRef: "order-d",
+      reason: "test",
+    });
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-d" },
+    });
+    await h.untilStory(id, "done");
+    const other = (await create(h, session)).body.storyId as string;
+    await h.untilStory(other, "preview_ready");
+    const remake = () => h.call(`/v1/stories/${id}/remake`, { method: "POST", session });
+    const render = () =>
+      h.call(`/v1/stories/${other}/render`, {
+        method: "POST",
+        session,
+        body: { idempotencyKey: "render-d2" },
+      });
+    const buy = () =>
+      h.call("/v1/billing/checkout", { method: "POST", session, body: { productKey: "pack1" } });
+    // Refunded after the credits were spent: what could not be taken back is owed.
+    h.db.prepare("UPDATE users SET refund_debt=10 WHERE id=?").run(userId);
+    expect((await remake()).body.error?.code).toBe("FORBIDDEN");
+    expect((await render()).body.error?.code).toBe("FORBIDDEN");
+    expect((await buy()).body.error?.code).toBe("FORBIDDEN");
+    h.db.prepare("UPDATE users SET refund_debt=0, paid_paused_at=? WHERE id=?").run(T0, userId);
+    expect((await remake()).body.error?.code).toBe("FORBIDDEN");
+    h.db.prepare("UPDATE users SET paid_paused_at=NULL WHERE id=?").run(userId);
+    // The daily paid line (or an admin) paused paid work: no remake and no new purchase either.
+    h.kv.store.set("flags", JSON.stringify({ paidPaused: true, paidPausedBy: "ops" }));
+    vi.setSystemTime(Date.now() + 61_000); // flags are cached for a minute
+    expect((await remake()).body.error?.code).toBe("PAUSED");
+    expect((await buy()).body.error?.code).toBe("PAUSED");
   });
 
   it("only the owner can read a story", async () => {
