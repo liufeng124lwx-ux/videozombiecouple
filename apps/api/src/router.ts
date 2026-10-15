@@ -37,6 +37,14 @@ import type { AppEnv } from "./types.ts";
 
 export const app = new Hono<AppEnv>();
 app.use("*", requestId());
+// Security headers on every answer: no framing, no sniffing, HTTPS only.
+app.use("*", async (c, next) => {
+  await next();
+  c.header("x-content-type-options", "nosniff");
+  c.header("x-frame-options", "DENY");
+  c.header("strict-transport-security", "max-age=31536000; includeSubDomains");
+  c.header("referrer-policy", "strict-origin-when-cross-origin");
+});
 app.use("*", originGuard());
 app.use("/v1/*", identity());
 app.use("/v1/*", session());

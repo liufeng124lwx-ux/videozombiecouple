@@ -65,6 +65,19 @@ function parseRange(
   return { offset: start, length: end - start + 1 };
 }
 
+const TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  mp4: "video/mp4",
+  m4a: "audio/mp4",
+};
+
+function typeOf(key: string): string {
+  return TYPES[key.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream";
+}
+
 files.on(["GET", "HEAD", "PUT"], "/*", async (c) => {
   const key = c.req.path
     .replace(/^\/files\//, "")
@@ -97,7 +110,9 @@ files.on(["GET", "HEAD", "PUT"], "/*", async (c) => {
   const head = await c.env.BUCKET.head(key);
   if (!head) return c.text("Not found", 404);
   const headers: Record<string, string> = {
-    "content-type": head.httpMetadata?.contentType ?? "application/octet-stream",
+    // The name decides the type, not what an upstream said: nothing here is ever served as a page.
+    "content-type": typeOf(key),
+    "content-security-policy": "sandbox; default-src 'none'",
     "accept-ranges": "bytes",
     "cache-control": "private, max-age=600",
   };

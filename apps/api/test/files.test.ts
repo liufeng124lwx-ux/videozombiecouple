@@ -87,4 +87,31 @@ describe("worker-signed file links", () => {
     });
     expect(pre.headers.get("access-control-allow-origin")).toBe(ORIGIN);
   });
+
+  it("serves a file as what its name says, never as a page, whatever type it was stored with", async () => {
+    const { h, env, path } = await proxied();
+    await h.r2.BUCKET.put("shot/S1/1.mp4", new Uint8Array([1]), {
+      httpMetadata: { contentType: "text/html" },
+    });
+    const back = await h.raw(path(await presign(env, "shot/S1/1.mp4", "GET", 60)));
+    expect(back.headers.get("content-type")).toBe("video/mp4");
+    expect(back.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(back.headers.get("content-security-policy")).toContain("sandbox");
+    await h.r2.BUCKET.put("kf/S1/x.html", new Uint8Array([1]), {
+      httpMetadata: { contentType: "text/html" },
+    });
+    const odd = await h.raw(path(await presign(env, "kf/S1/x.html", "GET", 60)));
+    expect(odd.headers.get("content-type")).toBe("application/octet-stream");
+  });
+});
+
+describe("API security headers", () => {
+  it("every API answer forbids framing and sniffing and asks for HTTPS", async () => {
+    const { h } = await proxied();
+    const res = await h.raw("/health");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("strict-transport-security")).toMatch(/max-age=31536000/);
+    expect(res.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+  });
 });
