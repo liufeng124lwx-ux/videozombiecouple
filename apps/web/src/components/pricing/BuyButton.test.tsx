@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import { WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { errorMessage } from "@vzc/i18n";
 import { describe, expect, it, vi } from "vitest";
 import { notifySignedIn, onOpenSignIn } from "../../lib/bus.ts";
@@ -29,13 +30,26 @@ const MEMBER = {
 };
 const CHECKOUT = { body: { url: "https://checkout.stripe.com/c/pay/cs_test_abc" } };
 
+const WAIVER = /I want my films made right away/;
+
 function buy(navigate = vi.fn()) {
   render(<BuyButton productKey="pack60" label="Buy" navigate={navigate} />);
+  const box = screen.getByRole("checkbox", { name: WAIVER }) as HTMLInputElement;
+  if (!box.checked) fireEvent.click(box);
   fireEvent.click(screen.getByRole("button", { name: "Buy" }));
   return navigate;
 }
 
 describe("BuyButton (spec 6.4)", () => {
+  it("cannot buy until the buyer asks for the films right away and accepts losing the withdrawal right", () => {
+    sessionStorage.clear();
+    render(<BuyButton productKey="pack60" label="Buy" />);
+    const button = screen.getByRole("button", { name: "Buy" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: WAIVER }));
+    expect(button.disabled).toBe(false);
+  });
+
   it("sends a member to checkout with the return page and GA4 client id", async () => {
     const { calls } = mockApi({ "GET /v1/me": MEMBER, "POST /v1/billing/checkout": CHECKOUT });
     document.cookie = "_ga=GA1.1.111.222; path=/";
@@ -48,6 +62,7 @@ describe("BuyButton (spec 6.4)", () => {
       productKey: "pack60",
       returnPath: "/pricing",
       clientId: "111.222",
+      waiver: WITHDRAWAL_WAIVER_VERSION,
     });
     expect(pendingCheckout()?.credits).toBe(5);
   });
@@ -73,6 +88,8 @@ describe("BuyButton (spec 6.4)", () => {
   it("continues a purchase after coming back from Google or the email link", async () => {
     mockApi({ "GET /v1/me": MEMBER, "POST /v1/billing/checkout": CHECKOUT });
     await refreshMe();
+    // Ticked before leaving to sign in: the tab remembers it.
+    sessionStorage.setItem("vzc-waiver", WITHDRAWAL_WAIVER_VERSION);
     history.replaceState(null, "", "/pricing?buy=pack60");
     const navigate = vi.fn();
     render(<BuyButton productKey="pack60" label="Buy" navigate={navigate} />);
@@ -106,6 +123,7 @@ describe("BuyButton (spec 6.4)", () => {
   it("returns to the page the purchase started from", async () => {
     const { calls } = mockApi({ "GET /v1/me": MEMBER, "POST /v1/billing/checkout": CHECKOUT });
     await refreshMe();
+    sessionStorage.removeItem("vzc-waiver");
     render(
       <BuyButton
         productKey="pack60"
@@ -114,6 +132,7 @@ describe("BuyButton (spec 6.4)", () => {
         returnPath="/fix-blurry-photo"
       />,
     );
+    fireEvent.click(screen.getByRole("checkbox", { name: WAIVER }));
     fireEvent.click(screen.getByRole("button", { name: "Buy" }));
     await waitFor(() =>
       expect(calls.find((c) => c.path === "/v1/billing/checkout")?.body).toMatchObject({

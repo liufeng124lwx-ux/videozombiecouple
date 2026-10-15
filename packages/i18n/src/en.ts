@@ -235,6 +235,8 @@ export const en = {
   "pricing.mostPicked": "Most picked",
   "pricing.save": "Save {pct}",
   "pricing.buyPack": "Get {what} — {price}",
+  "pricing.waiver":
+    "I want my films made right away. I understand that once a film starts I can't cancel it under the withdrawal right; unused videos can still be refunded under the refund policy.",
   "pricing.oneTime": "One-time payment. No subscription. Credits never expire.",
   "pricing.lede":
     "Pay only for the films you want. One-time packs, no subscription, no sign-up needed — and one free remake per film if the faces don't come out right.",

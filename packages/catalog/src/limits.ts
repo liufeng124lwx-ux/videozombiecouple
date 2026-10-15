@@ -74,9 +74,12 @@ export const ADULT_AGE = 18;
 /** Terms, "Report a video": a film shown without consent comes down this soon after a report. */
 export const TAKEDOWN_HOURS = 48;
 
-/** Spec 6.6: full refund for an untouched pack, or a new plan barely used, inside these windows. */
+/**
+ * Spec 6.6: full refund for an untouched pack, or a new plan barely used, inside these windows. An
+ * unused pack gets 14 days everywhere: the EU/UK withdrawal period for content not yet supplied.
+ */
 export const REFUND_POLICY = {
-  packDays: 7,
+  packDays: 14,
   subscriptionDays: 7,
   subscriptionMaxUsedShare: 0.2,
 } as const;

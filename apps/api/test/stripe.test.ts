@@ -1,3 +1,4 @@
+import { WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "./harness.ts";
 import { PRICES, signStripe, stripeApi, stripeEnv, stripeEvent } from "./stripe-kit.ts";
@@ -79,7 +80,12 @@ describe("POST /v1/billing/checkout with Stripe", () => {
     const response = await h.call("/v1/billing/checkout", {
       method: "POST",
       session,
-      body: { productKey: "pack3", returnPath: "/story?id=S&render=1", clientId: "123.456" },
+      body: {
+        productKey: "pack3",
+        returnPath: "/story?id=S&render=1",
+        clientId: "123.456",
+        waiver: WITHDRAWAL_WAIVER_VERSION,
+      },
     });
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_1" });
@@ -97,11 +103,27 @@ describe("POST /v1/billing/checkout with Stripe", () => {
       "metadata[userId]": userId,
       "metadata[productKey]": "pack3",
       "metadata[clientId]": "123.456",
+      "metadata[withdrawalWaiver]": WITHDRAWAL_WAIVER_VERSION,
       "payment_intent_data[metadata][userId]": userId,
       "payment_intent_data[metadata][productKey]": "pack3",
       success_url: "https://videozombiecouple.com/story?id=S&render=1&paid=1",
       cancel_url: "https://videozombiecouple.com/story?id=S&render=1",
     });
+  });
+
+  it("needs the buyer to start the films now and give up the 14-day withdrawal for each film once it starts", async () => {
+    const { session, h } = await shop();
+    const calls = stripeApi({
+      id: "cs_test_1",
+      url: "https://checkout.stripe.com/c/pay/cs_test_1",
+    });
+    const response = await h.call("/v1/billing/checkout", {
+      method: "POST",
+      session,
+      body: { productKey: "pack1" },
+    });
+    expect(response.body.error?.code).toBe("CONSENT_REQUIRED");
+    expect(calls).toHaveLength(0);
   });
 
   it("uses Stripe when Waffo is configured too", async () => {
@@ -115,7 +137,7 @@ describe("POST /v1/billing/checkout with Stripe", () => {
     const response = await h.call("/v1/billing/checkout", {
       method: "POST",
       session,
-      body: { productKey: "pack1" },
+      body: { productKey: "pack1", waiver: WITHDRAWAL_WAIVER_VERSION },
     });
     expect(response.status).toBe(200);
     expect(calls[0]?.url).toBe("https://api.stripe.com/v1/checkout/sessions");
@@ -126,7 +148,11 @@ describe("POST /v1/billing/checkout with Stripe", () => {
       STRIPE_PRICES: JSON.stringify({ pack1: "price_1KitPack1" }),
     });
     const post = (productKey: string) =>
-      h.call("/v1/billing/checkout", { method: "POST", session, body: { productKey } });
+      h.call("/v1/billing/checkout", {
+        method: "POST",
+        session,
+        body: { productKey, waiver: WITHDRAWAL_WAIVER_VERSION },
+      });
     expect((await post("pack3")).body).toMatchObject({ error: { code: "PAYMENTS_UNAVAILABLE" } });
     stripeApi({ error: { message: "boom" } }, 500);
     expect((await post("pack1")).status).toBe(503);

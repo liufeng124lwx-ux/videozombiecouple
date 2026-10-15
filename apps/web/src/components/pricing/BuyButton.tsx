@@ -1,3 +1,4 @@
+import { WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { t } from "@vzc/i18n";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { gaClientId, track } from "../../lib/analytics.ts";
@@ -6,6 +7,17 @@ import { onSignedIn, openSignIn } from "../../lib/bus.ts";
 import { rememberCheckout } from "../../lib/checkout.ts";
 import { loadMe, refreshMe } from "../../lib/me.ts";
 import { messageOf } from "../auth/SignInDialog.tsx";
+
+const WAIVER_KEY = "vzc-waiver";
+
+/** The tab's acknowledgement, read when the purchase happens (it may resume after a sign-in). */
+function waivedNow(): boolean {
+  try {
+    return sessionStorage.getItem(WAIVER_KEY) === WITHDRAWAL_WAIVER_VERSION;
+  } catch {
+    return false;
+  }
+}
 
 type Props = {
   productKey: string;
@@ -26,6 +38,14 @@ export default function BuyButton({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasPlan, setHasPlan] = useState(false);
+  // Kept for the tab, so a sign-in or a return to this page doesn't ask twice.
+  const [waived, setWaived] = useState(() => {
+    try {
+      return sessionStorage.getItem(WAIVER_KEY) === WITHDRAWAL_WAIVER_VERSION;
+    } catch {
+      return false;
+    }
+  });
   const waiting = useRef(false);
 
   async function checkout(fresh: boolean) {
@@ -33,6 +53,7 @@ export default function BuyButton({
     setError(null);
     setHasPlan(false);
     try {
+      if (!waivedNow()) return;
       const me = fresh ? await refreshMe() : await loadMe();
       if (!me?.user) {
         waiting.current = true;
@@ -48,6 +69,7 @@ export default function BuyButton({
         productKey,
         returnPath,
         ...(clientId ? { clientId } : {}),
+        waiver: WITHDRAWAL_WAIVER_VERSION,
       });
       navigate(url);
     } catch (failure) {
@@ -72,10 +94,25 @@ export default function BuyButton({
 
   return (
     <div class="buy">
+      <label class="consent small">
+        <input
+          type="checkbox"
+          checked={waived}
+          onChange={(e) => {
+            const on = e.currentTarget.checked;
+            setWaived(on);
+            try {
+              if (on) sessionStorage.setItem(WAIVER_KEY, WITHDRAWAL_WAIVER_VERSION);
+              else sessionStorage.removeItem(WAIVER_KEY);
+            } catch {}
+          }}
+        />
+        <span>{t("pricing.waiver")}</span>
+      </label>
       <button
         type="button"
         class={primary ? "btn btn-primary" : "btn"}
-        disabled={busy}
+        disabled={busy || !waived}
         onClick={() => void checkout(false)}
       >
         {label}

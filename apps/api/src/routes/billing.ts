@@ -1,5 +1,10 @@
 import { PLANS, type PlanId, productByKey } from "@vzc/catalog";
-import { type BillingView, ChangePlanSchema, CheckoutSchema } from "@vzc/contracts";
+import {
+  type BillingView,
+  ChangePlanSchema,
+  CheckoutSchema,
+  WITHDRAWAL_WAIVER_VERSION,
+} from "@vzc/contracts";
 import type { Context } from "hono";
 import { createStripeCheckout, StripeError, stripeConfig } from "../billing/stripe.ts";
 import {
@@ -59,6 +64,7 @@ export async function checkout(c: Context<AppEnv>) {
   if (!parsed.success) return fail(c, "BAD_REQUEST");
   const product = productByKey(parsed.data.productKey);
   if (!product) return fail(c, "BAD_REQUEST");
+  if (parsed.data.waiver !== WITHDRAWAL_WAIVER_VERSION) return fail(c, "CONSENT_REQUIRED");
   // Stripe (Managed Payments) when it is configured; Waffo stays as the fallback provider.
   const stripe = stripeConfig(c.env);
   const config = stripe ? null : waffoConfig(c.env);
@@ -79,6 +85,7 @@ export async function checkout(c: Context<AppEnv>) {
   const back = safeNext(parsed.data.returnPath);
   const metadata: Record<string, string> = { userId, productKey: product.key };
   if (parsed.data.clientId) metadata.clientId = parsed.data.clientId;
+  metadata.withdrawalWaiver = WITHDRAWAL_WAIVER_VERSION;
   const successUrl = `${c.env.ALLOWED_ORIGIN}${back}${back.includes("?") ? "&" : "?"}paid=1`;
   if (stripe) {
     if (product.kind !== "pack") return fail(c, "BAD_REQUEST");

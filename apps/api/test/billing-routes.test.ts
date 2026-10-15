@@ -1,3 +1,4 @@
+import { WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyEvent } from "../src/billing/apply.ts";
 import type { Bindings } from "../src/types.ts";
@@ -20,8 +21,13 @@ async function member(payments = true) {
   const kit = await waffoKit();
   const h = await setup(payments ? kit.env : {});
   const { userId, session } = await h.signIn("ann@example.com");
-  const post = (path: string, body: unknown = {}) =>
-    h.call(path, { method: "POST", body, session });
+  // A checkout from the site always carries the buyer's withdrawal acknowledgement.
+  const post = (path: string, body: Record<string, unknown> = {}) =>
+    h.call(path, {
+      method: "POST",
+      body: path === "/v1/billing/checkout" ? { waiver: WITHDRAWAL_WAIVER_VERSION, ...body } : body,
+      session,
+    });
   const subscribe = (plan: "starter" | "plus" = "starter") =>
     applyEvent(h.env as unknown as Bindings, "waffo", {
       kind: "sub_started",
@@ -67,8 +73,12 @@ describe("POST /v1/billing/checkout (spec 6.4)", () => {
   it("needs a session, a known product and configured payments", async () => {
     const { h, post } = await member();
     expect(
-      (await h.call("/v1/billing/checkout", { method: "POST", body: { productKey: "pack1" } }))
-        .status,
+      (
+        await h.call("/v1/billing/checkout", {
+          method: "POST",
+          body: { productKey: "pack1", waiver: WITHDRAWAL_WAIVER_VERSION },
+        })
+      ).status,
     ).toBe(401);
     expect((await post("/v1/billing/checkout", { productKey: "gold" })).status).toBe(400);
     const off = await member(false);

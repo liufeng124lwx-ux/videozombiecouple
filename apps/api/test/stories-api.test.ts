@@ -1,5 +1,5 @@
 import { RETENTION, TIERS } from "@vzc/catalog";
-import { UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
+import { UPLOAD_CONSENT_VERSION, WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { callbackToken } from "../src/services/crypto.ts";
 import { HMAC_KEY, setup, storyBody } from "./harness.ts";
@@ -463,7 +463,11 @@ describe("story API", () => {
         body: { idempotencyKey: "render-d2" },
       });
     const buy = () =>
-      h.call("/v1/billing/checkout", { method: "POST", session, body: { productKey: "pack1" } });
+      h.call("/v1/billing/checkout", {
+        method: "POST",
+        session,
+        body: { productKey: "pack1", waiver: WITHDRAWAL_WAIVER_VERSION },
+      });
     // Refunded after the credits were spent: what could not be taken back is owed.
     h.db.prepare("UPDATE users SET refund_debt=10 WHERE id=?").run(userId);
     expect((await remake()).body.error?.code).toBe("FORBIDDEN");
