@@ -22,6 +22,7 @@ export async function cleanupExpired(env: Bindings, now: number): Promise<number
     try {
       for (const prefix of ["keep", "kf", "shot", "out"])
         await deletePrefix(env.BUCKET, `${prefix}/${story.id}/`);
+      await env.STORY_RUNNER.get(env.STORY_RUNNER.idFromName(story.id)).purge();
       await env.DB.prepare("UPDATE stories SET status='expired' WHERE id=?").bind(story.id).run();
     } catch {
       failed++;

@@ -26,9 +26,12 @@ export async function deleteAccount(env: Bindings, userId: string): Promise<void
   const { results: stories } = await env.DB.prepare("SELECT id, status FROM stories WHERE owner=?")
     .bind(owner)
     .all<{ id: string; status: string }>();
-  for (const story of stories)
-    if (["previewing", "rendering"].includes(story.status))
-      await env.STORY_RUNNER.get(env.STORY_RUNNER.idFromName(story.id)).cancel();
+  for (const story of stories) {
+    const runner = env.STORY_RUNNER.get(env.STORY_RUNNER.idFromName(story.id));
+    // Stop running work first (gives holds back), then erase what the runner stored.
+    if (["previewing", "rendering"].includes(story.status)) await runner.cancel();
+    await runner.purge();
+  }
   for (const story of stories)
     for (const prefix of ["keep", "kf", "shot", "out"]) {
       const listed = await env.BUCKET.list({ prefix: `${prefix}/${story.id}/` });

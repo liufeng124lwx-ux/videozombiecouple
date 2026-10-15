@@ -247,6 +247,15 @@ export class StoryRunner extends DurableObject<Bindings> {
     return this.#stop("stuck: given up by ops", "TIMEOUT");
   }
 
+  /** Account deleted or story expired: erase everything this object stored (spec §8). */
+  purge(): Promise<void> {
+    return this.#serial(async () => {
+      await this.ctx.storage.deleteAlarm();
+      await this.ctx.storage.deleteAll();
+      this.#state = null;
+    });
+  }
+
   alarm(): Promise<void> {
     return this.#serial(async () => {
       const state = await this.#load();

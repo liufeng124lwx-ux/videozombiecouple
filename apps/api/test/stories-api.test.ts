@@ -136,15 +136,13 @@ describe("story API", () => {
   it("renders a failed video again under a new reservation, so it is charged once on success", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { userId, session } = await signedIn(h);
-    await h.wallets
-      .instance(userId)
-      .grant(userId, {
-        kind: "pack",
-        credits: 30,
-        expiresAt: null,
-        sourceRef: "order-y",
-        reason: "test",
-      });
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 30,
+      expiresAt: null,
+      sourceRef: "order-y",
+      reason: "test",
+    });
     let composeErrors = 99;
     const fake = (await import("../src/services/composer.ts")).fakeComposer(h.env as never);
     h.env.COMPOSER_IMPL = {
@@ -172,6 +170,41 @@ describe("story API", () => {
     expect(again.status).toBe(202);
     await h.untilStory(id, "done");
     expect((await h.wallets.instance(userId).balance(userId)).total).toBe(30 - TIERS.video.credits);
+  });
+
+  it("an expired preview can no longer be read or rendered", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { userId, session } = await signedIn(h);
+    await h.wallets
+      .instance(userId)
+      .grant(userId, {
+        kind: "pack",
+        credits: 10,
+        expiresAt: null,
+        sourceRef: "order-z",
+        reason: "test",
+      });
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    vi.setSystemTime(Date.now() + 3 * 86_400_000 + 60_000);
+    expect((await h.call(`/v1/stories/${id}`, { session })).status).toBe(404);
+    const render = await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-x" },
+    });
+    expect(render.status).toBe(404);
+    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(10);
+  });
+
+  it("deleting the account erases each story's runner data", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { userId, session } = await signedIn(h);
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    const { deleteAccount } = await import("../src/services/delete-account.ts");
+    await deleteAccount(h.env as never, userId);
+    expect(await h.runners.instance(id).view()).toBeNull();
   });
 
   it("only the owner can read a story", async () => {

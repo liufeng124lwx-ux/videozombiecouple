@@ -27,13 +27,15 @@ async function storyByKey(db: D1Database, owner: string, key: string): Promise<s
   return row?.id ?? null;
 }
 
-/** The story belongs to the signed-in account. */
+/** The story belongs to the signed-in account and has not expired (its files may be gone). */
 async function ownedStory(c: Context<AppEnv>, id: string): Promise<boolean> {
   if (!STORY_ID.test(id)) return false;
-  const row = await c.env.DB.prepare("SELECT owner FROM stories WHERE id=?")
+  const row = await c.env.DB.prepare("SELECT owner, status, expires_at FROM stories WHERE id=?")
     .bind(id)
-    .first<{ owner: string }>();
-  return !!row && row.owner === c.get("owner");
+    .first<{ owner: string; status: string; expires_at: number }>();
+  return (
+    !!row && row.owner === c.get("owner") && row.status !== "expired" && row.expires_at > Date.now()
+  );
 }
 
 /**

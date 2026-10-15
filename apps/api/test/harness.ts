@@ -136,6 +136,7 @@ export function storage() {
         data.set(key, structuredClone(value));
       },
       delete: async (key: string) => data.delete(key),
+      deleteAll: async () => void data.clear(),
       getAlarm: async () => alarm,
       setAlarm: async (time: number | Date) => {
         alarm = typeof time === "number" ? time : time.getTime();
