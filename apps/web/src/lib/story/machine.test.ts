@@ -20,6 +20,7 @@ const view = (status: StoryView["status"], over: Partial<StoryView> = {}): Story
   errorCode: null,
   recomposeLeft: 1,
   videoAttempts: 0,
+  remakeLeft: 1,
   createdAt: 0,
   ...over,
 });

@@ -44,14 +44,6 @@ const heroFilm = SAMPLE_FILMS.find((f) => f.id === (d.film ?? "cabin")) ?? SAMPL
 if (!heroFilm) throw new Error("no sample film");
 const heroPoster = await sampleImage(filmPoster(heroFilm.id), POSTER_SIZES, [540]);
 const filmPairInfo = samplePair(heroFilm.pair);
-const heroSources = filmPairInfo
-  ? await Promise.all(
-      (["survivor", "infected"] as const).map(async (f) => ({
-        src: (await sampleImage(sampleFile(filmPairInfo.id, f), "72px", [144])).src,
-        alt: sampleAlt(filmPairInfo, f),
-      })),
-    )
-  : [];
 const GALLERY_SIZES = "(min-width: 900px) 260px, 44vw";
 const gallery = await Promise.all(
   SAMPLE_FILMS.map(async (f) => ({
@@ -88,36 +80,42 @@ const likeness = await Promise.all(
   })),
 );
 const preset = page.preset ?? {};
+// The title flanks the film: its first word on the left, the rest on the right (design lock A).
+const [titleLeft = "", ...rest] = h1.split(" ");
+const titleRight = rest.join(" ");
 ---
-<section class="hero">
-  <div class="wrap hero-grid">
-    <div class="hero-copy">
-      {d.scene && <p class="scene">{d.scene}</p>}
-      <h1>{h1}</h1>
-      {d.lede && <p class="lede">{d.lede}</p>}
-      <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="#make">{t("home.cta", {}, locale)}</a>
-        <a class="btn btn-lg" href="#film">{t("home.watch", {}, locale)}</a>
-      </div>
-      {
-        d.trust && (
-          <ul class="trust">
-            {d.trust.map((item) => (
-              <li>{item}</li>
-            ))}
-          </ul>
-        )
-      }
-    </div>
-    <figure class="hero-poster">
+<section class="hero premiere" aria-label={h1}>
+  <div class="premiere-stage">
+    <h1 class="premiere-title">
+      <span class="pt-left">{titleLeft}</span>
+      {" "}
+      <span class="pt-right">{titleRight}</span>
+    </h1>
+    <figure class="premiere-film">
       <HeroFilm
         client:load
         src={filmSrc(heroFilm.id)}
         poster={heroPoster.src}
         label={`Example film: ${filmPairInfo?.who ?? ""}`}
-        sources={heroSources}
       />
     </figure>
+    <div class="premiere-actions">
+      <a class="btn btn-primary btn-lg" href="#make">{t("home.cta", {}, locale)}</a>
+      <a class="btn btn-lg btn-line" href="#film">{t("home.watch", {}, locale)}</a>
+    </div>
+  </div>
+  <div class="wrap premiere-credits">
+    {d.scene && <p class="scene">{d.scene}</p>}
+    {d.lede && <p class="lede">{d.lede}</p>}
+    {
+      d.trust && (
+        <ul class="trust">
+          {d.trust.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      )
+    }
   </div>
 </section>
 
@@ -127,11 +125,13 @@ const preset = page.preset ?? {};
   </div>
 </section>
 
-<section class="section films" id="film">
-  <div class="wrap">
-    <p class="scene">{t("home.film.kicker", {}, locale)}</p>
-    <h2>{t("home.films.title", {}, locale)}</h2>
-    <p class="lede">{t("home.films.text", {}, locale)}</p>
+<section class="films now-showing" id="film">
+  <div class="wrap showing-grid">
+    <div class="showing-rail">
+      <p class="scene">{t("home.film.kicker", {}, locale)} · {gallery.length}</p>
+      <h2>{t("home.films.title", {}, locale)}</h2>
+      <p class="small muted">{t("home.films.text", {}, locale)}</p>
+    </div>
     <FilmGallery client:visible films={gallery} />
   </div>
 </section>
@@ -241,7 +241,7 @@ const preset = page.preset ?? {};
         <div>
           <p class="scene">INT. BOX OFFICE — NIGHT</p>
           <h2>{t("home.pricing.title", {}, locale)}</h2>
-          <p class="lede">{t("home.pricing.text", { daily: fact("preview.daily") }, locale)}</p>
+          <p class="lede">{t("home.pricing.text", {}, locale)}</p>
           <a href="/pricing">{t("home.pricing.more", {}, locale)}</a>
         </div>
         <PackRows client:visible returnPath="/#make" />

@@ -27,7 +27,8 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
     expect(text).toMatch(/[Ff]ace features[^.]*never stored/);
     expect(text).toMatch(/under 18/);
     expect(text).toContain('<F k="retention.photosDays" />');
-    expect(text).toContain('<F k="retention.videoDays" />');
+    expect(text).toContain('<F k="retention.guestFilmDays" />');
+    expect(text).toContain('<F k="retention.memberFilmDays" />');
     expect(text).toContain("## Cookies");
     for (const cookie of ["upx_sess", "upx_in", "vid", "upx_consent", "_ga", "_clck"])
       expect(text, cookie).toContain(cookie);

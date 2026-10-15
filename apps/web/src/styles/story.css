@@ -3,16 +3,18 @@
   padding: 40px 0 64px;
   scroll-margin-top: 72px;
 }
+/* A casting sheet, not a card: gilt hairlines above and below, the room's own dark. */
 .tool {
   max-width: 880px;
   margin: 0 auto;
-  border: 1px solid var(--hairline);
-  background: var(--surface-1);
-  padding: 20px;
+  border-top: 1px solid var(--gilt-rule);
+  border-bottom: 1px solid var(--gilt-rule);
+  background: transparent;
+  padding: 24px 0;
 }
 @media (min-width: 720px) {
   .tool {
-    padding: 32px;
+    padding: 36px 0;
   }
 }
 .tool h3 {
@@ -362,4 +364,50 @@
 }
 .scene-tile.soon .scene-clip {
   opacity: 0.45;
+}
+
+/* Photos checked: the two photos as a small contact sheet beside the next step. */
+.tool-ready {
+  display: grid;
+  gap: 24px;
+}
+@media (min-width: 720px) {
+  .tool-ready {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 36px;
+  }
+}
+.ready-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-content: start;
+}
+.ready-photos img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+.ready-side > * + * {
+  margin-top: 12px;
+}
+.guest {
+  display: grid;
+  gap: 12px;
+}
+.guest .link {
+  justify-self: start;
+}
+
+/* Rolling camera: a thin ember progress line across the frame. */
+.render-bar {
+  height: 2px;
+  margin: 18px 0;
+  background: var(--hairline);
+}
+.render-bar span {
+  display: block;
+  height: 100%;
+  background: var(--ember);
+  transition: width 0.6s ease;
 }

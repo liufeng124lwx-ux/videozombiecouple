@@ -19,7 +19,7 @@ const { Content } = await render(entry);
 <section class="wrap pricing-top">
   <p class="scene">INT. BOX OFFICE — NIGHT</p>
   <h1>{h1}</h1>
-  <p class="lede">{t("pricing.lede", { daily: fact("preview.daily") }, locale)}</p>
+  <p class="lede">{t("pricing.lede", {}, locale)}</p>
 </section>
 <CheckoutReturn client:load />
 <section class="wrap pricing-grid">
@@ -27,10 +27,10 @@ const { Content } = await render(entry);
     <h2 class="scene">{t("pricing.included", {}, locale)}</h2>
     <ul>
       <li>{t("pricing.inc.film", { seconds: fact("video.seconds"), w: fact("video.width"), h: fact("video.height") }, locale)}</li>
-      <li>{t("pricing.inc.preview", { daily: fact("preview.daily") }, locale)}</li>
+      <li>{t("pricing.inc.preview", {}, locale)}</li>
       <li>{t("pricing.inc.title", {}, locale)}</li>
       <li>{t("pricing.inc.refund", {}, locale)}</li>
-      <li>{t("pricing.inc.keep", { days: fact("retention.videoDays") }, locale)}</li>
+      <li>{t("pricing.inc.keep", { guest: fact("retention.guestFilmDays"), member: fact("retention.memberFilmDays") }, locale)}</li>
     </ul>
   </div>
   <PackRows client:load returnPath="/pricing" />

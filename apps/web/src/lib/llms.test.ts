@@ -10,6 +10,10 @@ describe("llms.txt", () => {
     expect(text).toContain(`${fact("video.seconds")}-second`);
     expect(text).toContain("https://videozombiecouple.com/zombie-love-story-ai");
     expect(text).toContain("pet-zombie-video");
+    // Paid-only since 2026-10-15: no free preview, films kept by email status.
+    expect(text).not.toMatch(/free preview[^s]/i);
+    expect(text).toContain(`${fact("retention.memberFilmDays")} days once the email is confirmed`);
+    expect(text).toContain("remade once for free");
     // Drafts never appear.
     expect(text).not.toContain("zombie-love-story-prompts");
   });

@@ -27,7 +27,14 @@ export const DeleteAccountSchema = z.object({ confirm: z.literal("DELETE") });
 export type Banner = { text: string; href: string | null };
 
 export type MeView = {
-  user: { id: string; email: string; hasPassword: boolean; google: boolean } | null;
+  user: {
+    id: string;
+    email: string;
+    hasPassword: boolean;
+    google: boolean;
+    /** False for an account made at a guest checkout: its films are kept 3 days, not 30. */
+    verified: boolean;
+  } | null;
   owner: string;
   /** Total spendable credits; null for guests. */
   credits: number | null;

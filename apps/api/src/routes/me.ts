@@ -17,6 +17,7 @@ export async function me(c: Context<AppEnv>) {
           email: user.email,
           hasPassword: user.hasPassword,
           google: user.googleSub !== null,
+          verified: user.verified,
         }
       : null,
     owner: c.get("owner"),

@@ -9,6 +9,10 @@ const client = vi.hoisted(() => ({
   getStory: vi.fn(),
   getSharedFilm: vi.fn(),
   render: vi.fn(async () => undefined),
+  guestSignUp: vi.fn(async () => {
+    me.user = { id: "g1", verified: false };
+  }),
+  remake: vi.fn(async () => undefined),
   recompose: vi.fn(async () => undefined),
   getQuota: vi.fn(async () => ({ remaining: 3, limit: 3, resetAt: 0 })),
   newIdempotencyKey: () => "key-12345678",
@@ -48,6 +52,7 @@ const view = (status: StoryView["status"], over: Partial<StoryView> = {}): Story
   errorCode: null,
   recomposeLeft: 1,
   videoAttempts: 0,
+  remakeLeft: 1,
   createdAt: 0,
   ...over,
 });
@@ -71,26 +76,76 @@ beforeEach(() => {
 });
 
 describe("StoryTool", () => {
-  it("makes a free preview from two photos, then asks for a pack when there are no credits", async () => {
-    client.getStory.mockResolvedValue(
-      view("preview_ready", { preview: { A: "https://r2/a.jpg", C: "https://r2/c.jpg" } }),
-    );
-    client.render.mockRejectedValueOnce(new ApiError("CREDITS_LOW"));
+  it("checks the photos, then a signed-in member without videos picks a pack (nothing is free)", async () => {
+    client.getStory.mockResolvedValue(view("preview_ready"));
     render(<StoryTool posters={{}} pollMs={10} />);
     addPhotos();
-    const go = await screen.findByRole("button", { name: "Get my free preview" });
+    const go = await screen.findByRole("button", { name: "Make my film" });
     await waitFor(() => expect((go as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(go);
-    await screen.findByText("Does this look like you?");
+    await screen.findByText("Your photos are ready");
     expect(client.uploadPhoto).toHaveBeenCalledTimes(2);
     expect(client.createStory).toHaveBeenCalledWith(
       expect.objectContaining({ survivorKey: "in/K.jpg", kind: "human", scene: "cabin-wheat" }),
       expect.any(Function),
     );
-    fireEvent.click(screen.getByRole("button", { name: /Make the film/ }));
     const packs = await screen.findByTestId("packs");
     // After checkout the buyer comes back to this story and the film starts by itself.
     expect(packs.textContent).toBe("/story?id=S1&render=1");
+    expect(client.render).not.toHaveBeenCalled();
+  });
+
+  it("a member with videos makes the film straight away", async () => {
+    me.credits = 10;
+    client.getStory.mockResolvedValue(view("preview_ready"));
+    localStorage.setItem("vzc-story", "S1");
+    render(<StoryTool posters={{}} pollMs={10} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Make the film" }));
+    await waitFor(() => expect(client.render).toHaveBeenCalled());
+  });
+
+  it("a guest leaves an email, becomes the buyer, then picks a pack", async () => {
+    me.user = null;
+    client.getStory.mockResolvedValue(view("preview_ready"));
+    localStorage.setItem("vzc-story", "S1");
+    render(<StoryTool posters={{}} pollMs={10} />);
+    const email = await screen.findByLabelText("Where should we send your film?");
+    fireEvent.input(email, { target: { value: "new@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
+    await waitFor(() =>
+      expect(client.guestSignUp).toHaveBeenCalledWith("new@example.com", expect.any(Function)),
+    );
+    await screen.findByTestId("packs");
+  });
+
+  it("an email that already has an account asks to sign in instead", async () => {
+    me.user = null;
+    client.guestSignUp.mockRejectedValueOnce(new ApiError("LOGIN_REQUIRED"));
+    client.getStory.mockResolvedValue(view("preview_ready"));
+    localStorage.setItem("vzc-story", "S1");
+    const opened = vi.fn();
+    window.addEventListener("upx:open-signin", opened);
+    render(<StoryTool posters={{}} pollMs={10} />);
+    fireEvent.input(await screen.findByLabelText("Where should we send your film?"), {
+      target: { value: "known@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
+    await waitFor(() => expect(opened).toHaveBeenCalled());
+    expect(screen.queryByTestId("packs")).toBeNull();
+  });
+
+  it("the finished film says when it is deleted and offers one free remake", async () => {
+    localStorage.setItem("vzc-story", "S1");
+    client.getStory.mockResolvedValue(
+      view("done", {
+        video: { url: "v", poster: "p", expiresAt: Date.UTC(2026, 9, 18) },
+        remakeLeft: 1,
+      }),
+    );
+    render(<StoryTool posters={{}} pollMs={10} />);
+    await screen.findByText(/We delete your film on October 1[78]/);
+    fireEvent.click(screen.getByRole("button", { name: /Remake it once for free/ }));
+    await waitFor(() => expect(client.remake).toHaveBeenCalledWith("S1"));
   });
 
   it("buys a pack then renders on return", async () => {
@@ -199,19 +254,6 @@ describe("StoryTool", () => {
     render(<StoryTool posters={{}} pollMs={10} />);
     await screen.findByText(/went back to your balance/);
     expect(screen.getByRole("button", { name: "Make it again" })).toBeTruthy();
-  });
-
-  it("asks guests to sign in before the preview", async () => {
-    me.user = null;
-    const opened = vi.fn();
-    window.addEventListener("upx:open-signin", opened);
-    render(<StoryTool posters={{}} pollMs={10} />);
-    addPhotos();
-    const go = await screen.findByRole("button", { name: "Get my free preview" });
-    await waitFor(() => expect((go as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(go);
-    await waitFor(() => expect(opened).toHaveBeenCalled());
-    expect(client.uploadPhoto).not.toHaveBeenCalled();
   });
 
   it("locks the swap in the pet version", async () => {

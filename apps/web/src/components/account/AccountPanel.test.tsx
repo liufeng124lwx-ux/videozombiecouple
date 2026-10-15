@@ -64,7 +64,7 @@ describe("AccountPanel (spec 5.5, design S15)", () => {
     const done = await screen.findByRole("link", { name: /Video ready/ });
     expect(done.getAttribute("href")).toBe("/story?id=s1");
     expect(done.textContent).toContain("Cabin → Wheat field · Couple");
-    const ready = screen.getByRole("link", { name: /Preview ready/ });
+    const ready = screen.getByRole("link", { name: /Ready to make/ });
     expect(ready.getAttribute("href")).toBe("/story?id=s2");
   });
 

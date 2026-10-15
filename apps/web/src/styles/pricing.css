@@ -46,9 +46,12 @@
   align-items: center;
   column-gap: 14px;
   row-gap: 2px;
-  padding: 16px 18px;
-  border: 1px solid var(--hairline);
-  background: var(--surface-1);
+  padding: 18px 20px;
+  border: 1px solid var(--gilt-rule);
+  /* the stub: a perforated line before the price (design lock "Premiere Night") */
+  background:
+    linear-gradient(var(--gilt-rule) 50%, transparent 50%) right 112px top / 1px 8px repeat-y,
+    var(--void);
   cursor: pointer;
   /* ticket stub: notches on both sides */
   -webkit-mask:
@@ -81,7 +84,9 @@
 }
 .pack-price {
   grid-area: price;
-  font: 700 22px / 1 var(--font-ui);
+  min-width: 88px;
+  font: 800 34px / 1 var(--font-display);
+  font-stretch: 62%;
   text-align: right;
 }
 .pack-row .badge,

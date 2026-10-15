@@ -1,5 +1,4 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import { QUOTA } from "@vzc/catalog";
 import { errorMessage } from "@vzc/i18n";
 import { describe, expect, it, vi } from "vitest";
 import { rememberPassedCheck } from "../../lib/human-pass.ts";
@@ -29,11 +28,11 @@ async function askForCode(email = "ann@example.com") {
 }
 
 describe("SignInDialog (design S9, flows ②③)", () => {
-  it("says sign-in is for the free preview, and promises no sign-up bonus", () => {
+  it("says a code is emailed, promises no free preview and no sign-up bonus", () => {
     mockApi({});
     open();
-    const purpose = screen.getByText(/^Sign in to get your free preview/);
-    expect(purpose.textContent).toContain(`${QUOTA.previewUserDaily} a day`);
+    expect(screen.getByText(/^We email you a code/)).toBeTruthy();
+    expect(screen.queryByText(/free preview/i)).toBeNull();
     expect(screen.queryByText(/bonus|credits/i)).toBeNull();
   });
 

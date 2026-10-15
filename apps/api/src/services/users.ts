@@ -6,6 +6,8 @@ export type User = {
   hasPassword: boolean;
   googleSub: string | null;
   suspiciousAt: number | null;
+  /** False for an account made at a guest checkout until the email is proven. */
+  verified: boolean;
   createdAt: number;
 };
 
@@ -15,10 +17,12 @@ type Row = {
   password_hash: string | null;
   google_sub: string | null;
   suspicious_at: number | null;
+  email_verified_at: number | null;
   created_at: number;
 };
 
-const COLUMNS = "id, email, password_hash, google_sub, suspicious_at, created_at";
+const COLUMNS =
+  "id, email, password_hash, google_sub, suspicious_at, email_verified_at, created_at";
 
 const toUser = (row: Row): User => ({
   id: row.id,
@@ -26,6 +30,7 @@ const toUser = (row: Row): User => ({
   hasPassword: row.password_hash !== null,
   googleSub: row.google_sub,
   suspiciousAt: row.suspicious_at,
+  verified: row.email_verified_at !== null,
   createdAt: row.created_at,
 });
 

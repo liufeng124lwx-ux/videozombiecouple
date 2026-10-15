@@ -1,40 +1,111 @@
-/* Home and landing (design lock §3): a film poster that warms as you scroll. */
-.hero {
-  padding: 40px 0 24px;
-  background: radial-gradient(120% 70% at 85% 10%, #172434 0%, transparent 60%), var(--bg);
+/* Home and landing — "Premiere Night": the page is a screening room, the film its only light. */
+.hero.premiere {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(52% 58% at 50% 40%, var(--spill) 0%, transparent 72%), var(--void);
+  transition: --spill 1.2s ease;
 }
-.hero-grid {
-  display: grid;
-  gap: 32px;
+@media (prefers-reduced-motion: reduce) {
+  .hero.premiere {
+    transition: none;
+  }
+}
+.premiere-stage {
+  /* The film is as tall as the screen allows, leaving room for the header, beats and buttons. */
+  --film-h: min(820px, calc(100svh - 64px - 150px));
+  --film-w: calc(var(--film-h) * 9 / 16);
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 18px;
+  padding: 20px var(--gutter) 28px;
 }
-@media (min-width: 900px) {
-  .hero-grid {
-    grid-template-columns: 1.15fr 0.85fr;
-    gap: 56px;
-  }
-  .hero {
-    padding: 72px 0 40px;
-  }
+.premiere-film {
+  position: relative;
+  z-index: 2;
+  width: var(--film-w);
+  max-width: 100%;
 }
-.hero-copy .scene {
-  margin-bottom: 14px;
+.premiere-title {
+  margin: 0;
+  color: var(--gilt);
+  font-size: clamp(64px, 17vw, 120px);
+  line-height: 0.86;
+  text-align: center;
 }
-.hero-copy .lede {
-  margin-top: 18px;
+.premiere-title span {
+  display: block;
 }
-.hero-actions {
+.premiere-actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
-  margin-top: 28px;
+}
+.btn-line {
+  background: transparent;
+  border-color: var(--gilt-rule);
+}
+/* Phones: the film first, the title right under it. */
+@media (max-width: 899px) {
+  .premiere-stage {
+    --film-h: min(72svh, calc(86vw * 16 / 9));
+  }
+  .premiere-title {
+    order: 2;
+  }
+  .premiere-film {
+    order: 1;
+  }
+  .premiere-actions {
+    order: 3;
+  }
+}
+/* Wide screens: the title's words flank the film, tucked a little behind it. */
+@media (min-width: 900px) {
+  .premiere-title {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    font-size: clamp(96px, calc((100vw - var(--film-w)) / 2 / 3.7), 250px);
+  }
+  .premiere-title span {
+    position: absolute;
+    top: calc(20px + var(--film-h) * 0.42);
+    transform: translateY(-50%);
+    max-width: calc((100vw - var(--film-w)) / 2 + 0.4em);
+  }
+  .premiere-title .pt-left {
+    right: calc(50% + var(--film-w) / 2 - 0.14em);
+    text-align: right;
+  }
+  .premiere-title .pt-right {
+    left: calc(50% + var(--film-w) / 2 - 0.14em);
+    text-align: left;
+  }
+}
+.premiere-credits {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  padding-bottom: 56px;
+  text-align: center;
+  border-top: 1px solid var(--gilt-rule);
+  padding-top: 28px;
+}
+.premiere-credits .lede {
+  margin: 0 auto;
 }
 .trust {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px 18px;
-  margin-top: 22px;
   font: 400 12px / 1.4 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -42,28 +113,14 @@
 }
 .trust li::before {
   content: "· ";
-  color: var(--ember);
-}
-.hero-poster {
-  width: 100%;
-  max-width: min(380px, calc((100svh - 260px) * 9 / 16));
-  margin: 0 auto;
-}
-/* Phones: the film is the first thing you see, the headline follows. */
-@media (max-width: 899px) {
-  .hero-poster {
-    order: -1;
-    max-width: min(86vw, calc((100svh - 150px) * 9 / 16));
-  }
+  color: var(--gilt);
 }
 
 /* The hero film: a 9:16 reel, its controls, the beats lighting up as it plays */
 .reel {
   position: relative;
   aspect-ratio: 9 / 16;
-  background: var(--surface-1);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-btn);
+  background: #000;
   overflow: hidden;
 }
 .reel video {
@@ -148,21 +205,40 @@
   }
 }
 
-/* Films made here: four reels side by side (two by two on phones) */
-.films .lede {
-  margin: 12px 0 28px;
+/* Now showing: a slate rail on the left, the films in a row that scrolls sideways */
+.now-showing {
+  padding: 72px 0;
+  background: var(--void);
+  border-top: 1px solid var(--gilt-rule);
+  border-bottom: 1px solid var(--gilt-rule);
 }
-.film-gallery {
+.showing-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  list-style: none;
+  gap: 28px;
 }
 @media (min-width: 900px) {
-  .film-gallery {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+  .showing-grid {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
   }
+}
+.showing-rail h2 {
+  margin: 10px 0 14px;
+}
+.film-gallery {
+  display: flex;
+  gap: 16px;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gilt-rule) transparent;
+}
+.film-gallery li {
+  flex: 0 0 min(62vw, 260px);
+  scroll-snap-align: start;
 }
 .film-tile {
   position: relative;
@@ -170,9 +246,8 @@
   width: 100%;
   aspect-ratio: 9 / 16;
   padding: 0;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-btn);
-  background: var(--surface-1);
+  border: 0;
+  background: #000;
   overflow: hidden;
   cursor: pointer;
 }
@@ -182,19 +257,24 @@
   object-fit: cover;
 }
 .film-gallery .loud .film-tile {
-  border-color: var(--ember);
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
 }
 .film-sound {
   position: absolute;
   right: 8px;
   bottom: 8px;
   padding: 4px 8px;
-  background: rgb(11 15 20 / 0.7);
+  background: rgb(7 9 12 / 0.72);
   color: var(--text);
-  font: 500 11px / 1 var(--font-ui);
+  font: 400 11px / 1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 .film-gallery .scene {
   margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gilt-rule);
 }
 
 /* Beats: a sideways filmstrip, cold to warm */

@@ -55,6 +55,22 @@ export function getSharedFilm(id: string, token: string): Promise<SharedFilm> {
   return api<SharedFilm>(`/v1/share/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`);
 }
 
+/**
+ * Buying without signing in: a new email becomes this browser's (unverified) account. Throws
+ * ApiError("LOGIN_REQUIRED") when the email already has an account (sign in with a code instead).
+ */
+export async function guestSignUp(email: string, token: Token): Promise<void> {
+  await withHumanCheck(
+    (headers) => post<{ ok: true }>("/v1/auth/guest", { email }, headers),
+    token,
+  );
+}
+
+/** One free remake of a finished film (the faces didn't come out right). */
+export async function remake(id: string): Promise<void> {
+  await post<{ ok: true }>(`/v1/stories/${encodeURIComponent(id)}/remake`, {});
+}
+
 export async function render(id: string, idempotencyKey: string, token: Token): Promise<void> {
   await withHumanCheck(
     (headers) =>
@@ -71,6 +87,7 @@ export async function recompose(id: string, title: { names: string; date: string
   await post<{ ok: true }>(`/v1/stories/${encodeURIComponent(id)}/recompose`, title);
 }
 
+/** @deprecated Free previews are gone (owner, 2026-10-15); kept for old imports. */
 export function getQuota(): Promise<QuotaView> {
   return api<QuotaView>("/v1/quota");
 }

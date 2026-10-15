@@ -9,11 +9,12 @@ import { clearCheckout, pendingCheckout } from "../../lib/checkout.ts";
 import { loadMe, refreshMe } from "../../lib/me.ts";
 import {
   createStory,
-  getQuota,
   getSharedFilm,
   getStory,
+  guestSignUp,
   newIdempotencyKey,
   recompose,
+  remake,
   render,
   uploadPhoto,
 } from "../../lib/story/client.ts";
@@ -21,7 +22,6 @@ import { canSubmit, initialState, reduce, type Slot } from "../../lib/story/mach
 import { preparePhoto } from "../../lib/story/prepare.ts";
 import { forgetStory, rememberedStory, rememberStory, renderKey } from "../../lib/story/resume.ts";
 import { getToken } from "../../lib/turnstile.ts";
-import GradeWipe from "../GradeWipe.tsx";
 import PackRows from "../pricing/PackRows.tsx";
 import {
   PhotoSlot,
@@ -44,11 +44,6 @@ const POLL_MS = 3_000;
 const CHECKOUT_FRESH_MS = 30 * 60_000;
 /** How long to wait for a payment's credits before asking the buyer to refresh. */
 const CONFIRM_WAIT_MS = 60_000;
-const PREVIEW_STAGES = [
-  "story.previewing.stage1",
-  "story.previewing.stage2",
-  "story.previewing.stage3",
-] as const;
 const RENDER_STAGES = [
   "story.rendering.stage1",
   "story.rendering.stage2",
@@ -57,13 +52,17 @@ const RENDER_STAGES = [
   "story.rendering.stage5",
 ] as const;
 
+const deleteDate = (ms: number) =>
+  new Date(ms).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
 function message(code: string | null): string | null {
   if (!code) return null;
   return errorMessage(code);
 }
 
 /**
- * The tool (design lock "Tool states"): two photos → free preview → pack → render → film.
+ * The tool: two photos (checked for one adult face each) → pay (a guest leaves an email first) →
+ * the film. Nothing is generated for free (owner, 2026-10-15).
  * Everything the server knows comes from GET /v1/stories/:id; this island only drives it.
  */
 export default function StoryTool({
@@ -74,7 +73,10 @@ export default function StoryTool({
 }: StoryToolProps) {
   const [s, dispatch] = useReducer(reduce, initialState(preset));
   const [credits, setCredits] = useState<number | null>(null);
-  const [previewsLeft, setPreviewsLeft] = useState<number | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const [verified, setVerified] = useState(true);
+  const [email, setEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
   const [title, setTitle] = useState({ names: "", date: "", open: false });
   const [copied, setCopied] = useState(false);
   const [payment, setPayment] = useState<"confirming" | "slow" | null>(null);
@@ -104,10 +106,7 @@ export default function StoryTool({
       params.get("id") ?? params.get("story") ?? (mode === "home" ? rememberedStory() : null);
     autoRender.current = params.get("render") === "1" || params.get("paid") === "1";
     if (id) dispatch({ type: "resume", storyId: id });
-    void loadMe().then((me) => setCredits(me?.credits ?? null));
-    void getQuota()
-      .then((q) => setPreviewsLeft(q.loginRequired ? null : q.remaining))
-      .catch(() => undefined);
+    void loadMe().then(applyMe);
   }, []);
 
   // Poll the story while the server is working on it.
@@ -141,7 +140,7 @@ export default function StoryTool({
     if (s.phase === "preview_ready") track("preview_done", {});
     if (s.phase === "done") {
       track("video_done", {});
-      void refreshMe().then((me) => setCredits(me?.credits ?? null));
+      void refreshMe().then(applyMe);
     }
     if (s.phase === "preview_ready" && autoRender.current) {
       autoRender.current = false;
@@ -154,8 +153,7 @@ export default function StoryTool({
       onSignedIn(() => {
         if (!waitingForSignIn.current) return;
         waitingForSignIn.current = false;
-        void refreshMe().then((me) => setCredits(me?.credits ?? null));
-        void submit();
+        void refreshMe().then(applyMe);
       }),
     [s.photos, s.scene, s.kind, s.title],
   );
@@ -172,14 +170,49 @@ export default function StoryTool({
     });
   }
 
+  function applyMe(me: Awaited<ReturnType<typeof refreshMe>>) {
+    setCredits(me?.credits ?? null);
+    setSignedIn(Boolean(me?.user));
+    setVerified(me?.user ? me.user.verified !== false : true);
+  }
+
+  /** A guest leaves an email before paying; it becomes their account (no password, no code). */
+  async function continueAsGuest(event: Event) {
+    event.preventDefault();
+    setEmailBusy(true);
+    try {
+      const human = () => {
+        const el = turnstile.current;
+        return el ? getToken(el, "login") : Promise.reject(new Error("CHALLENGE_REQUIRED"));
+      };
+      await guestSignUp(email.trim(), human);
+      applyMe(await refreshMe());
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "LOGIN_REQUIRED") {
+        // The email already has an account: confirm it with a code, then pay.
+        waitingForSignIn.current = true;
+        openSignIn({
+          heading: t("story.pay.haveAccount"),
+          next: `${location.pathname}${location.search}`,
+        });
+      } else dispatch({ type: "error", code: error instanceof ApiError ? error.code : "INTERNAL" });
+    } finally {
+      setEmailBusy(false);
+    }
+  }
+
+  async function startRemake() {
+    if (!s.storyId) return;
+    try {
+      await remake(s.storyId);
+      dispatch({ type: "rendering" });
+    } catch (error) {
+      dispatch({ type: "error", code: error instanceof ApiError ? error.code : "INTERNAL" });
+    }
+  }
+
   async function submit() {
     if (!canSubmit(s)) return;
-    const me = await refreshMe();
-    if (!me?.user) {
-      waitingForSignIn.current = true;
-      openSignIn({ heading: t("story.signIn"), next: `${location.pathname}#make` });
-      return;
-    }
     dispatch({ type: "submit" });
     track("preview_start", { kind: s.kind, scene: s.scene });
     try {
@@ -201,7 +234,6 @@ export default function StoryTool({
       if (mode === "home")
         history.replaceState(null, "", `${location.pathname}?story=${storyId}#make`);
       dispatch({ type: "created", storyId });
-      setPreviewsLeft((n) => (n === null ? n : Math.max(0, n - 1)));
     } catch (error) {
       dispatch({ type: "error", code: error instanceof ApiError ? error.code : "INTERNAL" });
     }
@@ -271,7 +303,7 @@ export default function StoryTool({
     return (
       <div class="tool tool-shared" data-clarity-mask="true">
         {shared === "gone" ? (
-          <p class="notice">{t("story.shared.gone", { days: fact("retention.videoDays") })}</p>
+          <p class="notice">{t("story.shared.gone")}</p>
         ) : (
           <div class="tool-done">
             <div class="player">
@@ -384,82 +416,101 @@ export default function StoryTool({
               {s.phase === "uploading"
                 ? t("story.uploading")
                 : s.photos.survivor && s.photos.infected
-                  ? t("story.cta.preview")
+                  ? t("story.cta.make")
                   : t("story.cta.addPhotos")}
             </button>
-            {previewsLeft !== null && (
-              <p class="fine">{t("story.cta.previewsLeft", { n: previewsLeft })}</p>
-            )}
+            <p class="fine">
+              {t("story.cta.note", {
+                price: fact("price.fromPerVideo"),
+                remakes: fact("remakes.perFilm"),
+              })}
+            </p>
           </div>
         </div>
       )}
 
       {s.phase === "previewing" && (
-        <div class="tool-wait">
-          <h3>{t("story.previewing.title")}</h3>
-          <WaitingFrames
-            stages={PREVIEW_STAGES.map((k) => t(k))}
-            done={story?.progress.done ?? 0}
-            total={story?.progress.total ?? 5}
-            etaMs={story?.progress.etaMs ?? null}
-          />
+        <div class="tool-wait" role="status">
+          <h3>{t("story.checking.title")}</h3>
+          <p class="small muted">{t("story.checking.text")}</p>
         </div>
       )}
 
-      {(s.phase === "preview_ready" || s.phase === "paying") && story?.preview && (
+      {(s.phase === "preview_ready" || s.phase === "paying") && (
         <div class="tool-ready">
-          <div class="ready-frames">
-            <GradeWipe
-              mode="drag"
-              cold={{ src: story.preview.A, alt: "Your standoff frame" }}
-              warm={{ src: story.preview.C, alt: "Your memory frame" }}
-              priority
-            />
-            <div class="frame-labels scene" aria-hidden="true">
-              <span>{t("story.frame.standoff")}</span>
-              <span>{t("story.frame.memory")}</span>
-            </div>
+          <div class="ready-photos" aria-hidden="true">
+            {(["survivor", "infected"] as const).map((slot) =>
+              s.photos[slot] ? <img key={slot} src={s.photos[slot]?.url} alt="" /> : null,
+            )}
           </div>
           <div class="ready-side">
+            <p class="scene">{t("story.ready.kicker")}</p>
             <h3>{t("story.ready.title")}</h3>
-            <p class="small muted">{t("story.ready.drag")}</p>
+            <p class="small muted">
+              {t("story.ready.text", {
+                seconds: fact("video.seconds"),
+                remakes: fact("remakes.perFilm"),
+              })}
+            </p>
             {payment !== null ? (
               <p class="notice" role="status">
                 {payment === "confirming" ? t("story.pay.confirming") : t("story.pay.slow")}
               </p>
-            ) : s.phase === "preview_ready" ? (
+            ) : signedIn && videos !== null && videos > 0 ? (
               <div class="actions">
                 <button
                   type="button"
                   class="btn btn-primary btn-lg btn-block"
                   onClick={() => void startRender()}
                 >
-                  {videos !== null && videos > 0
-                    ? t("story.ready.make")
-                    : t("story.ready.makeWithPrice", { price: fact("price.fromPerVideo") })}
+                  {t("story.ready.make")}
                 </button>
-                {videos !== null && videos > 0 && (
-                  <p class="fine">
-                    {videos === 1
-                      ? t("story.ready.oneLeft")
-                      : t("story.ready.balance", { n: videos })}
-                  </p>
-                )}
-                <button type="button" class="btn btn-block" onClick={startOver}>
-                  {t("story.ready.retry")}
-                </button>
+                <p class="fine">
+                  {videos === 1
+                    ? t("story.ready.oneLeft")
+                    : t("story.ready.balance", { n: videos })}
+                </p>
               </div>
+            ) : !signedIn ? (
+              <form class="guest" onSubmit={(e) => void continueAsGuest(e)}>
+                <label class="field">
+                  <span>{t("story.pay.emailLabel")}</span>
+                  <input
+                    type="email"
+                    required
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+                  />
+                </label>
+                <p class="fine">{t("story.pay.emailNote")}</p>
+                <button
+                  type="submit"
+                  class="btn btn-primary btn-lg btn-block"
+                  aria-busy={emailBusy}
+                  disabled={emailBusy}
+                >
+                  {t("story.pay.continue")}
+                </button>
+                <button
+                  type="button"
+                  class="link small"
+                  onClick={() => {
+                    waitingForSignIn.current = true;
+                    openSignIn({
+                      heading: t("story.signIn"),
+                      next: `${location.pathname}${location.search}`,
+                    });
+                  }}
+                >
+                  {t("story.pay.signIn")}
+                </button>
+              </form>
             ) : (
               <div class="pay">
                 <p class="scene">{t("story.pay.title")}</p>
                 <PackRows returnPath={`/story?id=${s.storyId}&render=1`} />
-                <button
-                  type="button"
-                  class="link small"
-                  onClick={() => dispatch({ type: "cancelPay" })}
-                >
-                  {t("story.pay.back")}
-                </button>
               </div>
             )}
             {s.error && (
@@ -467,6 +518,9 @@ export default function StoryTool({
                 {message(s.error)}
               </p>
             )}
+            <button type="button" class="link small" onClick={startOver}>
+              {t("story.ready.retry")}
+            </button>
           </div>
         </div>
       )}
@@ -474,15 +528,21 @@ export default function StoryTool({
       {s.phase === "rendering" && (
         <div class="tool-render">
           <h3>{t("story.rendering.title")}</h3>
-          {story?.preview ? (
-            <GradeWipe
-              mode="progress"
-              value={story.progress.total ? (story.progress.done / story.progress.total) * 100 : 5}
-              cold={{ src: story.preview.A, alt: "Your standoff frame" }}
-              warm={{ src: story.preview.C, alt: "Your memory frame" }}
-              label={t("story.rendering.title")}
+          <div
+            class="render-bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(
+              story?.progress.total ? (story.progress.done / story.progress.total) * 100 : 3,
+            )}
+          >
+            <span
+              style={{
+                width: `${Math.max(3, story?.progress.total ? (story.progress.done / story.progress.total) * 100 : 3)}%`,
+              }}
             />
-          ) : null}
+          </div>
           <div class="timeline scene" aria-hidden="true">
             <span>00:00</span>
             <span>00:{fact("video.seconds")}</span>
@@ -571,7 +631,16 @@ export default function StoryTool({
                   {t("story.done.retitle")}
                 </button>
               ))}
-            <p class="fine">{t("story.done.expires", { days: fact("retention.videoDays") })}</p>
+            <p class="notice" role="note">
+              {t("story.done.expires", { date: deleteDate(story.video.expiresAt) })}
+              {!verified &&
+                ` ${t("story.done.keepLonger", { days: fact("retention.memberFilmDays") })}`}
+            </p>
+            {story.remakeLeft > 0 && (
+              <button type="button" class="link small" onClick={() => void startRemake()}>
+                {t("story.done.remake")}
+              </button>
+            )}
             <button type="button" class="btn btn-block" onClick={startOver}>
               {t("story.done.another")}
             </button>
@@ -583,7 +652,7 @@ export default function StoryTool({
         <div class="tool-failed" role="alert">
           <p>{s.phase === "failed" ? t("story.failed.video") : t("story.failed.preview")}</p>
           {message(s.error) && <p class="small muted">{message(s.error)}</p>}
-          {s.phase === "failed" && s.story?.preview ? (
+          {s.phase === "failed" && (s.story?.videoAttempts ?? 0) > 0 ? (
             <>
               <button type="button" class="btn btn-primary" onClick={() => void startRender()}>
                 {t("story.failed.again")}

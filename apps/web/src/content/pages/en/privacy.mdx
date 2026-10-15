@@ -1,17 +1,17 @@
 ---
 title: Privacy Policy – Your Photos | VideoZombieCouple
 description: What VideoZombieCouple collects, who processes your photos, how long photos and videos are kept, and your rights. Your photos are never used to train AI.
-updated: 2026-10-14
+updated: 2026-10-15
 ---
 
-Last updated: October 14, 2026
+Last updated: October 15, 2026
 
 VideoZombieCouple is operated by Arrayon Inc., a Wyoming corporation at 30 N Gould St Ste R, Sheridan, WY 82801, USA ("we", "us"). This policy explains what we collect when you use videozombiecouple.com, why, who processes it for us, how long we keep it and what you can do about it. Questions go to [hello@videozombiecouple.com](mailto:hello@videozombiecouple.com).
 
 ## The short version
 
-- Your photos are used only to make your own preview and video.
-- Original photos and keyframes are deleted within <F k="retention.photosDays" /> days. Finished videos are deleted within <F k="retention.videoDays" /> days.
+- Your photos are used only to check them and make your own video.
+- Original photos and keyframes are deleted within <F k="retention.photosDays" /> days. Finished films are deleted after <F k="retention.guestFilmDays" /> days if your email isn’t confirmed, or <F k="retention.memberFilmDays" /> days once it is.
 - Face features are computed in memory and never stored. They are used only to pick the best keyframe.
 - We don’t use your photos to train AI, and we pick AI providers that don’t allow training on them either.
 - Your photos and videos are private. We never show them publicly.
@@ -22,22 +22,23 @@ VideoZombieCouple is operated by Arrayon Inc., a Wyoming corporation at 30 N Gou
 
 **Photos.** The two photos you upload for a story. You must only upload photos of yourself or of adults who agreed to it.
 
-**What we make from them.** The keyframes for your preview (the standoff frame and the memory frame), the video shots, and your finished video. If you add an end title, we keep the names and date you typed.
+**What we make from them.** The result of the photo check, and after you pay, the keyframes, the video shots and your finished video. If you add an end title, we keep the names and date you typed.
 
-**Account details.** Your email address, and your Google account ID if you sign in with Google. We never see your Google password.
+**Account details.** Your email address, and your Google account ID if you sign in with Google. We never see your Google password. If you buy without signing up, we collect your email at checkout to deliver your film and receipt, and that email becomes your account, with no password. We record whether you have confirmed the email, because that decides how long your films are kept.
 
 **Video credits and payments.** Your video balance and history, and order details from our payment partner: what you bought, the amount, the currency and the country. Card details go straight to the payment partner. We never see your card number.
 
-**Usage and security data.** Which options you chose, how long each step took, errors, and when you visited. To run the daily preview limit and stop abuse we store a random visitor ID in a cookie, plus scrambled (hashed) versions of your IP address range and of basic device details. We can’t turn these back into your IP address or device.
+**Usage and security data.** Which options you chose, how long each step took, errors, and when you visited. To stop abuse, such as too many photo checks, we store a random visitor ID in a cookie, plus scrambled (hashed) versions of your IP address range and of basic device details. We can’t turn these back into your IP address or device.
 
 **Messages.** What you write to us by email.
 
 ## How we use it
 
-- To make your preview and your video, and show them to you.
-- To keep your account and video balance working, including the sign-in codes we email you.
+- To check your photos before you pay, make your video, and show it to you.
+- To create your account from the email you give at checkout, and keep your account and video balance working, including the sign-in codes we email you.
+- To email you when your film is ready, with its deletion date, and remind you once the day before it is deleted.
 - To take payments, send receipts and handle refunds and chargebacks.
-- To enforce the free preview limit and protect the service from fraud and abuse.
+- To protect the service from fraud and abuse.
 - To understand, in aggregate, which pages help and where things break, so we can fix them.
 - To answer your messages and meet our legal and tax obligations.
 
@@ -47,15 +48,15 @@ Our legal bases under the GDPR are: performing our contract with you (running th
 
 **Face features.** To pick the keyframe that looks most like the people in your photos, we compute face features (numbers that describe a face) from your photos and from each candidate keyframe. This happens in memory only. The features are never stored, and never used to recognize you elsewhere or to train anything.
 
-**Age check.** We estimate the age of each person in your photos. If someone looks under 18, we refuse the photo. The estimate is used only for that check and is not stored.
+**Photo check and age check.** Before you pay, we check your photos on our own servers: each photo of a person must show one adult face. We estimate the age of each person, and if someone looks under 18, we refuse the photo. This check generates nothing and sends nothing to AI providers. The estimate is used only for that check and is not stored.
 
-**AI generation.** To make keyframes and video shots, your photos are sent to AI models through kie.ai, which runs models from providers such as Google and ByteDance. They process the photos only to return the result to us. We don’t use your photos to train AI, and we pick AI providers that don’t allow training on them either.
+**AI generation.** After you pay, to make keyframes and video shots, your photos are sent to AI models through kie.ai, which runs models from providers such as Google and ByteDance. They process the photos only to return the result to us. We don’t use your photos to train AI, and we pick AI providers that don’t allow training on them either.
 
 ## Who processes your data for us
 
 | Service | What it does for us | What it receives |
 |---|---|---|
-| Cloudflare | Hosting, file storage, compute for video assembly, sending sign-in emails | Everything you send to the site, including photos |
+| Cloudflare | Hosting, file storage, compute for the photo check and video assembly, sending sign-in, film-ready and reminder emails | Everything you send to the site, including photos |
 | Cloudflare Turnstile | Checking that a visitor is human | Browser and connection signals |
 | kie.ai, and the model providers behind it such as Google and ByteDance | Running the AI models that make keyframes and video shots | Your photos and the instructions for that job |
 | Waffo | Payments, as merchant of record | Your email, what you buy, payment details |
@@ -69,7 +70,8 @@ These companies act on our instructions and may not use your data for their own 
 ## How long we keep it
 
 - Original photos and keyframes: deleted within <F k="retention.photosDays" /> days.
-- Finished videos, and the shots we keep so you can change the end title once: deleted within <F k="retention.videoDays" /> days. Download your video before then.
+- Finished films, and the shots we keep so you can change the end title once: deleted after <F k="retention.guestFilmDays" /> days for accounts whose email isn’t confirmed (for example, if you bought as a guest), and after <F k="retention.memberFilmDays" /> days once the email is confirmed. You confirm it by opening the link in the film email, signing in with a code, or signing in with Google. We email you when the film is ready, with the deletion date, and once the day before. Download your film before then.
+- The free remake uses your original photos, so it is only possible while they still exist.
 - Download links: private, and they stop working after <F k="retention.linkMinutes" /> minutes.
 - Face features and age estimates: never stored.
 - Account and video balance history: until you delete your account.

@@ -1,5 +1,4 @@
 import "../../styles/dialog.css";
-import { fact } from "@vzc/catalog";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { ApiError, apiOrigin, post } from "../../lib/api.ts";
@@ -143,7 +142,7 @@ export default function SignInDialog({
       ) : (
         <div class="stack">
           <h2 id="signin-title">{request.heading ?? t("auth.title")}</h2>
-          <p class="sub">{t("auth.subtitle", { daily: fact("preview.daily") })}</p>
+          <p class="sub">{t("auth.subtitle")}</p>
           <a
             class="btn btn-block"
             href={`${apiOrigin()}/auth/google/start?next=${encodeURIComponent(next)}`}

@@ -228,11 +228,6 @@ export function WaitingFrames(props: {
   );
 }
 
-export function previewsLeftLabel(n: number | null): string | null {
-  if (n === null) return null;
-  return t("story.cta.previewsLeft", { n });
-}
-
 export function fromPrice(): string {
   return fact("price.fromPerVideo");
 }

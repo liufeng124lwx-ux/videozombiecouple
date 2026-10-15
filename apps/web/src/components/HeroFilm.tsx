@@ -9,6 +9,20 @@ const BEATS = [
   { key: "story.frame.dawn", from: 11 },
 ] as const;
 
+/** The light each beat throws on the room around the film (design lock "Premiere Night"). */
+const SPILL = ["#13263A", "#1C2633", "#4A3418", "#3A3324"] as const;
+
+const PLAY = (
+  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+    <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
+  </svg>
+);
+const PAUSE = (
+  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+    <path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" fill="currentColor" />
+  </svg>
+);
+
 type Props = {
   src: string;
   poster: string;
@@ -32,9 +46,12 @@ export default function HeroFilm({ src, poster, label, sources = [] }: Props) {
     if (!v) return;
     const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (!still) void v.play().catch(() => undefined);
+    const room = v.closest<HTMLElement>(".hero");
     const onTime = () => {
       const now = v.currentTime;
-      setBeat(BEATS.reduce((at, b, i) => (now >= b.from ? i : at), 0));
+      const at = BEATS.reduce((found, b, i) => (now >= b.from ? i : found), 0);
+      setBeat(at);
+      room?.style.setProperty("--spill", SPILL[at] ?? SPILL[0]);
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
@@ -86,7 +103,7 @@ export default function HeroFilm({ src, poster, label, sources = [] }: Props) {
             onClick={togglePlay}
             aria-label={playing ? t("film.pause") : t("film.play")}
           >
-            {playing ? "❚❚" : "▶"}
+            {playing ? PAUSE : PLAY}
           </button>
           <button type="button" class="reel-btn" onClick={toggleSound} aria-pressed={!muted}>
             {muted ? t("film.soundOn") : t("film.soundOff")}

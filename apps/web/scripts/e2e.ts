@@ -1,8 +1,8 @@
 /**
- * Spec 11.1: the story journey in a real browser, against the built site and a scripted API.
- * Phone width. Two sample photos (AI-generated people) go through the in-browser face check, the
- * free preview arrives, "Make the film" with no credits opens the pack picker, and a finished film
- * plays. Turnstile is stubbed; no request leaves the machine except the page's own assets.
+ * The story journey in a real browser, against the built site and a scripted API. Phone width.
+ * A guest adds two sample photos (AI-generated people), the photos are checked (nothing is
+ * generated for free), the guest leaves an email and gets the pack picker, and a finished film
+ * plays with its deletion date. Turnstile is stubbed; nothing leaves the machine but the page.
  *
  *   pnpm --filter @vzc/web e2e
  */
@@ -38,6 +38,7 @@ async function serve(): Promise<ChildProcess> {
 function scriptedApi(page: Page) {
   let polls = 0;
   let created = false;
+  let guest = false;
   let state: "preview" | "done" = "preview";
   const uploads: number[] = [];
   const frame = readFileSync("src/assets/samples/p02-A.jpg");
@@ -54,7 +55,7 @@ function scriptedApi(page: Page) {
     scene: "cabin-wheat",
     names: null,
     date: null,
-    preview: polls >= 2 ? { A: `${FILES}/a.jpg`, C: `${FILES}/c.jpg` } : null,
+    preview: null,
     video:
       state === "done"
         ? { url: `${FILES}/film.mp4`, poster: `${FILES}/a.jpg`, expiresAt: Date.now() + 864e5 }
@@ -63,6 +64,7 @@ function scriptedApi(page: Page) {
     errorCode: null,
     recomposeLeft: 1,
     videoAttempts: state === "done" ? 1 : 0,
+    remakeLeft: 1,
     shareToken: state === "done" ? "a".repeat(32) : null,
     createdAt: Date.now(),
   });
@@ -88,20 +90,25 @@ function scriptedApi(page: Page) {
     const path = new URL(req.url()).pathname;
     if (path === "/v1/me")
       return json(route, {
-        user: { id: "u1", email: "e2e@example.com", hasPassword: false, google: false },
-        owner: "u:u1",
-        credits: 0,
+        user: guest
+          ? {
+              id: "g1",
+              email: "e2e@example.com",
+              hasPassword: false,
+              google: false,
+              verified: false,
+            }
+          : null,
+        owner: guest ? "u:g1" : "g:x",
+        credits: guest ? 0 : null,
         banner: null,
         consentRequired: false,
         paid: false,
       });
-    if (path === "/v1/quota")
-      return json(route, {
-        remaining: 3,
-        limit: 3,
-        resetAt: Date.now() + 864e5,
-        loginRequired: false,
-      });
+    if (path === "/v1/auth/guest") {
+      guest = true;
+      return json(route, { ok: true }, 201);
+    }
     if (path === "/v1/uploads")
       return json(
         route,
@@ -189,35 +196,39 @@ async function main() {
     step("two photo slots", (await inputs.count()) === 2);
     await inputs.nth(0).setInputFiles("src/assets/samples/p02-survivor.jpg");
     await inputs.nth(1).setInputFiles("src/assets/samples/p02-infected.jpg");
-    const go = page.getByRole("button", { name: "Get my free preview" });
+    const go = page.getByRole("button", { name: "Make my film" });
     await go.waitFor({ timeout: 60_000 });
     await page.waitForFunction(
       () =>
         [...document.querySelectorAll("button")].some(
-          (b) =>
-            b.textContent?.includes("Get my free preview") && !(b as HTMLButtonElement).disabled,
+          (b) => b.textContent?.includes("Make my film") && !(b as HTMLButtonElement).disabled,
         ),
       null,
       { timeout: 60_000 },
     );
     step("photos accepted by the face check", true);
     await go.click();
-    await page.getByText("Does this look like you?").waitFor({ timeout: 30_000 });
+    await page.getByText("Your photos are ready").waitFor({ timeout: 30_000 });
     step(
       "both photos reached storage as JPEGs",
       api.uploads.length === 2 && api.uploads.every((n) => n > 10_000),
       api.uploads.join(","),
     );
-    step("free preview shows both frames", (await page.locator(".ready-frames img").count()) >= 2);
+    step("photos checked, nothing generated for free", true);
 
-    await page.getByRole("button", { name: /Make the film/ }).click();
+    await page.getByLabel("Where should we send your film?").fill("e2e@example.com");
+    await page.getByRole("button", { name: "Continue to payment" }).click();
     await page.locator(".pay").waitFor({ timeout: 10_000 });
-    step("no credits → pack picker", true);
+    step("guest email → pack picker", true);
 
     api.finish();
     await page.reload();
     await page.locator(".tool-done video").waitFor({ timeout: 30_000 });
     step("finished film plays on resume", true);
+    step(
+      "says when the film is deleted",
+      (await page.getByText(/We delete your film on/).count()) > 0,
+    );
     step("no page errors", errors.length === 0, errors.join(" | "));
   } catch (error) {
     // Leave evidence for the CI log: what the tool said, and a screenshot.

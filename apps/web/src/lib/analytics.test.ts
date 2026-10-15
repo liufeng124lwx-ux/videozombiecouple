@@ -55,7 +55,7 @@ describe("analytics (spec 7.5, 9)", () => {
   });
 
   it("tells guests, free members and paying members apart", () => {
-    const user = { id: "u", email: "a@b.co", hasPassword: false, google: false };
+    const user = { id: "u", email: "a@b.co", hasPassword: false, google: false, verified: true };
     const base = { owner: "o", credits: null, banner: null, consentRequired: false, paid: false };
     expect(userKind(null)).toBe("guest");
     expect(userKind({ ...base, user: null })).toBe("guest");

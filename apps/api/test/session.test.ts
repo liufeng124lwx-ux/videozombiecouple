@@ -13,7 +13,13 @@ describe("sessions (spec 5.1)", () => {
     const { userId, session } = await h.signIn("ann@example.com");
     const me = await h.call("/v1/me", { session });
     expect(me.body).toEqual({
-      user: { id: userId, email: "ann@example.com", hasPassword: false, google: false },
+      user: {
+        id: userId,
+        email: "ann@example.com",
+        hasPassword: false,
+        google: false,
+        verified: true,
+      },
       owner: `u:${userId}`,
       credits: 0,
       banner: null,
