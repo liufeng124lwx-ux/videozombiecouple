@@ -36,7 +36,7 @@ wr kv namespace list | jq -r --arg n "$kv" '.[] | select(.title == $n) | "   kv 
 echo "== R2 $bucket"
 if wr r2 bucket list | grep -qx "name: *$bucket"; then echo "   (exists)"; else wr r2 bucket create "$bucket" >/dev/null; fi
 jq --arg o "$origin" '.rules[0].allowed.origins = [$o]' "$root/infra/r2-cors.json" >"$tmp/cors.json"
-wr r2 bucket cors set "$bucket" --file "$tmp/cors.json" --force
+wr r2 bucket cors set "$bucket" --file "$tmp/cors.json" --force || true
 wr r2 bucket lifecycle set "$bucket" --file "$root/infra/r2-lifecycle.json" --force
 
 echo "== R2 vzc-backups (private, weekly D1 exports kept 12 weeks)"
