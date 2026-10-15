@@ -3,6 +3,8 @@ import { UPLOAD_CONSENT_VERSION, WITHDRAWAL_WAIVER_VERSION } from "@vzc/contract
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ipSegment } from "../src/middleware/identity.ts";
 import { callbackToken, hashIdentity } from "../src/services/crypto.ts";
+import { hitRate } from "../src/services/limits.ts";
+import type { Bindings } from "../src/types.ts";
 import { HMAC_KEY, IP, setup, storyBody } from "./harness.ts";
 import { stripeEnv } from "./stripe-kit.ts";
 
