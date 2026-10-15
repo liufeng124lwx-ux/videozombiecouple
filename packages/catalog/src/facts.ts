@@ -1,5 +1,6 @@
 import {
   ABUSE,
+  ADULT_AGE,
   FILE_LIMITS,
   REFUND_POLICY,
   REMAKES_PER_FILM,
@@ -31,6 +32,7 @@ function build(): Record<string, string> {
     "retention.linkMinutes": count(RETENTION.signedUrlSeconds / 60),
     "file.maxMb": count(FILE_LIMITS.maxBytes / 1_000_000),
     "refund.packDays": count(REFUND_POLICY.packDays),
+    "age.adult": count(ADULT_AGE),
     "age.minEstimated": count(ABUSE.minEstimatedAge),
     "takedown.hours": count(TAKEDOWN_HOURS),
   };

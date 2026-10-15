@@ -100,7 +100,7 @@ describe("story API", () => {
     expect(
       h.db
         .prepare("SELECT consent_version, consent_at FROM stories WHERE id=?")
-        .get(ok.body.storyId),
+        .get(ok.body.storyId as string),
     ).toEqual({ consent_version: UPLOAD_CONSENT_VERSION, consent_at: T0 });
   });
 

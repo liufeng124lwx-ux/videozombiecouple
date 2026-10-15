@@ -68,6 +68,9 @@ export const ABUSE = {
   minEstimatedAge: 21,
 } as const;
 
+/** The service is for adults: uploaders and everyone in the photos. */
+export const ADULT_AGE = 18;
+
 /** Terms, "Report a video": a film shown without consent comes down this soon after a report. */
 export const TAKEDOWN_HOURS = 48;
 

@@ -114,9 +114,9 @@ export const en = {
   "story.tips.light": "Good light, no sunglasses",
   "story.tips.adults": "Adults who agreed to it",
   "story.consent.human":
-    "I'm 18 or older. Both people in these photos are adults who agreed to be in this film and to their faces being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
+    "I'm {adult} or older. Both people in these photos are adults who agreed to be in this film and to their faces being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
   "story.consent.pet":
-    "I'm 18 or older. The person in this photo is me, or an adult who agreed to be in this film and to their face being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
+    "I'm {adult} or older. The person in this photo is me, or an adult who agreed to be in this film and to their face being analysed, in memory only and never stored or sold, to check their age and pick the most similar frame.",
   "story.consent.terms": "Terms",
   "story.consent.biometric": "Biometric data notice",
   "story.privacy":

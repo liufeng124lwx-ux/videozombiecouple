@@ -411,7 +411,9 @@ export default function StoryTool({
               onChange={(e) => dispatch({ type: "consent", value: e.currentTarget.checked })}
             />
             <span>
-              {t(s.kind === "pet" ? "story.consent.pet" : "story.consent.human")}{" "}
+              {t(s.kind === "pet" ? "story.consent.pet" : "story.consent.human", {
+                adult: fact("age.adult"),
+              })}{" "}
               <a href="/terms">{t("story.consent.terms")}</a> ·{" "}
               <a href="/privacy#biometric-data">{t("story.consent.biometric")}</a>
             </span>
