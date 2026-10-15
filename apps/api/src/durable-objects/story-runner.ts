@@ -3,6 +3,7 @@ import {
   CAPABILITIES,
   CAPTION_SEC,
   type CapabilityId,
+  REMAKES_PER_FILM,
   REQUIRED_FACES,
   RETENTION,
   SCENES,
@@ -22,6 +23,7 @@ import { pauseForKieCap } from "../ops/kie-cap.ts";
 import { recordAttempt } from "../services/analytics.ts";
 import { type ComposerApi, composerFor } from "../services/composer.ts";
 import { callbackToken } from "../services/crypto.ts";
+import { filmMail } from "../services/film-mail.ts";
 import { sendMail } from "../services/mail.ts";
 import { type ProviderKit, providerKit } from "../services/provider-kit.ts";
 import { presign } from "../services/r2-presign.ts";
@@ -74,6 +76,9 @@ export type RenderOutcome =
   | { ok: true }
   | { ok: false; reason: "not_ready" | "already"; activeReservation?: string | null };
 export type RecomposeOutcome = { ok: true } | { ok: false; reason: "used" | "not_done" };
+export type RemakeOutcome =
+  | { ok: true }
+  | { ok: false; reason: "used" | "not_done" | "photos_gone" };
 
 function newAttempt(step: StepRecord, route: Route): AttemptRecord {
   return {
@@ -119,7 +124,8 @@ export class StoryRunner extends DurableObject<Bindings> {
     return next;
   }
 
-  start(spec: StorySpec, previewCharge: ChargeHold): Promise<StoryView> {
+  /** Checks the two photos only; nothing is generated before the film is paid for. */
+  start(spec: StorySpec, previewCharge: ChargeHold | null = null): Promise<StoryView> {
     return this.#serial(async () => {
       const existing = await this.#load();
       if (existing) return this.#view(existing);
@@ -133,6 +139,7 @@ export class StoryRunner extends DurableObject<Bindings> {
         previewSettled: false,
         videoSettled: false,
         recomposeLeft: 1,
+        remakeLeft: REMAKES_PER_FILM,
         output: null,
         errorCode: null,
         finishedAt: null,
@@ -190,6 +197,52 @@ export class StoryRunner extends DurableObject<Bindings> {
       state.status = "rendering";
       state.errorCode = null;
       state.finishedAt = null;
+      await this.#save(state);
+      await this.#tick(state);
+      return { ok: true };
+    });
+  }
+
+  /** A guest's story now belongs to the account made at checkout (or at sign-in). */
+  adopt(owner: string, userId: string): Promise<void> {
+    return this.#serial(async () => {
+      const state = await this.#load();
+      if (!state || state.spec.userId) return;
+      state.spec.owner = owner;
+      state.spec.userId = userId;
+      await this.#save(state);
+    });
+  }
+
+  /**
+   * Owner, 2026-10-15: a paid film can be made again once for free (the faces didn't come out
+   * right), while its photos still exist. Every generated step starts over; nothing is charged.
+   */
+  remake(): Promise<RemakeOutcome> {
+    return this.#serial(async () => {
+      const state = await this.#load();
+      if (!state || state.status !== "done") return { ok: false, reason: "not_done" };
+      if ((state.remakeLeft ?? 0) <= 0) return { ok: false, reason: "used" };
+      const photos = await Promise.all(
+        [state.spec.survivorKey, state.spec.infectedKey].map((k) => this.env.BUCKET.head(k)),
+      );
+      if (photos.some((p) => !p)) return { ok: false, reason: "photos_gone" };
+      state.remakeLeft = (state.remakeLeft ?? 0) - 1;
+      for (const step of Object.values(state.steps))
+        if (step.phase === "video")
+          Object.assign(step, {
+            state: "waiting",
+            attempts: [],
+            fallbacks: [],
+            outputKey: null,
+            failures: 0,
+            nextRunAt: null,
+            error: null,
+            failKind: null,
+          });
+      state.picks = {};
+      state.status = "rendering";
+      state.errorCode = null;
       await this.#save(state);
       await this.#tick(state);
       return { ok: true };
@@ -715,25 +768,30 @@ export class StoryRunner extends DurableObject<Bindings> {
     if (state.status === "done" && !state.notified) await this.#notify(state);
   }
 
-  /** Spec §4.1 step 4: tell the owner the film is ready (best effort, once). */
+  /**
+   * Spec §4.1 step 4: tell the owner the film is ready (best effort, once), with the date it will
+   * be deleted. An unverified buyer's link also signs them in, which keeps the film 30 days.
+   */
   async #notify(state: StoryState): Promise<void> {
     state.notified = true;
     try {
       const user = await this.env.DB.prepare(
-        "SELECT email FROM users WHERE id=? AND deleted_at IS NULL",
+        "SELECT email, email_verified_at FROM users WHERE id=? AND deleted_at IS NULL",
       )
         .bind(state.spec.userId)
-        .first<{ email: string }>();
+        .first<{ email: string; email_verified_at: number | null }>();
       if (!user) return;
-      await sendMail(this.env, {
-        to: user.email,
-        subject: "Your zombie love story is ready",
-        intro: `Your ${STORYBOARD.reduce((t, s) => t + s.targetSec, 0) + CAPTION_SEC}-second film is ready to watch and download. The file is kept for ${RETENTION.outputDays} days.`,
-        link: {
-          href: `${this.env.ALLOWED_ORIGIN}/story?id=${state.spec.id}`,
-          label: "Watch your film",
-        },
+      const mail = await filmMail(this.env, {
+        storyId: state.spec.id,
+        email: user.email,
+        verified: user.email_verified_at !== null,
+        expiresAt:
+          (state.finishedAt ?? Date.now()) +
+          (user.email_verified_at !== null ? RETENTION.memberFilmDays : RETENTION.guestFilmDays) *
+            86_400_000,
+        reminder: false,
       });
+      await sendMail(this.env, mail);
     } catch (error) {
       console.error(
         JSON.stringify({ level: "error", storyId: state.spec.id, notify: message(error) }),
@@ -860,7 +918,8 @@ export class StoryRunner extends DurableObject<Bindings> {
     ]);
     if (signature === state.syncedSig) return;
     await this.env.DB.prepare(
-      "UPDATE stories SET status=?, picks=?, steps=?, output_key=?, poster_key=?, error_code=?, cost_usd=?, names=?, date=?, finished_at=?, expires_at=CASE WHEN ?='done' THEN ? ELSE expires_at END WHERE id=?",
+      // A finished film is kept 3 days, or 30 once its owner verified their email (retention).
+      "UPDATE stories SET status=?, picks=?, steps=?, output_key=?, poster_key=?, error_code=?, cost_usd=?, names=?, date=?, finished_at=?, expires_at=CASE WHEN ?='done' THEN ? + (CASE retention WHEN 'member' THEN ? ELSE ? END) ELSE expires_at END WHERE id=?",
     )
       .bind(
         state.status,
@@ -874,7 +933,9 @@ export class StoryRunner extends DurableObject<Bindings> {
         state.spec.date,
         state.finishedAt,
         state.status,
-        (state.finishedAt ?? Date.now()) + RETENTION.outputDays * 86_400_000,
+        state.finishedAt ?? Date.now(),
+        RETENTION.memberFilmDays * 86_400_000,
+        RETENTION.guestFilmDays * 86_400_000,
         state.spec.id,
       )
       .run();
@@ -919,6 +980,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       progress: { done, total: steps.length, etaMs: this.#eta(snap, phase, steps) },
       errorCode: snap.errorCode,
       recomposeLeft: snap.recomposeLeft,
+      remakeLeft: snap.remakeLeft ?? 0,
       videoAttempts: snap.videoAttempts ?? 0,
       createdAt: snap.spec.createdAt,
     };
@@ -931,7 +993,8 @@ export class StoryRunner extends DurableObject<Bindings> {
         ? {
             url: await sign(output.videoKey),
             poster: await sign(output.posterKey),
-            expiresAt: (snap.finishedAt ?? Date.now()) + RETENTION.outputDays * 86_400_000,
+            // The route replaces this with the story's real expiry (it depends on the owner's account).
+            expiresAt: (snap.finishedAt ?? Date.now()) + RETENTION.guestFilmDays * 86_400_000,
           }
         : null,
     };

@@ -67,11 +67,16 @@ export async function checkCode(
   return "ok";
 }
 
-export async function issueLinkToken(env: Bindings, email: string): Promise<string> {
+/** A one-use sign-in link; the film emails use one that lasts as long as the film (ttlMs). */
+export async function issueLinkToken(
+  env: Bindings,
+  email: string,
+  ttlMs: number = LINK_TTL_MS,
+): Promise<string> {
   const token = randomHex(32);
-  const stored: StoredLink = { email, expiresAt: Date.now() + LINK_TTL_MS };
+  const stored: StoredLink = { email, expiresAt: Date.now() + ttlMs };
   await env.KV.put(`login:${await sha256Hex(token)}`, JSON.stringify(stored), {
-    expirationTtl: ttlSec(LINK_TTL_MS),
+    expirationTtl: ttlSec(ttlMs),
   });
   return token;
 }

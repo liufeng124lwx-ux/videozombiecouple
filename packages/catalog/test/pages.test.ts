@@ -13,12 +13,19 @@ import {
 } from "../src/index.ts";
 
 describe("limits", () => {
-  it("give logged-in users 3 free previews a day (spec §7)", () => {
-    expect(QUOTA).toEqual({ previewUserDaily: 3, previewIpSegmentDaily: 10 });
+  it("give no free generation at all (owner, 2026-10-15)", () => {
+    expect(QUOTA).toEqual({});
   });
 
   it("keep photos 1 day, work files 3 days and videos 14 days (spec §3.4)", () => {
-    expect(RETENTION).toMatchObject({ inputHours: 24, workDays: 3, outputDays: 14 });
+    // Photos and keyframes: 3 days for everyone. Films: 3 days unverified, 30 days verified.
+    expect(RETENTION).toMatchObject({
+      inputHours: 24,
+      workDays: 3,
+      guestFilmDays: 3,
+      memberFilmDays: 30,
+    });
+    expect(RETENTION).not.toHaveProperty("outputDays");
   });
 
   it("need faces big enough to recognise", () => {

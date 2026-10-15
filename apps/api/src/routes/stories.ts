@@ -3,7 +3,7 @@ import { CreateStorySchema, RecomposeSchema, RenderSchema, type SharedFilm } fro
 import type { Context } from "hono";
 import { fail } from "../http.ts";
 import { readFlags } from "../middleware/flags.ts";
-import { holdPreview, holdVideo, moveToKeep } from "../services/charge.ts";
+import { holdVideo, moveToKeep } from "../services/charge.ts";
 import { hmacHex, safeEqual } from "../services/crypto.ts";
 import { requireHuman } from "../services/human-pass.ts";
 import { ulid } from "../services/ids.ts";
@@ -40,19 +40,19 @@ async function ownedStory(c: Context<AppEnv>, id: string): Promise<boolean> {
 }
 
 /**
- * Spec §4.1: limit, check the human and both photos (before any quota is taken), hold one free
- * preview, keep the photos, record the story and start its runner.
+ * Limit, check the human and both photos, keep the photos, record the story and start its runner,
+ * which only checks the photos (one adult face each) on our own container: nothing is generated
+ * before payment (owner, 2026-10-15), so guests can start a story without an account.
  */
 export async function createStory(c: Context<AppEnv>) {
-  const userId = c.get("userId");
-  if (!userId) return fail(c, "LOGIN_REQUIRED");
+  const userId = c.get("userId") ?? null;
   const parsed = CreateStorySchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return fail(c, "BAD_REQUEST");
   const request = parsed.data;
   if ((await readFlags(c.env.KV)).offline.includes("keyframe")) return fail(c, "PROVIDER_DOWN");
   const rate = await hitRate(
     c.env,
-    `rate:stories:${userId}`,
+    `rate:stories:${userId ?? c.get("visitorHash")}`,
     RATE_LIMITS.userJobsPerMinute,
     60_000,
   );
@@ -91,7 +91,7 @@ export async function createStory(c: Context<AppEnv>) {
       .bind(
         id,
         owner,
-        userId,
+        userId ?? "",
         visitorHash,
         c.get("fpHash"),
         c.get("ipSegmentHash"),
@@ -115,21 +115,15 @@ export async function createStory(c: Context<AppEnv>) {
     throw error;
   }
 
-  const hold = await holdPreview(c, id);
-  if (!hold.ok) {
-    await c.env.DB.prepare("DELETE FROM stories WHERE id=?").bind(id).run();
-    return fail(c, hold.code);
-  }
   try {
     await moveToKeep(c.env, request.survivorKey, spec.survivorKey);
     await moveToKeep(c.env, request.infectedKey, spec.infectedKey);
   } catch (error) {
-    await settle(c.env, `${id}:preview`, hold.charge, null);
     await c.env.DB.prepare("DELETE FROM stories WHERE id=?").bind(id).run();
     throw error;
   }
   try {
-    await runnerFor(c, id).start(spec, hold.charge);
+    await runnerFor(c, id).start(spec);
   } catch (error) {
     // The runner saved the story before failing and its alarm will resume it.
     console.error(JSON.stringify({ level: "error", storyId: id, start: String(error) }));
@@ -151,7 +145,12 @@ export async function getStory(c: Context<AppEnv>) {
   const view = await runnerFor(c, id).view();
   if (!view) return fail(c, "NOT_FOUND");
   const share = view.status === "done" && view.video ? await shareToken(c.env, id) : null;
-  return c.json({ ...view, shareToken: share });
+  // When the film is deleted depends on the owner's account (3 or 30 days), which D1 knows.
+  const row = await c.env.DB.prepare("SELECT expires_at FROM stories WHERE id=?")
+    .bind(id)
+    .first<{ expires_at: number }>();
+  const video = view.video && row ? { ...view.video, expiresAt: row.expires_at } : view.video;
+  return c.json({ ...view, video, shareToken: share });
 }
 
 /** The public link of a finished film: it names the story and cannot be guessed from the id. */
@@ -237,9 +236,30 @@ export async function renderStory(c: Context<AppEnv>) {
     if (outcome.reason === "not_ready") return fail(c, "NOT_READY");
     return c.json({ ok: true }, 202);
   }
-  await c.env.DB.prepare("UPDATE stories SET render_key=?, rendered_at=? WHERE id=?")
-    .bind(parsed.data.idempotencyKey, Date.now(), id)
+  // The film is kept 30 days for a verified account, 3 for a buyer who never verified (owner).
+  await c.env.DB.prepare(
+    "UPDATE stories SET render_key=?, rendered_at=?, retention=(SELECT CASE WHEN email_verified_at IS NULL THEN 'guest' ELSE 'member' END FROM users WHERE id=?) WHERE id=?",
+  )
+    .bind(parsed.data.idempotencyKey, Date.now(), c.get("userId"), id)
     .run();
+  return c.json({ ok: true }, 202);
+}
+
+/** Owner, 2026-10-15: make a paid film again once for free while its photos still exist. */
+export async function remakeStory(c: Context<AppEnv>) {
+  const id = c.req.param("id") ?? "";
+  if (!(await ownedStory(c, id))) return fail(c, "NOT_FOUND");
+  const outcome = await runnerFor(c, id).remake();
+  if (!outcome.ok)
+    return fail(
+      c,
+      outcome.reason === "used"
+        ? "REMAKE_USED"
+        : outcome.reason === "photos_gone"
+          ? "PHOTOS_EXPIRED"
+          : "NOT_READY",
+    );
+  await c.env.DB.prepare("UPDATE stories SET rendered_at=? WHERE id=?").bind(Date.now(), id).run();
   return c.json({ ok: true }, 202);
 }
 

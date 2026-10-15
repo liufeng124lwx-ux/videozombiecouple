@@ -1,4 +1,4 @@
-import { TIERS } from "@vzc/catalog";
+import { RETENTION, TIERS } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { callbackToken } from "../src/services/crypto.ts";
 import { HMAC_KEY, setup, storyBody } from "./harness.ts";
@@ -25,21 +25,62 @@ async function create(h: H, session: string, body?: Record<string, unknown>) {
   return h.call("/v1/stories", { method: "POST", session, body: body ?? storyBody(a, b) });
 }
 
-const previewsLeft = async (h: H, session: string) =>
-  (await h.call("/v1/quota", { session })).body.remaining as number;
+const kfFiles = (h: H) => [...h.r2.objects.keys()].filter((k) => k.startsWith("kf/"));
 
 describe("story API", () => {
-  it("guests get LOGIN_REQUIRED", async () => {
+  it("a guest can start a story: the photos are checked, nothing is generated", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     await h.pass();
     const a = await h.upload();
     const b = await h.upload();
     const res = await h.call("/v1/stories", { method: "POST", body: storyBody(a, b) });
-    expect(res.status).toBe(401);
-    expect(res.body.error?.code).toBe("LOGIN_REQUIRED");
+    expect(res.status).toBe(201);
+    const id = res.body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    expect(kfFiles(h)).toEqual([]);
+    // Paying needs an account: the guest gets one by email first.
+    const render = await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      body: { idempotencyKey: "render-guest" },
+    });
+    expect(render.body.error?.code).toBe("LOGIN_REQUIRED");
   });
 
-  it("rejects another browser's upload without taking a free preview", async () => {
+  it("a guest's new email becomes an unverified account that owns the story; a known email never signs in", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    await h.pass();
+    const a = await h.upload();
+    const b = await h.upload();
+    const id = (await h.call("/v1/stories", { method: "POST", body: storyBody(a, b) })).body
+      .storyId as string;
+    await h.untilStory(id, "preview_ready");
+    const signUp = await h.call("/v1/auth/guest", {
+      method: "POST",
+      body: { email: "new@example.com" },
+    });
+    expect(signUp.status).toBe(201);
+    const session = signUp.cookies.upx_sess as string;
+    const user = h.db
+      .prepare("SELECT id, email_verified_at FROM users WHERE email=?")
+      .get("new@example.com") as {
+      id: string;
+      email_verified_at: number | null;
+    };
+    expect(user.email_verified_at).toBeNull();
+    expect((await h.call(`/v1/stories/${id}`, { session })).status).toBe(200);
+    // Typing someone else's address (verified or not) never opens their account.
+    const other = await setup({ FAKE_COMPOSER: "1" });
+    await other.signIn("known@example.com");
+    await other.pass();
+    const again = await other.call("/v1/auth/guest", {
+      method: "POST",
+      body: { email: "known@example.com" },
+    });
+    expect(again.body.error?.code).toBe("LOGIN_REQUIRED");
+    expect(again.cookies.upx_sess).toBeUndefined();
+  });
+
+  it("rejects another browser's upload", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { session } = await signedIn(h);
     const mine = await h.upload();
@@ -51,10 +92,9 @@ describe("story API", () => {
       body: storyBody(mine, theirs),
     });
     expect(res.body.error?.code).toBe("FORBIDDEN");
-    expect(await previewsLeft(h, session)).toBe(3);
   });
 
-  it("rejects photos too small for a face without taking a free preview", async () => {
+  it("rejects photos too small for a face", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { session } = await signedIn(h);
     const small = await h.upload({ width: 300, height: 300 });
@@ -65,16 +105,14 @@ describe("story API", () => {
       body: storyBody(ok, small),
     });
     expect(res.body.error?.code).toBe("FILE_UNSUPPORTED");
-    expect(await previewsLeft(h, session)).toBe(3);
   });
 
-  it("gives three free previews a day, then PREVIEW_QUOTA_EXHAUSTED", async () => {
+  it("never gives anything for free: many stories start, none generates before payment", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { session } = await signedIn(h);
-    for (let i = 0; i < 3; i++) expect((await create(h, session)).status).toBe(201);
-    const fourth = await create(h, session);
-    expect(fourth.status).toBe(402);
-    expect(fourth.body.error?.code).toBe("PREVIEW_QUOTA_EXHAUSTED");
+    for (let i = 0; i < 4; i++) expect((await create(h, session)).status).toBe(201);
+    await h.advance(60_000);
+    expect(kfFiles(h)).toEqual([]);
   });
 
   it("returns the same story for the same idempotency key", async () => {
@@ -88,7 +126,6 @@ describe("story API", () => {
     expect(first.status).toBe(201);
     expect(again.status).toBe(200);
     expect(again.body.storyId).toBe(first.body.storyId);
-    expect(await previewsLeft(h, session)).toBe(2);
   });
 
   it("render without credits is CREDITS_LOW and leaves the story ready", async () => {
@@ -264,6 +301,86 @@ describe("story API", () => {
     expect((shared.body.video as { url: string }).url).toBeTruthy();
     expect((await h.call(`/v1/share/${id}?t=${"0".repeat(32)}`)).status).toBe(404);
     expect((await h.call(`/v1/share/${id}`)).status).toBe(404);
+  });
+
+  it("an unverified buyer's film is kept 3 days, a verified one 30; verifying later extends it; one reminder the day before", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    await h.pass();
+    const a = await h.upload();
+    const b = await h.upload();
+    const id = (await h.call("/v1/stories", { method: "POST", body: storyBody(a, b) })).body
+      .storyId as string;
+    await h.untilStory(id, "preview_ready");
+    const session = (
+      await h.call("/v1/auth/guest", { method: "POST", body: { email: "g@example.com" } })
+    ).cookies.upx_sess as string;
+    const user = h.db.prepare("SELECT id FROM users WHERE email=?").get("g@example.com") as {
+      id: string;
+    };
+    await h.wallets.instance(user.id).grant(user.id, {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: "order-g",
+      reason: "test",
+    });
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-g" },
+    });
+    await h.untilStory(id, "done");
+    const row = () =>
+      h.db.prepare("SELECT expires_at, finished_at, retention FROM stories WHERE id=?").get(id) as {
+        expires_at: number;
+        finished_at: number;
+        retention: string;
+      };
+    expect(row().retention).toBe("guest");
+    expect(row().expires_at - row().finished_at).toBe(RETENTION.guestFilmDays * 86_400_000);
+    const view = await h.call(`/v1/stories/${id}`, { session });
+    expect((view.body.video as { expiresAt: number }).expiresAt).toBe(row().expires_at);
+    // The film-ready email says when it goes and offers to keep it longer.
+    expect(h.mail.at(-1)?.text).toMatch(/deleted on/);
+    expect(h.mail.at(-1)?.text).toMatch(/\/account\?login=/);
+    // The day before deletion: one reminder.
+    const { remindBeforeDeletion } = await import("../src/ops/reminders.ts");
+    const mails = h.mail.length;
+    expect(await remindBeforeDeletion(h.env as never, row().expires_at - 3_600_000)).toBe(1);
+    expect(await remindBeforeDeletion(h.env as never, row().expires_at - 1_800_000)).toBe(0);
+    expect(h.mail.length).toBe(mails + 1);
+    // Proving the email (here: a code sign-in) keeps the film 30 days.
+    const { keepFilmsLonger } = await import("../src/services/merge.ts");
+    await keepFilmsLonger(h.env as never, user.id);
+    expect(row().retention).toBe("member");
+    expect(row().expires_at - row().finished_at).toBe(RETENTION.memberFilmDays * 86_400_000);
+  });
+
+  it("remakes a paid film once for free through the API", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { userId, session } = await signedIn(h);
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: "order-r",
+      reason: "test",
+    });
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-r" },
+    });
+    await h.untilStory(id, "done");
+    expect((await h.call(`/v1/stories/${id}/remake`, { method: "POST", session })).status).toBe(
+      202,
+    );
+    await h.untilStory(id, "done");
+    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(0);
+    const again = await h.call(`/v1/stories/${id}/remake`, { method: "POST", session });
+    expect(again.body.error?.code).toBe("REMAKE_USED");
   });
 
   it("only the owner can read a story", async () => {

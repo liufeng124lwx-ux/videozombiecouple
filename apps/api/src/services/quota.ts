@@ -1,24 +1,8 @@
-import { QUOTA } from "@vzc/catalog";
-import type { Context } from "hono";
 import { utcDay } from "../durable-objects/rate-limiter.ts";
-import type { AppEnv, Bindings } from "../types.ts";
+import type { Bindings } from "../types.ts";
 import { limiter } from "./limits.ts";
 
 export type QuotaCounter = { name: string; limit: number };
-
-/** Spec §7: free previews are per account, with a cap per IP segment against account farming. */
-export function previewCounters(userId: string, ipSegmentHash: string): QuotaCounter[] {
-  return [
-    { name: `quota:preview:user:${userId}`, limit: QUOTA.previewUserDaily },
-    { name: `quota:preview:ip:${ipSegmentHash}`, limit: QUOTA.previewIpSegmentDaily },
-  ];
-}
-
-/** The signed-in user's preview counters; guests have none (previews need an account). */
-export function countersFor(c: Context<AppEnv>): QuotaCounter[] {
-  const userId = c.get("userId");
-  return userId ? previewCounters(userId, c.get("ipSegmentHash")) : [];
-}
 
 /** Reserves one use on every counter, or none: a refusal or an error gives back what was taken. */
 export async function reserveQuota(

@@ -8,6 +8,9 @@ export const EmailLoginSchema = z.object({
   next: z.string().max(200).optional(),
 });
 
+/** Buying without signing in: the email the film and receipts go to (owner, 2026-10-15). */
+export const GuestSignUpSchema = z.object({ email: EmailSchema });
+
 export const CodeLoginSchema = z.object({ email: EmailSchema, code: z.string().regex(/^\d{6}$/) });
 export const LinkLoginSchema = z.object({ token: z.string().regex(/^[a-f0-9]{64}$/) });
 

@@ -40,7 +40,7 @@
       }
     },
     {
-      "id": "shots-15d",
+      "id": "shots-31d",
       "enabled": true,
       "conditions": {
         "prefix": "shot/"
@@ -48,12 +48,12 @@
       "deleteObjectsTransition": {
         "condition": {
           "type": "Age",
-          "maxAge": 1296000
+          "maxAge": 2678400
         }
       }
     },
     {
-      "id": "videos-15d",
+      "id": "films-31d",
       "enabled": true,
       "conditions": {
         "prefix": "out/"
@@ -61,7 +61,7 @@
       "deleteObjectsTransition": {
         "condition": {
           "type": "Age",
-          "maxAge": 1296000
+          "maxAge": 2678400
         }
       }
     },

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RateLimiter } from "../src/durable-objects/rate-limiter.ts";
-import { namespace, setup } from "./harness.ts";
+import { namespace, setup, storyBody } from "./harness.ts";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -27,18 +27,22 @@ describe("RateLimiter.absorb", () => {
 });
 
 describe("guest to account merge (spec 5.1)", () => {
-  // Previews need an account, so a guest has nothing to bring; signing in again hands out nothing.
-  it("gives the account its own previews however often the browser signs in", async () => {
-    const h = await setup();
+  // Owner, 2026-10-15: a guest can start a story; signing in brings it along so it can be paid for.
+  it("moves the stories this browser started as a guest to the account", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
     await h.pass();
-    expect((await h.call("/v1/quota")).body).toMatchObject({ loginRequired: true });
-    const first = await signInByCode(h);
-    expect((await h.call("/v1/quota", { session: first })).body).toMatchObject({
-      remaining: 3,
-      limit: 3,
-    });
-    await h.call("/v1/auth/logout", { method: "POST", session: first });
-    const second = await signInByCode(h);
-    expect((await h.call("/v1/quota", { session: second })).body).toMatchObject({ remaining: 3 });
+    const a = await h.upload();
+    const b = await h.upload();
+    const id = (await h.call("/v1/stories", { method: "POST", body: storyBody(a, b) })).body
+      .storyId as string;
+    await h.untilStory(id, "preview_ready");
+    const session = await signInByCode(h);
+    expect((await h.call(`/v1/stories/${id}`, { session })).status).toBe(200);
+    const row = h.db.prepare("SELECT owner, user_id FROM stories WHERE id=?").get(id) as {
+      owner: string;
+      user_id: string;
+    };
+    expect(row.owner).toBe(`u:${row.user_id}`);
+    expect(row.user_id).not.toBe("");
   });
 });

@@ -1,4 +1,4 @@
-import { FILE_LIMITS, QUOTA, REFUND_POLICY, RETENTION } from "./limits.ts";
+import { FILE_LIMITS, REFUND_POLICY, REMAKES_PER_FILM, RETENTION } from "./limits.ts";
 import { PACKS } from "./plans.ts";
 import { CANDIDATES_PER_FRAME, CAPTION_SEC, STORYBOARD, VIDEO } from "./story.ts";
 import { TIERS } from "./tiers.ts";
@@ -13,13 +13,14 @@ const count = (n: number) => n.toLocaleString("en-US");
 function build(): Record<string, string> {
   const videosIn = (credits: number) => credits / TIERS.video.credits;
   const out: Record<string, string> = {
-    "preview.daily": count(QUOTA.previewUserDaily),
+    "remakes.perFilm": count(REMAKES_PER_FILM),
     "candidates.perFrame": count(CANDIDATES_PER_FRAME),
     "video.seconds": count(STORYBOARD.reduce((t, s) => t + s.targetSec, 0) + CAPTION_SEC),
     "video.width": String(VIDEO.width),
     "video.height": String(VIDEO.height),
     "retention.photosDays": count(RETENTION.workDays),
-    "retention.videoDays": count(RETENTION.outputDays),
+    "retention.guestFilmDays": count(RETENTION.guestFilmDays),
+    "retention.memberFilmDays": count(RETENTION.memberFilmDays),
     "retention.linkMinutes": count(RETENTION.signedUrlSeconds / 60),
     "file.maxMb": count(FILE_LIMITS.maxBytes / 1_000_000),
     "refund.packDays": count(REFUND_POLICY.packDays),

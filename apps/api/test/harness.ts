@@ -351,9 +351,17 @@ export async function setup(extra: Record<string, unknown> = {}) {
     } catch {
       parsed = { text }; // plain-text answers, e.g. webhooks
     }
+    // Cookies the response set, by name (e.g. the session a guest sign-up starts).
+    const cookies: Record<string, string> = {};
+    for (const line of response.headers.getSetCookie?.() ?? []) {
+      const [pair] = line.split(";");
+      const at = pair?.indexOf("=") ?? -1;
+      if (pair && at > 0) cookies[pair.slice(0, at).trim()] = pair.slice(at + 1);
+    }
     return {
       status: response.status,
       headers: response.headers,
+      cookies,
       body: parsed as Record<string, unknown> & {
         error?: { code: string; retryAfterSec?: number };
       },

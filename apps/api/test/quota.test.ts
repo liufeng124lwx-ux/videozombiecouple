@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   commitQuota,
-  previewCounters,
+  type QuotaCounter,
   quotaStatus,
   releaseQuota,
   reserveQuota,
@@ -15,9 +15,13 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-const account = (userId: string, ipSegmentHash = "ip1") => previewCounters(userId, ipSegmentHash);
+// The counters are generic (all-or-nothing daily uses); free previews no longer use them.
+const account = (userId: string, ipSegmentHash = "ip1"): QuotaCounter[] => [
+  { name: `quota:preview:user:${userId}`, limit: 3 },
+  { name: `quota:preview:ip:${ipSegmentHash}`, limit: 10 },
+];
 
-describe("preview quota (spec 7)", () => {
+describe("daily quota counters", () => {
   it("gives each account 3 previews a day", async () => {
     const { env } = await setup();
     const e = env as unknown as Bindings;
@@ -71,11 +75,9 @@ describe("preview quota (spec 7)", () => {
   });
 });
 
-describe("GET /v1/quota", () => {
-  it("tells a guest to sign in: previews need an account", async () => {
+describe("no free previews (owner, 2026-10-15)", () => {
+  it("has no quota endpoint any more", async () => {
     const h = await setup();
-    const first = await h.call("/v1/quota");
-    expect(first.status).toBe(200);
-    expect(first.body).toEqual({ remaining: 0, limit: 0, resetAt: null, loginRequired: true });
+    expect((await h.call("/v1/quota")).status).toBe(404);
   });
 });

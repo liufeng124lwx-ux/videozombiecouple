@@ -1,6 +1,6 @@
 /** Spec 5.2. Guests are counted per cookie and per device fingerprint, each capped at guestDaily. */
-/** Spec §7: free previews need an account; the IP segment cap stops account farming. */
-export const QUOTA = { previewUserDaily: 3, previewIpSegmentDaily: 10 } as const;
+/** No free generation (owner, 2026-10-15): the example films on the site are the preview. */
+export const QUOTA = {} as const;
 
 /** Spec 3.2 / 7.2. */
 export const FILE_LIMITS = {
@@ -26,13 +26,20 @@ export const RATE_LIMITS = {
   codeAttemptsPerIpHour: 30,
 } as const;
 
-/** Spec §3.4: uploads 1 day, keyframes and shots 3 days, finished videos 14 days. */
+/**
+ * Uploads 1 day, photos and keyframes 3 days for everyone. Films: 3 days for accounts that never
+ * verified their email (bought without signing in), 30 days once verified (owner, 2026-10-15).
+ */
 export const RETENTION = {
   inputHours: 24,
   workDays: 3,
-  outputDays: 14,
+  guestFilmDays: 3,
+  memberFilmDays: 30,
   signedUrlSeconds: 3600,
 } as const;
+
+/** A paid film can be made again once for free while its photos still exist. */
+export const REMAKES_PER_FILM = 1;
 
 /** Spec 4.2 / 3.7. */
 export const DISPATCH = {

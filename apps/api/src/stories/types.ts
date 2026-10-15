@@ -7,7 +7,8 @@ import type { ChargeHold } from "../services/settle.ts";
 export type StorySpec = {
   id: string;
   owner: string;
-  userId: string;
+  /** null while a guest owns the story; set when the guest buys (and gets an account). */
+  userId: string | null;
   kind: Kind;
   scene: SceneId;
   names: string | null;
@@ -88,6 +89,8 @@ export type StoryState = {
   previewSettled: boolean;
   videoSettled: boolean;
   recomposeLeft: number;
+  /** Free remakes left (owner, 2026-10-15); absent on stories made before the change. */
+  remakeLeft?: number;
   output: { videoKey: string; posterKey: string } | null;
   errorCode: ErrorCode | null;
   finishedAt: number | null;

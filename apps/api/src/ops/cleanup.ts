@@ -7,8 +7,9 @@ async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<void> {
 }
 
 /**
- * Spec §3.4: a story's files go when it expires (R2 lifecycle rules are the backstop: in/ 1 day,
- * keep/ kf/ 3 days, shot/ out/ 15 days so a late title change still has its shots), and the row says so. Never assets/ or samples/.
+ * A story's files go when it expires: 3 days after the film for an unverified buyer, 30 for a
+ * verified account (owner, 2026-10-15). R2 lifecycle rules are the backstop: in/ 1 day, keep/ kf/
+ * 3 days (photos never outlive that), shot/ out/ 31 days. Never assets/ or samples/.
  */
 export async function cleanupExpired(env: Bindings, now: number): Promise<number> {
   const { results } = await env.DB.prepare(

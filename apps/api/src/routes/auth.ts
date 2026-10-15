@@ -2,6 +2,7 @@ import { RATE_LIMITS } from "@vzc/catalog";
 import {
   CodeLoginSchema,
   EmailLoginSchema,
+  GuestSignUpSchema,
   LinkLoginSchema,
   PasswordLoginSchema,
 } from "@vzc/contracts";
@@ -11,7 +12,7 @@ import { checkCode, issueCode, issueLinkToken, redeemLinkToken } from "../servic
 import { isDisposable } from "../services/disposable.ts";
 import { requireHuman } from "../services/human-pass.ts";
 import { hitRate } from "../services/limits.ts";
-import { completeLogin, safeNext } from "../services/login.ts";
+import { completeLogin, safeNext, guestSignUp as signUpGuest } from "../services/login.ts";
 import { sendMail } from "../services/mail.ts";
 import { hashPassword, verifyPassword } from "../services/password.ts";
 import { endSession, sha256Hex, startSession } from "../services/session.ts";
@@ -70,6 +71,29 @@ export async function requestEmailLogin(c: Context<AppEnv>) {
     },
   });
   return c.json({ sent: true }, 202);
+}
+
+/**
+ * Owner, 2026-10-15: pay without signing up. A new email becomes an unverified account and this
+ * browser is signed into it; an email that already has an account gets LOGIN_REQUIRED, and the
+ * page asks for the emailed code instead.
+ */
+export async function guestSignUp(c: Context<AppEnv>) {
+  const parsed = GuestSignUpSchema.safeParse(await body(c));
+  if (!parsed.success) return fail(c, "BAD_REQUEST");
+  const { email } = parsed.data;
+  const byIp = await limit(
+    c,
+    `rate:mail:ip:${c.get("ipSegmentHash")}`,
+    RATE_LIMITS.loginMailPerIpHour,
+  );
+  if (byIp) return byIp;
+  if (!(await requireHuman(c, "login"))) return fail(c, "CHALLENGE_REQUIRED");
+  if (await isDisposable(c.env, email)) return fail(c, "EMAIL_REJECTED");
+  const result = await signUpGuest(c, email);
+  if (!result.ok) return fail(c, "LOGIN_REQUIRED");
+  c.header("cache-control", "no-store");
+  return c.json({ ok: true }, 201);
 }
 
 export async function codeLogin(c: Context<AppEnv>) {

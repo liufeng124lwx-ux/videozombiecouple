@@ -330,6 +330,9 @@ export const en = {
   "error.LOGIN_REQUIRED": "Sign in to make your free preview. It takes a few seconds.",
   "error.NOT_READY": "Your preview isn’t ready yet. Wait for both frames, then try again.",
   "error.RECOMPOSE_USED": "You’ve already changed this video’s end title once.",
+  "error.REMAKE_USED": "You’ve already remade this film once.",
+  "error.PHOTOS_EXPIRED":
+    "Your photos have already been deleted for your privacy, so this film can’t be remade.",
   "error.FACE_NOT_FOUND":
     "We couldn’t find a clear face in one of the photos. Use a front-facing photo of one person. Nothing was charged.",
   "error.UNDERAGE": "This tool is only for photos of adults. Nothing was charged.",

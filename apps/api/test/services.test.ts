@@ -3,7 +3,7 @@ import { ROUTES } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { recordAttempt } from "../src/services/analytics.ts";
 import { providerKit } from "../src/services/provider-kit.ts";
-import { previewCounters, quotaStatus, reserveQuota } from "../src/services/quota.ts";
+import { quotaStatus, reserveQuota } from "../src/services/quota.ts";
 import { loadRoutes } from "../src/services/routes-store.ts";
 import { settle } from "../src/services/settle.ts";
 import type { Bindings } from "../src/types.ts";
@@ -106,10 +106,13 @@ describe("providerKit", () => {
 });
 
 describe("settle", () => {
-  it("commits the preview quota when a preview was delivered and returns it otherwise", async () => {
+  it("commits a quota hold when delivered and returns it otherwise", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;
-    const counters = previewCounters("u1", "i");
+    const counters = [
+      { name: "quota:test:user:u1", limit: 3 },
+      { name: "quota:test:ip:i", limit: 10 },
+    ];
     const names = counters.map((c) => c.name);
     await reserveQuota(env, counters, "ok");
     await reserveQuota(env, counters, "bad");

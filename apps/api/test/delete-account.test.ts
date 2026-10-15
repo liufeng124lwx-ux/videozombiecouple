@@ -45,7 +45,8 @@ describe("delete account (spec 5.5)", () => {
     const session = await signUpByCode(h, "ann@example.com");
     const { userId, owner } = userOf(h, "ann@example.com");
     const { spec } = await h.readyStory({ owner, userId, names: "Ann & Bo" });
-    expect([...h.r2.objects.keys()].some((k) => k.startsWith(`kf/${spec.id}/`))).toBe(true);
+    // Nothing is generated before payment; the kept photos are what must go.
+    expect([...h.r2.objects.keys()].some((k) => k.startsWith(`keep/${spec.id}/`))).toBe(true);
 
     const response = await h.call("/v1/account/delete", {
       method: "POST",
@@ -121,14 +122,15 @@ describe("delete account edge cases", () => {
       session,
     });
     expect(rendered.status).toBe(202);
-    const preview = await h.story({ owner, userId });
-    await preview.runner.start(preview.spec, h.noCharge);
+    const checked = await h.story({ owner, userId });
+    await checked.runner.start(checked.spec);
     await h.call("/v1/account/delete", { method: "POST", body: { confirm: "DELETE" }, session });
     await h.advance(200_000);
     expect(h.r2.objects.size).toBe(0);
     const statusOf = (id: string) => h.db.prepare("SELECT status FROM stories WHERE id=?").get(id);
     expect(statusOf(video.spec.id)).toEqual({ status: "failed" });
-    expect(statusOf(preview.spec.id)).toEqual({ status: "preview_failed" });
+    // A story that was only checked (never paid) has nothing running and nothing to give back.
+    expect(statusOf(checked.spec.id)).toEqual({ status: "preview_ready" });
     const types = h.db
       .prepare("SELECT type FROM credit_ledger WHERE user_id=? AND delta<>0 ORDER BY id")
       .all(userId)

@@ -15,6 +15,7 @@ import { liftKieCap } from "./kie-cap.ts";
 import { checkOrders } from "./orders.ts";
 import { anonymizeOld } from "./privacy.ts";
 import { checkHolds, checkLedger, checkWebhooks } from "./reconcile.ts";
+import { remindBeforeDeletion } from "./reminders.ts";
 import { checkStuck } from "./stuck.ts";
 
 export const CRONS = {
@@ -39,6 +40,7 @@ export const SCHEDULE: Record<string, [string, Task][]> = {
     // Spec 6.2: Waffo retries a failed delivery only 3 times; this keeps trying (up to 10).
     ["webhook-replay", async (env, now) => void (await replayPending(env, now))],
     ["cleanup", async (env, now) => void (await cleanupExpired(env, now))],
+    ["film-reminders", async (env, now) => void (await remindBeforeDeletion(env, now))],
     ["cost-spike", checkCostSpike],
     ["health", checkHealth],
   ],

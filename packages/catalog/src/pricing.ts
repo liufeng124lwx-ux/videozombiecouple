@@ -32,28 +32,24 @@ const primary = (routes: readonly RouteSeed[], capability: RouteSeed["capability
   return rs.filter((r) => r.rank === rank).reduce((sum, r) => sum + r.costUsd, 0);
 };
 
-/** Model cost of one free preview and one paid video on the primary routes. */
-export function storyCostUsd(routes: readonly RouteSeed[] = ROUTES): {
-  preview: number;
-  video: number;
-} {
+/** Model cost of one paid film on the primary routes: A/C candidates, B and every shot. */
+export function storyCostUsd(routes: readonly RouteSeed[] = ROUTES): { video: number } {
   const keyframe = primary(routes, "keyframe");
   return {
-    preview: keyframe * 2 * CANDIDATES_PER_FRAME,
-    video: keyframe + primary(routes, "shot") * STORYBOARD.length,
+    video: keyframe * (2 * CANDIDATES_PER_FRAME + 1) + primary(routes, "shot") * STORYBOARD.length,
   };
 }
 
 export type GuardViolation = { rule: "video_margin"; revenueUsd: number; costUsd: number };
 
-/** A paid video must pay for itself and its preview with margin, at the cheapest credit price. */
+/** A paid video must pay for itself with margin, at the cheapest credit price. */
 export function pricingGuard(
   routes: readonly RouteSeed[] = ROUTES,
   pMin = minCreditPrice(),
 ): GuardViolation[] {
   const cost = storyCostUsd(routes);
   const revenueUsd = TIERS.video.credits * pMin;
-  const costUsd = cost.preview + cost.video;
+  const costUsd = cost.video;
   return revenueUsd < costUsd * MARGIN_FACTOR
     ? [{ rule: "video_margin", revenueUsd, costUsd }]
     : [];

@@ -29,42 +29,42 @@ const step = (
   failKind: null,
 });
 
-/**
- * Spec §4.2 S0b–S2: check the two photos (one face each, adults) before any model sees them, then
- * two candidates each for keyframes A and C, then one scoring call to pick the best of each.
- */
+/** Before payment: only the check of the two photos (one face each, adults), on our own container. */
 export function previewSteps(): StepRecord[] {
-  const sources = step("score:sources", "score", "preview", []);
-  const kf = (["A", "C"] as const).flatMap((frame) =>
-    Array.from({ length: CANDIDATES_PER_FRAME }, (_, i) =>
-      step(`kf:${frame}:${i + 1}`, "kie", "preview", [sources.id], "keyframe"),
-    ),
-  );
-  return [
-    sources,
-    ...kf,
-    step(
-      "score:AC",
-      "score",
-      "preview",
-      kf.map((s) => s.id),
-    ),
-  ];
+  return [step("score:sources", "score", "preview", [])];
 }
 
-/** Spec §4.2 S3–S5: keyframe B, the shots (shot 3 ends on B, shot 5 starts from it), then compose. */
+/**
+ * After payment (owner, 2026-10-15: nothing is generated for free): two candidates each for
+ * keyframes A and C, one scoring call to pick the best of each, keyframe B from the picks, the
+ * shots (A/C shots need the picks, shots that start or end on B need B), then compose.
+ */
 export function videoSteps(): StepRecord[] {
+  const kf = (["A", "C"] as const).flatMap((frame) =>
+    Array.from({ length: CANDIDATES_PER_FRAME }, (_, i) =>
+      step(`kf:${frame}:${i + 1}`, "kie", "video", [], "keyframe"),
+    ),
+  );
+  const score = step(
+    "score:AC",
+    "score",
+    "video",
+    kf.map((s) => s.id),
+  );
+  const b = step("kf:B", "kie", "video", [score.id], "keyframe");
   const shots = STORYBOARD.map((shot) =>
     step(
       `shot:${shot.id}`,
       "kie",
       "video",
-      shot.first === "B" || shot.last === "B" ? ["kf:B"] : [],
+      shot.first === "B" || shot.last === "B" ? [b.id] : [score.id],
       "shot",
     ),
   );
   return [
-    step("kf:B", "kie", "video", [], "keyframe"),
+    ...kf,
+    score,
+    b,
     ...shots,
     step(
       "compose",
@@ -105,14 +105,16 @@ export function readySteps(state: StoryState): StepRecord[] {
 
 export function phaseOutcome(state: StoryState, phase: Phase): "running" | "succeeded" | "failed" {
   if (phase === "preview") {
-    if (state.steps["score:sources"]?.state === "failed") return "failed";
-    for (const frame of ["A", "C"] as const)
-      if (candidates(state, frame).every((s) => s.state === "failed")) return "failed";
-    const score = state.steps["score:AC"];
-    if (score?.state === "succeeded") return "succeeded";
-    return score?.state === "failed" ? "failed" : "running";
+    const check = state.steps["score:sources"];
+    if (check?.state === "failed") return "failed";
+    return check?.state === "succeeded" ? "succeeded" : "running";
   }
-  const steps = Object.values(state.steps).filter((s) => s.phase === "video");
+  // A failed candidate is fine while another of the same frame can still win.
+  for (const frame of ["A", "C"] as const)
+    if (candidates(state, frame).every((s) => s.state === "failed")) return "failed";
+  const steps = Object.values(state.steps).filter(
+    (s) => s.phase === "video" && !/^kf:[AC]:/.test(s.id),
+  );
   if (steps.some((s) => s.state === "failed")) return "failed";
   return state.steps.compose?.state === "succeeded" ? "succeeded" : "running";
 }

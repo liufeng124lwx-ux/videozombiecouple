@@ -14,10 +14,12 @@ describe("page facts", () => {
     expect(fact("video.seconds")).toBe("15");
     expect(fact("video.width")).toBe("720");
     expect(fact("video.height")).toBe("1280");
-    expect(fact("preview.daily")).toBe("3");
+    expect(() => fact("preview.daily")).toThrow();
+    expect(fact("remakes.perFilm")).toBe("1");
     expect(fact("candidates.perFrame")).toBe("2");
     expect(fact("retention.photosDays")).toBe("3");
-    expect(fact("retention.videoDays")).toBe("14");
+    expect(fact("retention.guestFilmDays")).toBe("3");
+    expect(fact("retention.memberFilmDays")).toBe("30");
   });
 
   it("fills {{key}} and fails on unknown keys", () => {

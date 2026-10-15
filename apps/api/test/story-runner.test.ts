@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COMPOSER_MAX_FAILURES } from "../src/durable-objects/story-runner.ts";
 import type { ComposeRequest, ComposerApi, ScoreResponse } from "../src/services/composer.ts";
 import { fakeComposer } from "../src/services/composer.ts";
-import { reserveQuota } from "../src/services/quota.ts";
 import type { ChargeHold } from "../src/services/settle.ts";
 import { setup } from "./harness.ts";
 
@@ -49,15 +48,6 @@ function scripted(
   return calls;
 }
 
-async function previewHold(
-  h: Awaited<ReturnType<typeof setup>>,
-  nonce: string,
-): Promise<ChargeHold> {
-  const counters = [{ name: "quota:preview:user:test", limit: 3 }];
-  expect(await reserveQuota(h.env as never, counters, nonce)).toBe(true);
-  return { kind: "quota", nonce, counters: counters.map((c) => c.name) };
-}
-
 async function creditHold(
   h: Awaited<ReturnType<typeof setup>>,
   storyId: string,
@@ -84,9 +74,6 @@ const stepAttempts = (h: Awaited<ReturnType<typeof setup>>, id: string) =>
     attempts: unknown[];
   }[];
 
-const quotaUsed = (h: Awaited<ReturnType<typeof setup>>) =>
-  h.limiters.instance("quota:preview:user:test").used();
-
 async function untilStatus(
   h: Awaited<ReturnType<typeof setup>>,
   runner: { view(): Promise<unknown> },
@@ -103,32 +90,28 @@ async function untilStatus(
 
 async function readyStory(h: Awaited<ReturnType<typeof setup>>) {
   const { spec, runner } = await h.story();
-  await runner.start(spec, await previewHold(h, spec.id));
+  await runner.start(spec);
   await untilStatus(h, runner, "preview_ready");
   return { spec, runner };
 }
 
 describe("StoryRunner", () => {
-  it("preview succeeds: four candidates, scored, picks set, quota committed", async () => {
+  it("before payment only the photos are checked: no keyframe, no model call", async () => {
     const h = await setup();
     const calls = scripted(h);
     const { spec, runner } = await h.story();
-    await runner.start(spec, await previewHold(h, spec.id));
-    const view = (await untilStatus(h, runner, "preview_ready")) as {
-      preview: { A: string; C: string } | null;
-    };
-    expect(view.preview?.A).toContain(`kf/${spec.id}/kf-A-1.jpg`);
-    expect(view.preview?.C).toContain(`kf/${spec.id}/kf-C-1.jpg`);
-    // One check of the two photos, then one scoring of the candidates.
-    expect(calls.score).toBe(2);
-    expect(await quotaUsed(h)).toBe(1);
+    await runner.start(spec);
+    const view = (await untilStatus(h, runner, "preview_ready")) as { preview: unknown };
+    expect(view.preview).toBeNull();
+    expect(calls.score).toBe(1);
+    expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);
     const row = h.db.prepare("SELECT status FROM stories WHERE id=?").get(spec.id) as {
       status: string;
     };
     expect(row.status).toBe("preview_ready");
   });
 
-  it("preview fails when every A candidate fails, and gives the quota back", async () => {
+  it("after payment: four candidates scored, picks set; every A candidate failing refunds", async () => {
     const reject = { kind: "fail", failMsg: "content policy violation" };
     const h = await setup({
       FAKE_SCRIPT: JSON.stringify(
@@ -141,18 +124,19 @@ describe("StoryRunner", () => {
       ),
     });
     scripted(h);
-    const { spec, runner } = await h.story();
-    await runner.start(spec, await previewHold(h, spec.id));
-    const view = (await untilStatus(h, runner, "preview_failed")) as { errorCode: string };
+    const { spec, runner } = await readyStory(h);
+    await runner.render(await creditHold(h, spec.id));
+    const view = (await untilStatus(h, runner, "failed")) as { errorCode: string };
     expect(view.errorCode).toBe("CONTENT_REJECTED");
-    expect(await quotaUsed(h)).toBe(0);
+    expect(h.wallet.calls).toContainEqual(["release", "test", spec.id, spec.id]);
   });
 
-  it("refuses to render before the preview is ready", async () => {
+  it("refuses to render before the photos are checked", async () => {
     const h = await setup();
-    scripted(h);
+    // The composer is briefly down: the check is retried later, the story is still checking.
+    scripted(h, { scoreErrors: 1 });
     const { spec, runner } = await h.story();
-    await runner.start(spec, await previewHold(h, spec.id));
+    await runner.start(spec);
     expect(await runner.render(h.noCharge)).toEqual({ ok: false, reason: "not_ready" });
   });
 
@@ -187,8 +171,8 @@ describe("StoryRunner", () => {
     const h = await setup();
     scripted(h);
     h.db
-      .prepare("INSERT INTO users(id,email,created_at) VALUES(?,?,?)")
-      .run("test", "ann@example.com", Date.now());
+      .prepare("INSERT INTO users(id,email,email_verified_at,created_at) VALUES(?,?,?,?)")
+      .run("test", "ann@example.com", Date.now(), Date.now());
     const { spec, runner } = await readyStory(h);
     await runner.render(await creditHold(h, spec.id));
     await untilStatus(h, runner, "done");
@@ -264,10 +248,10 @@ describe("StoryRunner", () => {
   it("poke is idempotent: repeated callbacks never resubmit or add attempts", async () => {
     const h = await setup();
     scripted(h);
-    const { spec, runner } = await h.story();
-    await runner.start(spec, await previewHold(h, spec.id));
+    const { spec, runner } = await readyStory(h);
+    await runner.render(await creditHold(h, spec.id));
     for (let i = 0; i < 5; i++) await runner.poke();
-    await untilStatus(h, runner, "preview_ready");
+    await untilStatus(h, runner, "done");
     for (let i = 0; i < 3; i++) await runner.poke();
     const steps = JSON.parse(
       (h.db.prepare("SELECT steps FROM stories WHERE id=?").get(spec.id) as { steps: string })
@@ -275,8 +259,33 @@ describe("StoryRunner", () => {
     ) as { id: string; attempts: unknown[] }[];
     for (const step of steps.filter((s) => s.id.startsWith("kf:A") || s.id.startsWith("kf:C")))
       expect(step.attempts).toHaveLength(1);
-    expect(((await runner.view()) as { status: string }).status).toBe("preview_ready");
-    expect(await quotaUsed(h)).toBe(1);
+    expect(h.wallet.calls.filter((c) => c[0] === "commit")).toHaveLength(1);
+  });
+
+  it("remakes a paid film once for free while the photos exist", async () => {
+    const h = await setup();
+    const calls = scripted(h);
+    const { spec, runner } = await readyStory(h);
+    await runner.render(await creditHold(h, spec.id));
+    await untilStatus(h, runner, "done");
+    const commits = h.wallet.calls.filter((c) => c[0] === "commit").length;
+    expect(await runner.remake()).toEqual({ ok: true });
+    const view = (await untilStatus(h, runner, "done")) as { remakeLeft: number };
+    expect(view.remakeLeft).toBe(0);
+    expect(calls.compose).toBe(2);
+    expect(h.wallet.calls.filter((c) => c[0] === "commit").length).toBe(commits);
+    expect(await runner.remake()).toEqual({ ok: false, reason: "used" });
+  });
+
+  it("refuses a remake once the photos are deleted", async () => {
+    const h = await setup();
+    scripted(h);
+    const { spec, runner } = await readyStory(h);
+    await runner.render(await creditHold(h, spec.id));
+    await untilStatus(h, runner, "done");
+    await h.r2.BUCKET.delete(spec.survivorKey);
+    expect(await runner.remake()).toEqual({ ok: false, reason: "photos_gone" });
+    expect(((await runner.view()) as { status: string }).status).toBe("done");
   });
 
   it("recompose reruns only compose, once, without another charge", async () => {
@@ -301,10 +310,9 @@ describe("StoryRunner", () => {
     const h = await setup();
     scripted(h, { score: { sourceFaces: { survivor: false, infected: true } } });
     const { spec, runner } = await h.story();
-    await runner.start(spec, await previewHold(h, spec.id));
+    await runner.start(spec);
     const view = (await untilStatus(h, runner, "preview_failed")) as { errorCode: string };
     expect(view.errorCode).toBe("FACE_NOT_FOUND");
-    expect(await quotaUsed(h)).toBe(0);
     // Checked before any model call: no keyframe was made.
     expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);
   });
@@ -313,7 +321,7 @@ describe("StoryRunner", () => {
     const h = await setup();
     scripted(h, { score: { minAge: 14 } });
     const { spec, runner } = await h.story();
-    await runner.start(spec, await previewHold(h, spec.id));
+    await runner.start(spec);
     const view = (await untilStatus(h, runner, "preview_failed")) as { errorCode: string };
     expect(view.errorCode).toBe("UNDERAGE");
     expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);

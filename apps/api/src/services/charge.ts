@@ -2,7 +2,6 @@ import { TIERS } from "@vzc/catalog";
 import type { Context } from "hono";
 import type { AppEnv, Bindings } from "../types.ts";
 import { limiter } from "./limits.ts";
-import { countersFor, reserveQuota } from "./quota.ts";
 import type { ChargeHold } from "./settle.ts";
 import { dailyCreditCap, reserveSpend, spendCounter } from "./spend-cap.ts";
 import { isSuspicious } from "./suspicion.ts";
@@ -20,25 +19,6 @@ export type Hold =
         | "PAUSED"
         | "DAILY_LIMIT";
     };
-
-/**
- * Spec §7: a free preview takes one use of the account's daily preview quota (and its IP
- * segment's). Suspicious identities and a paused free tier get no previews.
- */
-export async function holdPreview(c: Context<AppEnv>, storyId: string): Promise<Hold> {
-  const userId = c.get("userId");
-  if (!userId) return { ok: false, code: "LOGIN_REQUIRED" };
-  if (c.get("freePaused")) return { ok: false, code: "FREE_TIER_PAUSED" };
-  const who = { owner: c.get("owner"), userId, fpHash: c.get("fpHash") };
-  if (await isSuspicious(c.env, who)) return { ok: false, code: "PREVIEW_QUOTA_EXHAUSTED" };
-  const counters = countersFor(c);
-  if (!(await reserveQuota(c.env, counters, storyId)))
-    return { ok: false, code: "PREVIEW_QUOTA_EXHAUSTED" };
-  return {
-    ok: true,
-    charge: { kind: "quota", nonce: storyId, counters: counters.map((x) => x.name) },
-  };
-}
 
 /**
  * Spec §7: the video holds TIERS.video.credits from the wallet until it is delivered (commit) or

@@ -45,22 +45,29 @@ const set = (s: StoryState, id: string, st: StepState) => {
 const ids = (s: StoryState) => readySteps(s).map((x) => x.id);
 
 describe("story graph", () => {
-  it("checks the two photos (faces, age) before any keyframe is made", () => {
+  it("before payment only the two photos are checked; nothing is generated", () => {
     const s = state();
     expect(ids(s)).toEqual(["score:sources"]);
     set(s, "score:sources", "succeeded");
-    expect(ids(s)).toEqual(["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"]);
+    expect(ids(s)).toEqual([]);
+    expect(phaseOutcome(s, "preview")).toBe("succeeded");
   });
 
-  it("fails the preview when the photo check fails, before spending anything", () => {
+  it("a failed photo check ends the check phase", () => {
     const s = state();
     set(s, "score:sources", "failed");
     expect(phaseOutcome(s, "preview")).toBe("failed");
     expect(ids(s)).toEqual([]);
   });
 
+  it("after payment the keyframe candidates start first", () => {
+    const s = state({ status: "rendering" });
+    set(s, "score:sources", "succeeded");
+    expect(ids(s)).toEqual(["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"]);
+  });
+
   it("scoring waits for all candidates to end, and needs one A and one C", () => {
-    const s = state();
+    const s = state({ status: "rendering" });
     set(s, "score:sources", "succeeded");
     set(s, "kf:A:1", "succeeded");
     set(s, "kf:C:1", "succeeded");
@@ -71,31 +78,21 @@ describe("story graph", () => {
     expect(ids(s)).toEqual(["score:AC"]);
   });
 
-  it("preview fails as soon as every candidate of one frame failed", () => {
-    const s = state();
+  it("one failed candidate is fine; every candidate of a frame failing fails the film", () => {
+    const s = state({ status: "rendering" });
     set(s, "score:sources", "succeeded");
-    for (const id of ["kf:A:1", "kf:A:2"]) set(s, id, "failed");
-    set(s, "kf:C:1", "pending");
-    expect(phaseOutcome(s, "preview")).toBe("failed");
+    set(s, "kf:A:1", "failed");
+    expect(phaseOutcome(s, "video")).toBe("running");
+    set(s, "kf:A:2", "failed");
+    expect(phaseOutcome(s, "video")).toBe("failed");
   });
 
-  it("preview succeeds once scoring succeeded", () => {
-    const s = state();
-    set(s, "score:sources", "succeeded");
-    for (const id of ["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"]) set(s, id, "succeeded");
-    expect(phaseOutcome(s, "preview")).toBe("running");
-    set(s, "score:AC", "succeeded");
-    expect(phaseOutcome(s, "preview")).toBe("succeeded");
-  });
-
-  it("video steps are never ready during the preview", () => {
-    expect(readySteps(state()).some((x) => x.phase === "video")).toBe(false);
-  });
-
-  it("in the video phase shots 3 and 5 wait for keyframe B and compose waits for every shot", () => {
-    const s = state({ status: "rendering", picks: { A: "kf/S/a.jpg", C: "kf/S/c.jpg" } });
-    for (const id of ["score:sources", "kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2", "score:AC"])
+  it("B and the shots wait for the picked frames; shots 3 and 5 wait for B; compose for every shot", () => {
+    const s = state({ status: "rendering" });
+    for (const id of ["score:sources", "kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"])
       set(s, id, "succeeded");
+    expect(ids(s)).toEqual(["score:AC"]);
+    set(s, "score:AC", "succeeded");
     expect(ids(s).sort()).toEqual(["kf:B", "shot:1", "shot:2", "shot:4"]);
     set(s, "kf:B", "succeeded");
     expect(ids(s)).toContain("shot:3");

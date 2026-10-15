@@ -1,7 +1,6 @@
-import { ROUTES } from "@vzc/catalog";
+import { ROUTES, TIERS } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkStuck, stuckAfterMs } from "../src/ops/stuck.ts";
-import { previewCounters, reserveQuota } from "../src/services/quota.ts";
 import type { Bindings } from "../src/types.ts";
 import { setup } from "./harness.ts";
 
@@ -41,29 +40,41 @@ describe("stuck stories (spec 8.2)", () => {
     );
   });
 
-  it("wakes a stuck preview first, and gives up on it (with its quota back) the round after", async () => {
-    const h = await setup({ FAKE_SCRIPT: never("keyframe") });
+  it("wakes a stuck film first, and gives up on it (credits back) the round after", async () => {
+    const h = await setup({ FAKE_SCRIPT: never("keyframe"), FAKE_COMPOSER: "1" });
     const env = h.env as unknown as Bindings;
     const { spec, runner } = await h.story();
-    const counters = previewCounters(spec.userId, "ip");
-    expect(await reserveQuota(env, counters, spec.id)).toBe(true);
-    await runner.start(spec, {
-      kind: "quota",
-      nonce: spec.id,
-      counters: counters.map((c) => c.name),
+    await runner.start(spec);
+    const wallet = h.wallets.instance("test");
+    await wallet.grant("test", {
+      kind: "pack",
+      credits: 10,
+      expiresAt: null,
+      sourceRef: "o",
+      reason: "t",
     });
+    await wallet.reserve("test", spec.id, TIERS.video.credits, spec.id);
+    expect(
+      await runner.render({
+        kind: "credits",
+        userId: "test",
+        reservationId: spec.id,
+        reserved: TIERS.video.credits,
+      }),
+    ).toEqual({ ok: true });
+    h.db.prepare("UPDATE stories SET rendered_at=? WHERE id=?").run(START, spec.id);
     // Its calls never finish, and its alarm got lost.
     const entry = h.runners.entries.get(spec.id);
     entry?.store.clearAlarm();
-    const late = START + stuckAfterMs("previewing") + 1_000;
+    const late = START + stuckAfterMs("rendering") + 1_000;
     vi.setSystemTime(late);
     await checkStuck(env, late, async () => {});
     expect(entry?.store.alarmAt()).not.toBeNull();
     vi.setSystemTime(late + 300_000);
     entry?.store.clearAlarm();
     await checkStuck(env, late + 300_000, async () => {});
-    expect(status(h, spec.id)).toMatchObject({ status: "preview_failed", error_code: "TIMEOUT" });
-    expect(await h.limiters.instance(counters[0]?.name ?? "").used()).toBe(0);
+    expect(status(h, spec.id)).toMatchObject({ status: "failed", error_code: "TIMEOUT" });
+    expect(h.wallet.calls).toContainEqual(["release", "test", spec.id, spec.id]);
   });
 
   it("fails a preview whose runner never started as preview_failed, and says so", async () => {

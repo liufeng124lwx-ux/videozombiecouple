@@ -53,13 +53,14 @@ export async function passwordHashOf(db: D1Database, id: string): Promise<string
 }
 
 /**
- * Creates a verified account (every way in proves the email: a code, a link or Google). When a
- * concurrent sign-in created the same email first, returns that account instead (review focus 1).
+ * Creates an account. Sign-ins prove the email (a code, a link or Google) and create it verified;
+ * the guest sign-up before checkout creates it unverified (`verified: false`). When a concurrent
+ * request created the same email first, returns that account instead (review focus 1).
  */
 export async function createUser(
   db: D1Database,
   email: string,
-  fields: { googleSub?: string } = {},
+  fields: { googleSub?: string; verified?: boolean } = {},
 ): Promise<{ id: string; created: boolean }> {
   const normalized = normalizeEmail(email);
   const id = ulid();
@@ -69,7 +70,7 @@ export async function createUser(
       .prepare(
         "INSERT INTO users(id,email,google_sub,email_verified_at,created_at) VALUES(?,?,?,?,?)",
       )
-      .bind(id, normalized, fields.googleSub ?? null, now, now)
+      .bind(id, normalized, fields.googleSub ?? null, fields.verified === false ? null : now, now)
       .run();
   } catch (error) {
     const existing = await userByEmail(db, normalized);

@@ -10,17 +10,24 @@ import { identity } from "./middleware/identity.ts";
 import { requestId } from "./middleware/request-id.ts";
 import { session } from "./middleware/session.ts";
 import { account, ledger, removeAccount, setPassword } from "./routes/account.ts";
-import { codeLogin, linkLogin, logout, passwordLogin, requestEmailLogin } from "./routes/auth.ts";
+import {
+  codeLogin,
+  guestSignUp,
+  linkLogin,
+  logout,
+  passwordLogin,
+  requestEmailLogin,
+} from "./routes/auth.ts";
 import { billing, cancelPlan, changePlan, checkout, resumePlan } from "./routes/billing.ts";
 import { googleCallback, googleStart } from "./routes/google.ts";
 import { me } from "./routes/me.ts";
-import { quota } from "./routes/quota.ts";
 import {
   createStory,
   getSharedFilm,
   getStory,
   listStories,
   recomposeStory,
+  remakeStory,
   renderStory,
 } from "./routes/stories.ts";
 import { createUpload } from "./routes/uploads.ts";
@@ -43,6 +50,7 @@ app.get("/v1/me", me);
 app.post("/v1/auth/logout", logout);
 app.post("/v1/auth/email", requestEmailLogin);
 app.post("/v1/auth/code", codeLogin);
+app.post("/v1/auth/guest", guestSignUp);
 app.post("/v1/auth/link", linkLogin);
 app.post("/v1/auth/password", passwordLogin);
 app.post("/v1/account/password", setPassword);
@@ -56,13 +64,13 @@ app.post("/v1/billing/subscription/cancel", cancelPlan);
 app.post("/v1/billing/subscription/resume", resumePlan);
 app.get("/auth/google/start", googleStart);
 app.get("/auth/google/callback", googleCallback);
-app.get("/v1/quota", quota);
 app.post("/v1/uploads", createUpload);
 app.post("/v1/stories", createStory);
 app.get("/v1/stories", listStories);
 app.get("/v1/stories/:id", getStory);
 app.post("/v1/stories/:id/render", renderStory);
 app.post("/v1/stories/:id/recompose", recomposeStory);
+app.post("/v1/stories/:id/remake", remakeStory);
 app.get("/v1/share/:id", getSharedFilm);
 app.post("/webhooks/kie/:storyId", kieCallback);
 app.post("/webhooks/waffo", waffoWebhook);
