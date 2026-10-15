@@ -23,8 +23,10 @@ esac
 cd "$(dirname "$0")/.."
 root="$(pwd)"
 secrets="$HOME/.vzc-secrets"
-api() { (cd "$root/apps/api" && pnpm --silent exec wrangler "$@"); }
-web() { (cd "$root/apps/web" && pnpm --silent exec wrangler "$@"); }
+# Every step is idempotent; retry the Cloudflare API's occasional "fetch failed".
+retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "   (attempt $n failed, retrying)" >&2; sleep $((n * 5)); done; return 1; }
+api() { retry sh -c 'cd "$0/apps/api" && pnpm --silent exec wrangler "$@"' "$root" "$@"; }
+web() { retry sh -c 'cd "$0/apps/web" && pnpm --silent exec wrangler "$@"' "$root" "$@"; }
 value() { grep -E "^$1=" "$2" | head -1 | cut -d= -f2-; }
 
 # One HMAC key per environment, made once and kept.
