@@ -40,7 +40,7 @@ VideoZombieCouple 已于 2026-10-14 上线（正式站 videozombiecouple.com，�
 - [x] **setup-cloudflare.sh**：两个环境都跑过，D1、KV、R2 和 `vzc-backups` 都在，id 已填进 wrangler 配置。
 - [x] **真实照片评测**：用 AI 生成的成人示例照片做过评测（`docs/model-eval.md`）。真实用户照片的误判率要在上线后从运营数据看。
 - [x] **第二供应商**：暂不接，备用路由都是 kie 上的其他模型（Veo 3.1 Lite、Seedance 2 Mini）。
-- [ ] **Stripe 正式账号**：VideoZombieCouple 账号要先激活（业务资料、代表人验证，最后的“Agree and submit”由本人点），再接受正式环境的 Managed Payments 条款。之后：建受限密钥（只给 Checkout Sessions 写权限）写入 `~/.vzc-secrets/stripe-live-secret.txt`，运行 `node scripts/stripe-setup.ts live --yes`（建商品、webhook，签名密钥写入 `stripe-live-whsec.txt`），把输出的 `STRIPE_PRICES` 填进 `wrangler.production.jsonc`，再部署。
+- [ ] **Stripe 正式账号**：资料已提交（2026-10-15），审核中。正式受限密钥、三个正式商品、webhook 和 Managed Payments（状态：可以使用）都已就绪，`STRIPE_PRICES` 已填入 `wrangler.production.jsonc`。**还差**：① 代表人证件（护照）上传，在这之前收款是暂停的；② 审核通过后部署正式站，用真卡买一次 $4.99 再退款；③ 把密钥权限收窄到只剩 Checkout Sessions 写权限（商品、价格、webhook 已建好，运行时用不到）。
 - [ ] **法律页**：Terms、Privacy、Refund、DMCA 已上线；DMCA 登记还没加本站别名。
 - [ ] **密钥**：`scripts/launch-secrets.sh production` 仍缺 `WAFFO_PRIVATE_KEY`（等正式商户）、`TELEGRAM_*`（可选）、`ACCESS_*` 和 `ADMIN_EMAILS`（不设时管理后台是 404，等于关闭）、`CF_ANALYTICS_TOKEN`（每周用量报告）、R2 S3 key（不需要，文件走 `/files` 代理）。`ALERT_EMAIL` 已设。
 - [x] **GSC**：网域资源已验证，sitemap 已提交。

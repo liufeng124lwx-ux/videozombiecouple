@@ -94,6 +94,9 @@ describe("deployable configs (spec 1.4)", () => {
       SALE_PRODUCTS.map((p) => p.key).sort(),
     );
     expect(parse(production.vars, "rk_live_x")?.live).toBe(true);
+    expect(Object.keys(parse(production.vars, "rk_live_x")?.prices ?? {}).sort()).toEqual(
+      SALE_PRODUCTS.map((p) => p.key).sort(),
+    );
     expect(staging.vars.WAFFO_MODE).toBeUndefined();
     expect(production.vars.WAFFO_MODE).toBeUndefined();
   });
