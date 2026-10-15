@@ -72,6 +72,10 @@ if os.path.exists(sys.argv[4]):
 # Error reports (DSN of the Sentry project "api"); server-side GA4 events in production only.
 if os.path.exists(sys.argv[5]):
     out["SENTRY_DSN"] = json.load(open(sys.argv[5]))["api"]
+# Waffo private key of this environment's mode (test on staging, prod on production).
+pem = os.path.join(os.path.dirname(sys.argv[1]), "waffo-test.pem" if sys.argv[7] == "staging" else "waffo-prod.pem")
+if os.path.exists(pem):
+    out["WAFFO_PRIVATE_KEY"] = open(pem).read()
 if sys.argv[7] == "production" and os.path.exists(sys.argv[6]):
     out["GA4_API_SECRET"] = json.load(open(sys.argv[6]))["sec"]
 print(json.dumps(out))
