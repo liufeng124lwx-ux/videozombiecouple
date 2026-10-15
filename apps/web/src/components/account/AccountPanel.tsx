@@ -149,7 +149,9 @@ export default function AccountPanel({ navigate = (url: string) => location.assi
               const { token, next } = confirmLink;
               setConfirmLink(null);
               void redeem(token, next, true)
-                .then((stay) => stay && load())
+                .then(async (stay) => {
+                  if (stay) await load();
+                })
                 .catch((failure) => {
                   setNotice(messageOf(failure));
                   void load();
