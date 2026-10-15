@@ -20,7 +20,7 @@ GRADES = {
     "cold": "eq=saturation=0.72:contrast=1.06,colorbalance=bs=0.10:bm=0.06:bh=0.04:rs=-0.04",
     "warm": "eq=saturation=1.08,colorbalance=rs=0.08:rm=0.03:bs=-0.06",
     # First light in the ruins: still cool in the shadows, gold coming into the highlights.
-    "dawn": "eq=saturation=0.9,colorbalance=rs=0.04:rh=0.06:bs=0.05",
+    "dawn": "eq=saturation=0.98,colorbalance=rs=0.05:rm=0.04:rh=0.14:gh=0.05:bs=0.03:bh=-0.08",
 }
 
 

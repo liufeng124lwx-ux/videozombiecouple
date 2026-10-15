@@ -35,7 +35,7 @@ def test_the_ending_holds_the_last_frame_and_the_title_fades_in_over_it():
 
 def test_the_dawn_shot_has_its_own_grade():
     joined = " ".join(build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4"))
-    assert joined.count("colorbalance=rs=0.04:rh=0.06") == 1
+    assert joined.count("colorbalance=rs=0.05:rm=0.04:rh=0.14") == 1
 
 
 def test_poster_is_taken_one_second_into_the_memory_shot():
