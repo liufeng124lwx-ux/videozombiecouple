@@ -23,6 +23,7 @@ VideoZombieCouple 已于 2026-10-14 上线（正式站 videozombiecouple.com，�
 | Microsoft Clarity | 项目 VideoZombieCouple（与 UnblurPix 项目同一登录） | `yxv3ilksct`；故事工具整块屏蔽录制 |
 | Sentry | 组织 `videozombiecouple`，项目 `api`、`web` | DSN 在 secret / GitHub variable；峰值告警规则还没建（API 返回 404，请在后台建：同一问题 5 分钟 > 50 次 → 邮件） |
 | KIE | 正式和测试都用 `~/.vzc-secrets/eval.env` 里的密钥 | 每小时消费上限由你在 kie.ai 调高 |
+| AI zombie filter | `/ai-zombie-filter`：免费每天 1 张（每个网络每天 3 张），提示词 `portraitPrompt` v5（2026-10-15 在即梦测过），线上用 gpt-image-2；全站免费预算 $5/天，超了自动暂停免费功能 | 测试站已用真实流程生成 3 张：约 80–110 秒一张，每张 $0.015 |
 | SeeAPI | 上传照片 NSFW 检测（`nsfw-filter` / `image-moderation`），密钥在 `~/.vzc-secrets/seeapi.txt` 和 wrangler secret `SEEAPI_API_KEY`（测试站、正式站共用） | 每张约 0.01 credit；用量查 `GET https://api.seeapi.com/v1/usage`。两个环境都设了 `MODERATION_FAIL=closed`：检测不了的照片按退避重试，最终拦下（不收费）；去掉这个变量则重试 2 次后放行并报 Sentry |
 | Stripe | Arrayon 登录下单独新建的账号 **VideoZombieCouple**（`acct_1UQlpkK1NmwsUaE9`，选的是“独立账号”，不和 video2mp4 的 Arrayon 账号共享数据），沙盒 `acct_1UQlqEGZhLcYFqqh`。开了 **Managed Payments**：Stripe 当代收方，负责销售税/VAT、欺诈和争议，每笔另收 3.5%。商品税码 `txcd_10105001`（AI 云服务，个人使用）。登录用 AdsPower（SunBrowser）里固定美国 IP 的配置。 | 沙盒：三个商品、webhook 已建，测试站用测试卡实测付款到账和全额退款扣回积分。正式账号已能收款（2026-10-15），正式站已部署。Waffo 已停用。 |
 | GitHub | 仓库 `liufeng124lwx-ux/videozombiecouple`（**公开**） | secrets：`CLOUDFLARE_API_TOKEN`、`STAGING_SMOKE_KEY`、`STAGING_SMOKE_SESSION`；variables：账号 ID、Turnstile、Sentry web DSN、GA4、Clarity、`ADS_ENABLED=false` |

@@ -19,8 +19,8 @@ const { locale, h1, entry } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 const SIZES = "(min-width: 900px) 200px, 40vw";
-// Before → after examples: AI-generated people, made with the same prompt as the tool.
-const EXAMPLES = ["p01", "p06", "p08"];
+// Before → after examples: AI-generated people, made by this tool on staging (2026-10-15).
+const EXAMPLES = ["p03", "p05", "p08"];
 const examples = await Promise.all(
   EXAMPLES.map(async (id) => ({
     id,

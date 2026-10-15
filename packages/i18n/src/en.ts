@@ -141,7 +141,7 @@ export const en = {
   "photo.again": "Try another photo",
   "photo.examples.title": "Before and after",
   "photo.examples.note":
-    "AI-generated people, made with the same zombie look as the tool. Your own photo keeps your face.",
+    "AI-generated people, turned by this filter exactly as it runs, mark included. Your own photo keeps your face.",
   "photo.examples.before": "Example portrait before (AI-generated person)",
   "photo.examples.after": "The same AI-generated person as a zombie",
   "story.consent.terms": "Terms",
