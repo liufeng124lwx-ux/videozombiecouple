@@ -2,7 +2,13 @@ import { isLive, type LocaleId, PAGES, type PageConfig, pagePath } from "@vzc/ca
 
 export type NavLink = { label: string; href: string };
 
-const STORIES = ["home", "zombie-love-story-ai", "pet-zombie-video", "zombie-love-story-prompts"];
+const STORIES = [
+  "home",
+  "zombie-love-story-ai",
+  "pet-zombie-video",
+  "zombie-couple-halloween",
+  "zombie-love-story-prompts",
+];
 const COMPANY = ["pricing", "about", "contact", "privacy", "terms", "refund", "dmca"];
 
 const link = (page: PageConfig, locale: LocaleId): NavLink => ({

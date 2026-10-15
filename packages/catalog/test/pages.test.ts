@@ -76,6 +76,7 @@ describe("pages", () => {
       "home",
       "zombie-love-story-ai",
       "pet-zombie-video",
+      "zombie-couple-halloween",
       "pricing",
       "story",
       "account",
@@ -94,5 +95,16 @@ describe("pages", () => {
   it("build root-relative paths", () => {
     expect(pagePath(pageById("home") as PageConfig)).toBe("/");
     expect(pagePath(pageById("pricing") as PageConfig)).toBe("/pricing");
+  });
+
+  it("has a live Halloween costume post that points back to the tool (SEO review 2026-10-15)", () => {
+    const post = pageById("zombie-couple-halloween");
+    expect(post?.kind).toBe("blog");
+    expect(post?.locales.en).toMatchObject({
+      slug: "zombie-couple-halloween",
+      status: "live",
+      h1: "Zombie Couple Halloween Ideas",
+    });
+    expect(post?.related).toContain("home");
   });
 });
