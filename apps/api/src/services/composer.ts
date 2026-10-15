@@ -93,7 +93,12 @@ export function composerFor(env: Bindings, storyId = ""): ComposerApi {
         env.COMPOSER.idFromName(`composer-${shardOf(storyId)}`),
       ).fetch(`http://composer${path}`, init);
     else throw new Error("no composer configured");
-    if (!response.ok) throw new Error(`composer ${path}: HTTP ${response.status}`);
+    // Read every answer to the end, errors too: the container counts a request as running until
+    // its body is read, and never sleeps while one runs (docs/lessons.md, container sleep).
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")).slice(0, 200);
+      throw new Error(`composer ${path}: HTTP ${response.status} ${detail}`.trim());
+    }
     return (await response.json()) as T;
   };
   return {

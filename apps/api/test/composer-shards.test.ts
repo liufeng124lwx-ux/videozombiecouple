@@ -42,4 +42,35 @@ describe("composer instances", () => {
     });
     expect(names.at(-1)).toBe(names[0]);
   });
+
+  it("reads every container answer to the end, errors included, so the instance can go to sleep", async () => {
+    // @cloudflare/containers counts a request as running until its body is read or cancelled, and
+    // never sleeps while one runs (video2mp4 kept 6 instances awake for 13 days this way).
+    const answers: Response[] = [];
+    const reply = (status: number, body: unknown) => {
+      const response = Response.json(body, { status });
+      answers.push(response);
+      return response;
+    };
+    const queue = [
+      () => reply(503, { error: "busy" }),
+      () => reply(500, { error: "boom" }),
+      () => reply(200, { ok: true, durationSec: 15 }),
+    ];
+    const env = {
+      COMPOSER: {
+        idFromName: (name: string) => name,
+        get: () => ({ fetch: async () => (queue.shift() as () => Response)() }),
+      },
+    } as unknown as Bindings;
+    const compose = () =>
+      composerFor(env, "01AAAAAAAAAAAAAAAAAAAAAAAA").compose({
+        keys: [],
+      } as never);
+    await expect(compose()).rejects.toThrow(/503/);
+    await expect(compose()).rejects.toThrow(/500/);
+    await compose();
+    expect(answers).toHaveLength(3);
+    for (const answer of answers) expect(answer.bodyUsed).toBe(true);
+  });
 });

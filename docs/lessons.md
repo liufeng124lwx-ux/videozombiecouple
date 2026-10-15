@@ -142,3 +142,9 @@ docker run --rm --cpus=2 --memory=7g --shm-size=1g -v /tmp/repo.tar:/repo.tar:ro
 - 部署 token 没有重定向规则权限（rulesets 报 Authentication error）；www→apex 的 301 规则是用 dashboard 会话建的。改规则要么在 dashboard 操作，要么给 token 加 "Dynamic URL Redirects"。
 - 上传归属于 `vid` cookie：smoke 脚本必须像浏览器一样带上 API 下发的 `vid`，否则建故事返回 403 FORBIDDEN。
 - Email Sending 在账号级页面接入（Email Service → Email Sending → Onboard Domain），zone 级页面在新 zone 上是空白的。每日发送配额 200 封，和同账号的其他站共用。
+
+## Cloudflare 容器与账单（2026-10-15）
+- **调用容器拿到的每个 Response 都要读完**（`json()` / `text()`）或 `body.cancel()`。`@cloudflare/containers` 把 body 没读完的请求算作「进行中」，有进行中的请求就永远不执行 `sleepAfter`，实例一直开到下次部署。`composerFor` 原来遇到非 2xx 直接抛异常不读 body，已修，`test/composer-shards.test.ts` 断言每个 Response 的 `bodyUsed`。同账号的 video2mp4 就因为这个 3+3 个实例常开 13 天，见 Obsidian「20-Cloudflare费用与容器控制」。
+- 部署会重启实例，部署后实例为 0 不能证明修好：要等真实请求把它叫醒，再看 10 分钟（`sleepAfter`）后能不能自己回到 0（`wrangler containers list`）。
+- 这个 Cloudflare 账号的账单和 video2mp4（`v2m-*`）混在一起，看 Billable usage 前先按应用分清是谁在花钱。
+- R2 生命周期不跟仓库走：线上规则曾经是 15 天，而页面承诺 30 天。现在 `deploy.sh` 每次部署都应用 `infra/r2-lifecycle.json`。
