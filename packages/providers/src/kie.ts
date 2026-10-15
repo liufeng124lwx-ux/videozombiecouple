@@ -83,6 +83,9 @@ export function buildKieInput(route: RouteSeed, input: TaskInput): Record<string
 const CONTENT = /nsfw|content polic|safety|violat|sensitive|prohibited/i;
 const KEY_DAILY_CAP = /exceeded the daily limit/i;
 const TIMEOUT = /time(d)? ?out/i;
+/** kie could not download our input (a passing network fault): another try or model will work. */
+const INPUT_FETCH =
+  /\b(image|file|input)\b[^.]{0,40}\b(fetch|download)\w*\s+fail|fail\w*\s+to\s+(fetch|download)/i;
 
 /** Spec 4.3. Message checks come before 400/422 so a rejected photo still switches models. */
 export function classifyKie(fail: { code?: number | string; msg?: string }): FailKind {
@@ -93,6 +96,7 @@ export function classifyKie(fail: { code?: number | string; msg?: string }): Fai
   if (code === 429) return "rate_limited";
   if (CONTENT.test(msg)) return "content_rejected";
   if (TIMEOUT.test(msg)) return "timeout";
+  if (INPUT_FETCH.test(msg)) return "provider_error";
   if (code === 400 || code === 422) return "invalid";
   return "provider_error";
 }

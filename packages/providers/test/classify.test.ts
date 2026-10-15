@@ -23,6 +23,15 @@ describe("classifyKie (spec 4.3)", () => {
     [{ code: 500, msg: "server error" }, "provider_error"],
     [{ code: "NO_OUTPUT", msg: "kie reported success without result URLs" }, "provider_error"],
     [{ code: 422, msg: "content policy violation" }, "content_rejected"],
+    // Seen on staging 2026-10-15: kie could not download our signed input once; the next try worked.
+    [
+      {
+        code: 400,
+        msg: "Image fetch failed. Check access settings or use our File Upload API instead.",
+      },
+      "provider_error",
+    ],
+    [{ code: 422, msg: "Failed to download the input image" }, "provider_error"],
   ] as const)("%j → %s", (fail, kind) => {
     expect(classifyKie(fail)).toBe(kind);
   });

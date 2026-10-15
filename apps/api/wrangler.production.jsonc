@@ -35,6 +35,8 @@
     "Composer": { "type": "durable-object", "storage": "sqlite" }
   },
   // Spec §3: apps/composer (ffmpeg + face scoring); scales to zero when idle.
+  // Workers Logs: console output and exceptions, searchable in the dashboard (included in the plan).
+  "observability": { "enabled": true },
   "containers": [
     {
       "class_name": "Composer",
