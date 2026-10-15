@@ -377,13 +377,18 @@
   .render-set {
     grid-template-columns: minmax(0, 340px) minmax(0, 420px);
     gap: 48px;
+  }
+  .render-set .monitor {
+    width: 100%;
     align-items: start;
   }
 }
 .monitor {
   position: relative;
   aspect-ratio: 9 / 16;
-  max-height: 72vh;
+  /* Short enough on a phone that the shot list starts on the first screen. */
+  width: min(100%, calc(52svh * 9 / 16));
+  justify-self: center;
   overflow: hidden;
   background: #07090c;
   box-shadow:
