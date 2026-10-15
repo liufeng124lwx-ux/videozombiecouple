@@ -135,3 +135,10 @@ docker run --rm --cpus=2 --memory=7g --shm-size=1g -v /tmp/repo.tar:/repo.tar:ro
   - 原因：首屏照片铺满背景，用户只是去点上传按钮或往下滚，鼠标也会经过照片，所以对比几乎都是误触发，打断了用户读标题、找按钮。
   - 做法：首屏只自动循环，不监听指针。前后对比只在用户主动操作的地方提供（效果画廊、工作台滑块）。
   - 守护：`apps/web/src/lib/hero.test.ts`「ignores the pointer」，以及 browser-check「the hero ignores the pointer」。
+
+## 上线 VideoZombieCouple（2026-10-14）
+- 新 zone 卡在 initializing（activation_check 报 81163）：要把 dashboard 的接入向导走完（选 Free 计划 → DNS 记录页 Continue to activation → 确认），状态才变 pending，再触发 activation_check。
+- wrangler 偶发 `fetch failed`：步骤都是幂等的，`scripts/deploy.sh` 对每条 wrangler 命令重试 3 次。
+- 部署 token 没有重定向规则权限（rulesets 报 Authentication error）；www→apex 的 301 规则是用 dashboard 会话建的。改规则要么在 dashboard 操作，要么给 token 加 "Dynamic URL Redirects"。
+- 上传归属于 `vid` cookie：smoke 脚本必须像浏览器一样带上 API 下发的 `vid`，否则建故事返回 403 FORBIDDEN。
+- Email Sending 在账号级页面接入（Email Service → Email Sending → Onboard Domain），zone 级页面在新 zone 上是空白的。每日发送配额 200 封，和同账号的其他站共用。
