@@ -72,6 +72,10 @@ if os.path.exists(sys.argv[4]):
 # Error reports (DSN of the Sentry project "api"); server-side GA4 events in production only.
 if os.path.exists(sys.argv[5]):
     out["SENTRY_DSN"] = json.load(open(sys.argv[5]))["api"]
+# Upload moderation (SeeAPI NSFW filter), one key for both environments.
+seeapi = os.path.join(os.path.dirname(sys.argv[1]), "seeapi.txt")
+if os.path.exists(seeapi):
+    out["SEEAPI_API_KEY"] = open(seeapi).read().strip()
 # Stripe (Managed Payments) of this environment's mode: test keys on staging, live on production.
 stripe = os.path.join(os.path.dirname(sys.argv[1]), "stripe-test" if sys.argv[7] == "staging" else "stripe-live")
 if os.path.exists(stripe + "-secret.txt"):

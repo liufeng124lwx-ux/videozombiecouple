@@ -355,6 +355,47 @@ describe("StoryRunner", () => {
     expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);
   });
 
+  it("fails the preview with PHOTO_REJECTED when moderation flags an upload", async () => {
+    const h = await setup();
+    scripted(h);
+    const checked: string[] = [];
+    h.env.MODERATION_IMPL = {
+      async check(url: string) {
+        checked.push(url);
+        return url.includes("infected")
+          ? { flagged: true, labels: ["explicit_nudity"] }
+          : { flagged: false, labels: [] };
+      },
+    };
+    const { spec, runner } = await h.story();
+    await runner.start(spec);
+    const view = (await untilStatus(h, runner, "preview_failed")) as { errorCode: string };
+    expect(view.errorCode).toBe("PHOTO_REJECTED");
+    expect(checked).toHaveLength(2);
+  });
+
+  it("lets the photos through when moderation is down (fail open), and can be set to fail closed", async () => {
+    const down = {
+      async check(): Promise<never> {
+        throw new Error("seeapi: inference_failed");
+      },
+    };
+    const open = await setup();
+    scripted(open);
+    open.env.MODERATION_IMPL = down;
+    const a = await open.story();
+    await a.runner.start(a.spec);
+    await untilStatus(open, a.runner, "preview_ready");
+
+    const closed = await setup({ MODERATION_FAIL: "closed" });
+    scripted(closed);
+    closed.env.MODERATION_IMPL = down;
+    const b = await closed.story();
+    await b.runner.start(b.spec);
+    const view = (await untilStatus(closed, b.runner, "preview_failed")) as { errorCode: string };
+    expect(view.errorCode).toBe("PROVIDER_DOWN");
+  });
+
   it("render twice reserves once", async () => {
     const h = await setup();
     scripted(h);

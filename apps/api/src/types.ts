@@ -3,6 +3,7 @@ import type { RateLimiter } from "./durable-objects/rate-limiter.ts";
 import type { StoryRunner } from "./durable-objects/story-runner.ts";
 import type { Wallet } from "./durable-objects/wallet.ts";
 import type { ComposerApi } from "./services/composer.ts";
+import type { ModerationApi } from "./services/moderation.ts";
 
 export interface Bindings {
   DB: D1Database;
@@ -19,6 +20,12 @@ export interface Bindings {
   FAKE_COMPOSER?: string;
   /** Tests only: a scripted composer. */
   COMPOSER_IMPL?: ComposerApi;
+  /** Upload moderation (SeeAPI); moderation is off without it. */
+  SEEAPI_API_KEY?: string;
+  /** "closed": a photo moderation could not check fails the preview. Default open (let through). */
+  MODERATION_FAIL?: string;
+  /** Tests only: a scripted moderation. */
+  MODERATION_IMPL?: ModerationApi;
   WALLET: DurableObjectNamespace<Wallet>;
   ANALYTICS?: AnalyticsEngineDataset;
   /** https://videozombiecouple.com (staging: https://staging.videozombiecouple.com). */

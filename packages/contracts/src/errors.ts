@@ -31,6 +31,7 @@ export const ERROR_CODES = [
   "RECOMPOSE_USED",
   "FACE_NOT_FOUND",
   "UNDERAGE",
+  "PHOTO_REJECTED",
   "COMPOSE_FAILED",
   "INTERNAL",
 ] as const;
@@ -72,6 +73,7 @@ export const ERROR_CHARGE: Record<ErrorCode, ChargeEffect> = {
   RECOMPOSE_USED: "none",
   FACE_NOT_FOUND: "refunded",
   UNDERAGE: "refunded",
+  PHOTO_REJECTED: "refunded",
   COMPOSE_FAILED: "refunded",
   INTERNAL: "refunded",
 };

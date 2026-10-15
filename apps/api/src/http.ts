@@ -37,6 +37,7 @@ export const ERROR_STATUS: Record<ErrorCode, ContentfulStatusCode> = {
   PHOTOS_EXPIRED: 410,
   FACE_NOT_FOUND: 422,
   UNDERAGE: 422,
+  PHOTO_REJECTED: 422,
   COMPOSE_FAILED: 503,
   INTERNAL: 500,
 };

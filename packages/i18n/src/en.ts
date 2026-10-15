@@ -373,6 +373,8 @@ export const en = {
   "error.FACE_NOT_FOUND":
     "We couldn’t find a clear face in one of the photos. Use a front-facing photo of one person. Nothing was charged.",
   "error.UNDERAGE": "This tool is only for photos of adults. Nothing was charged.",
+  "error.PHOTO_REJECTED":
+    "One of these photos can't be used: please choose a clothed, everyday photo. Nothing was charged.",
   "error.COMPOSE_FAILED": "We couldn’t finish your video. Your credits were given back. Try again.",
   "error.INTERNAL": "Something went wrong on our side. Nothing was charged. Try again.",
   "error.NETWORK":

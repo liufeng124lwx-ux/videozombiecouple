@@ -25,9 +25,11 @@ import { type ComposerApi, composerFor } from "../services/composer.ts";
 import { callbackToken } from "../services/crypto.ts";
 import { filmMail } from "../services/film-mail.ts";
 import { sendMail } from "../services/mail.ts";
+import { moderationFor } from "../services/moderation.ts";
 import { type ProviderKit, providerKit } from "../services/provider-kit.ts";
 import { presign } from "../services/r2-presign.ts";
 import { loadRoutes } from "../services/routes-store.ts";
+import { report } from "../services/sentry.ts";
 import { type ChargeHold, settle } from "../services/settle.ts";
 import {
   activePhase,
@@ -51,6 +53,8 @@ const MAX_FALLBACKS = 2;
 const COMPOSER_RETRY_MS = 30_000;
 const COMPOSER_RETRY_MAX_MS = 15 * 60_000;
 export const COMPOSER_MAX_FAILURES = 5;
+/** Moderation outages retried this many times before a photo is let through unchecked. */
+const MODERATION_RETRIES = 2;
 
 /** The shot list a renter watches: keyframes (and their scoring), each shot, the final cut. */
 export function stagesOf(steps: StepRecord[]): StageView[] {
@@ -657,16 +661,25 @@ export class StoryRunner extends DurableObject<Bindings> {
   async #checkSources(state: StoryState, step: StepRecord): Promise<void> {
     const { spec } = state;
     const pet = spec.kind === "pet";
-    const result = await this.#composer().score({
-      sources: {
-        survivor: await this.#url(spec.survivorKey),
-        infected: pet ? null : await this.#url(spec.infectedKey),
-      },
-      candidates: [],
-      requiredFaces: { A: [], B: [], C: [] },
-      checkAge: true,
-    });
+    const sources = {
+      survivor: await this.#url(spec.survivorKey),
+      infected: pet ? null : await this.#url(spec.infectedKey),
+    };
+    const [result, flagged] = await Promise.all([
+      this.#composer().score({
+        sources,
+        candidates: [],
+        requiredFaces: { A: [], B: [], C: [] },
+        checkAge: true,
+      }),
+      this.#moderate(state, step, sources),
+    ]);
     step.nextRunAt = null;
+    if (flagged) {
+      step.state = "failed";
+      step.error = "PHOTO_REJECTED";
+      return;
+    }
     if (!result.sourceFaces.survivor || (!pet && result.sourceFaces.infected === false)) {
       step.state = "failed";
       step.error = "FACE_NOT_FOUND";
@@ -678,6 +691,45 @@ export class StoryRunner extends DurableObject<Bindings> {
       return;
     }
     step.state = "succeeded";
+  }
+
+  /**
+   * Upload moderation beside the face check: true when a photo is flagged. A photo that could not
+   * be checked is retried with the step's backoff, then let through and reported (the video
+   * models' own filters still apply); MODERATION_FAIL=closed keeps retrying and fails instead.
+   */
+  async #moderate(
+    state: StoryState,
+    step: StepRecord,
+    sources: { survivor: string; infected: string | null },
+  ): Promise<boolean> {
+    const api = moderationFor(this.env);
+    if (!api) return false;
+    const photos = Object.entries(sources).filter((e): e is [string, string] => e[1] !== null);
+    const verdicts = await Promise.all(
+      photos.map(([, url]) => api.check(url).catch((error: unknown) => error as Error)),
+    );
+    let flagged = false;
+    for (const [i, verdict] of verdicts.entries()) {
+      const photo = photos[i]?.[0];
+      if (verdict instanceof Error) {
+        if (this.env.MODERATION_FAIL === "closed" || step.failures < MODERATION_RETRIES)
+          throw verdict;
+        report(this.env, verdict, { task: `moderation:${photo}` });
+        continue;
+      }
+      console.log(
+        JSON.stringify({
+          level: "info",
+          storyId: state.spec.id,
+          moderation: photo,
+          flagged: verdict.flagged,
+          labels: verdict.labels,
+        }),
+      );
+      flagged ||= verdict.flagged;
+    }
+    return flagged;
   }
 
   async #score(state: StoryState, step: StepRecord): Promise<void> {
@@ -824,7 +876,8 @@ export class StoryRunner extends DurableObject<Bindings> {
       (s) => s.phase === phase && s.state === "failed",
     );
     for (const s of failed) {
-      if (s.error === "FACE_NOT_FOUND" || s.error === "UNDERAGE") return s.error;
+      if (s.error === "FACE_NOT_FOUND" || s.error === "UNDERAGE" || s.error === "PHOTO_REJECTED")
+        return s.error;
       if (s.kind === "compose") return "COMPOSE_FAILED";
     }
     const last = failed.find((s) => s.failKind !== null);
