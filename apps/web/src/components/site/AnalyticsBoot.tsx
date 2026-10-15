@@ -19,9 +19,14 @@ export default function AnalyticsBoot({ pageId, kind, locale }: Props) {
     void loadMe().then((me) => {
       const stored = storedConsent();
       const consent = effectiveConsent(stored, me?.consentRequired ?? true);
-      startAnalytics({ lang: locale, page_id: pageId, user_kind: userKind(me) }, consent, undefined, {
-        explicit: stored === "granted",
-      });
+      startAnalytics(
+        { lang: locale, page_id: pageId, user_kind: userKind(me) },
+        consent,
+        undefined,
+        {
+          explicit: stored === "granted",
+        },
+      );
       const view = kind ? VIEW_EVENTS[kind] : undefined;
       if (view) track(view);
     });
