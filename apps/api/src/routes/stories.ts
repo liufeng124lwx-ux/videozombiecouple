@@ -76,6 +76,13 @@ export async function createStory(c: Context<AppEnv>) {
     60_000,
   );
   if (!rate.allowed) return fail(c, "RATE_LIMITED", rate.retryAfterSec);
+  const daily = await hitRate(
+    c.env,
+    `rate:stories:ip:${c.get("ipSegmentHash")}`,
+    RATE_LIMITS.storiesPerIpDay,
+    86_400_000,
+  );
+  if (!daily.allowed) return fail(c, "RATE_LIMITED", daily.retryAfterSec);
   if (!(await requireHuman(c))) return fail(c, "CHALLENGE_REQUIRED");
   const owner = c.get("owner");
   const existing = await storyByKey(c.env.DB, owner, request.idempotencyKey);

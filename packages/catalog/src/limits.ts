@@ -16,6 +16,10 @@ export const RATE_LIMITS = {
   guestJobsPerMinute: 5,
   userJobsPerMinute: 20,
   loginMailPerEmailHour: 5,
+  /** Nobody's inbox gets more than this many sign-in emails a day, whoever asks. */
+  loginMailPerEmailDay: 10,
+  /** Stories one network (IP range) can start a day: each costs a photo check (container, SeeAPI). */
+  storiesPerIpDay: 30,
   loginMailPerIpHour: 20,
   codeMaxAttempts: 5,
   statusPerSecond: 5,
@@ -135,7 +139,7 @@ export const BUDGETS = {
 /** Cost guardrails spec 4: credits one account may spend per UTC day. */
 export const SPEND_CAPS = {
   /** Accounts whose first paid order is under `newPayerDays` old, or who never paid. */
-  newPayerDailyCredits: 300,
+  newPayerDailyCredits: 50,
   newPayerDays: 7,
   dailyCredits: 1200,
 } as const;

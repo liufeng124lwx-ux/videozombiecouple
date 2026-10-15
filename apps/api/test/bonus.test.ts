@@ -116,6 +116,14 @@ describe("suspicious marks (spec 7.3)", () => {
     expect(await isSuspicious(env, { owner: "g:other", userId: null, fpHash: "fp1" })).toBe(true);
   });
 
+  it("counts photos refused for nudity or age as rejections too", async () => {
+    const h = await setup();
+    const env = h.env as unknown as Bindings;
+    rejected(h, 6, "g:nsfw", "fpn");
+    h.db.prepare("UPDATE stories SET error_code='PHOTO_REJECTED' WHERE owner='g:nsfw'").run();
+    expect(await noteRejections(env, { owner: "g:nsfw", userId: null, fpHash: null })).toBe(true);
+  });
+
   it("marks a guest by owner when there is no device fingerprint", async () => {
     const h = await setup();
     const env = h.env as unknown as Bindings;

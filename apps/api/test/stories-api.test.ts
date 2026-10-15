@@ -1,8 +1,9 @@
-import { RETENTION, TIERS } from "@vzc/catalog";
+import { RATE_LIMITS, RETENTION, TIERS } from "@vzc/catalog";
 import { UPLOAD_CONSENT_VERSION, WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { callbackToken } from "../src/services/crypto.ts";
-import { HMAC_KEY, setup, storyBody } from "./harness.ts";
+import { ipSegment } from "../src/middleware/identity.ts";
+import { callbackToken, hashIdentity } from "../src/services/crypto.ts";
+import { HMAC_KEY, IP, setup, storyBody } from "./harness.ts";
 import { stripeEnv } from "./stripe-kit.ts";
 
 const T0 = Date.UTC(2026, 9, 14, 12);
@@ -130,6 +131,24 @@ describe("story API", () => {
       headers: { "cf-ipcountry": "US", "cf-region-code": "NY" },
     });
     expect(ny.status).toBe(201);
+  });
+
+  it("caps how many stories one network can start in a day (each costs a photo check)", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    await h.pass();
+    const ipp = await hashIdentity(`ip:${ipSegment(IP)}`, HMAC_KEY);
+    // The network already started its day's worth.
+    for (let i = 0; i < RATE_LIMITS.storiesPerIpDay; i++)
+      await hitRate(
+        h.env as unknown as Bindings,
+        `rate:stories:ip:${ipp}`,
+        RATE_LIMITS.storiesPerIpDay,
+        86_400_000,
+      );
+    const a = await h.upload();
+    const b = await h.upload();
+    const res = await h.call("/v1/stories", { method: "POST", body: storyBody(a, b) });
+    expect(res.body.error?.code).toBe("RATE_LIMITED");
   });
 
   it("rejects another browser's upload", async () => {

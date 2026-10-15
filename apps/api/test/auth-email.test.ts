@@ -1,3 +1,4 @@
+import { RATE_LIMITS } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashIdentity } from "../src/services/crypto.ts";
 import { HMAC_KEY, setup } from "./harness.ts";
@@ -117,6 +118,18 @@ describe("email sign-in (spec 5.1)", () => {
     expect(h.db.prepare("SELECT user_id FROM stories WHERE id='S1'").get()).toEqual({
       user_id: "",
     });
+  });
+
+  it("sends one address at most a day's worth of sign-in emails, however the hours are spread", async () => {
+    const { h, ask } = await ready();
+    let sent = 0;
+    for (let hour = 0; hour < 6; hour++) {
+      for (let i = 0; i < RATE_LIMITS.loginMailPerEmailHour; i++)
+        if ((await ask()).status === 202) sent++;
+      vi.setSystemTime(Date.now() + 3_600_000 + 1);
+      await h.pass();
+    }
+    expect(sent).toBe(RATE_LIMITS.loginMailPerEmailDay);
   });
 
   it("signs in an existing account by link, once", async () => {

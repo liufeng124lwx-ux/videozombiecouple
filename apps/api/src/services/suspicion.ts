@@ -32,13 +32,16 @@ export async function isSuspicious(env: Bindings, who: Who): Promise<boolean> {
   return who.fpHash !== null && (await flagged(env, deviceKey(who.fpHash)));
 }
 
-/** Spec 7.3: more than 5 rejected jobs in 24 hours marks the account (or guest) and the device. */
+/**
+ * Spec 7.3: more than 5 rejected jobs in 24 hours (a model refused it, or the photo check found nudity
+ * or a minor) marks the account (or guest) and the device.
+ */
 export async function noteRejections(env: Bindings, who: Who): Promise<boolean> {
   const since = Date.now() - ABUSE.rejectionWindowMs;
   const rejections = async (column: "owner" | "fp_hash", value: string) =>
     (
       await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM stories WHERE ${column}=? AND error_code='CONTENT_REJECTED' AND created_at>?`,
+        `SELECT COUNT(*) AS n FROM stories WHERE ${column}=? AND error_code IN ('CONTENT_REJECTED','PHOTO_REJECTED','UNDERAGE') AND created_at>?`,
       )
         .bind(value, since)
         .first<{ n: number }>()

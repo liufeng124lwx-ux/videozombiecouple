@@ -54,6 +54,13 @@ export async function requestEmailLogin(c: Context<AppEnv>) {
     RATE_LIMITS.loginMailPerEmailHour,
   );
   if (byEmail) return byEmail;
+  const byEmailDay = await hitRate(
+    c.env,
+    `rate:mail:email-day:${await sha256Hex(email)}`,
+    RATE_LIMITS.loginMailPerEmailDay,
+    86_400_000,
+  );
+  if (!byEmailDay.allowed) return fail(c, "RATE_LIMITED", byEmailDay.retryAfterSec);
   if (!(await userByEmail(c.env.DB, email)) && (await isDisposable(c.env, email)))
     return fail(c, "EMAIL_REJECTED");
   const code = await issueCode(c.env, email);
