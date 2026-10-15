@@ -18,20 +18,26 @@ if (!api || !site) {
 }
 const staging = api.includes("staging");
 const sessionCookie = staging ? "upx_sess_stg" : "upx_sess";
+/** The visitor id the API hands out; uploads belong to it, like a browser's cookie jar. */
+let vid = "";
 
 async function call(path: string, init: RequestInit = {}) {
-  return fetch(`${api}${path}`, {
+  const cookies = [
+    ...(process.env.SMOKE_SESSION ? [`${sessionCookie}=${process.env.SMOKE_SESSION}`] : []),
+    ...(vid ? [`vid=${vid}`] : []),
+  ];
+  const response = await fetch(`${api}${path}`, {
     ...init,
     headers: {
       origin: site as string,
       "content-type": "application/json",
-      ...(process.env.SMOKE_SESSION
-        ? { cookie: `${sessionCookie}=${process.env.SMOKE_SESSION}` }
-        : {}),
+      ...(cookies.length ? { cookie: cookies.join("; ") } : {}),
       ...(process.env.SMOKE_KEY ? { "x-smoke-key": process.env.SMOKE_KEY } : {}),
       ...(init.headers as Record<string, string> | undefined),
     },
   });
+  vid = response.headers.get("set-cookie")?.match(/vid=([a-f0-9]{32})/)?.[1] ?? vid;
+  return response;
 }
 
 function step(name: string, ok: boolean, detail = "") {
@@ -98,8 +104,13 @@ async function realStory() {
       idempotencyKey: `smoke-${Date.now()}`,
     }),
   });
-  step("story created", created.status === 201 || created.status === 202, String(created.status));
-  const { storyId } = (await created.json()) as { storyId: string };
+  const body = (await created.json()) as { storyId?: string; error?: { code: string } };
+  step(
+    "story created",
+    created.status === 201,
+    `${created.status} ${body.error?.code ?? ""}`.trim(),
+  );
+  const storyId = body.storyId as string;
   console.log(`smoke:      story ${storyId}`);
   const preview = await until(storyId, ["preview_ready"], 15);
   step("preview", preview.status === "preview_ready", preview.errorCode ?? preview.status);
@@ -107,7 +118,13 @@ async function realStory() {
     method: "POST",
     body: JSON.stringify({ idempotencyKey: `smoke-render-${storyId}` }),
   });
-  step("render started", rendered.status === 202, String(rendered.status));
+  const renderBody =
+    rendered.status === 202 ? null : ((await rendered.json()) as { error?: { code: string } });
+  step(
+    "render started",
+    rendered.status === 202,
+    `${rendered.status} ${renderBody?.error?.code ?? ""}`.trim(),
+  );
   const done = await until(storyId, ["done"], 30);
   step("film", done.status === "done" && !!done.video, done.errorCode ?? done.status);
   const film = await fetch(done.video?.url as string, { headers: { range: "bytes=0-1023" } });
