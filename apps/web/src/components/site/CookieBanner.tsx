@@ -20,7 +20,7 @@ export default function CookieBanner() {
 
   function choose(choice: Consent) {
     saveConsent(choice);
-    applyConsent(choice);
+    applyConsent(choice, undefined, { explicit: true });
     if (choice === "granted") track("consent");
     setOpen(false);
   }

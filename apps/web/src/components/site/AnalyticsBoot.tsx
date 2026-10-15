@@ -17,8 +17,11 @@ type Props = { pageId: string; kind: PageKind | null; locale: LocaleId };
 export default function AnalyticsBoot({ pageId, kind, locale }: Props) {
   useEffect(() => {
     void loadMe().then((me) => {
-      const consent = effectiveConsent(storedConsent(), me?.consentRequired ?? true);
-      startAnalytics({ lang: locale, page_id: pageId, user_kind: userKind(me) }, consent);
+      const stored = storedConsent();
+      const consent = effectiveConsent(stored, me?.consentRequired ?? true);
+      startAnalytics({ lang: locale, page_id: pageId, user_kind: userKind(me) }, consent, undefined, {
+        explicit: stored === "granted",
+      });
       const view = kind ? VIEW_EVENTS[kind] : undefined;
       if (view) track(view);
     });

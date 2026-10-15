@@ -34,37 +34,49 @@ export function userKind(me: MeView | null): CommonEventProps["user_kind"] {
   return me.paid ? "paid" : "free";
 }
 
-/** Spec 7.5 / 9: GA4 in Consent Mode v2; Clarity only after consent; no IDs means no scripts. */
+function loadGa(consent: Consent, ids: AnalyticsIds): void {
+  if (!ids.ga4 || gaLoaded) return;
+  gaLoaded = true;
+  window.dataLayer = window.dataLayer ?? [];
+  // gtag.js reads the arguments object itself, so this must not be an arrow function.
+  window.gtag = function gtag() {
+    window.dataLayer?.push(arguments);
+  };
+  window.gtag("consent", "default", {
+    analytics_storage: consent,
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
+  });
+  window.gtag("js", new Date());
+  window.gtag("config", ids.ga4);
+  loadScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ids.ga4)}`);
+}
+
+/**
+ * Spec 7.5 / 9, legal review 2026-10-15: GA4 loads only once analytics are allowed (by default
+ * outside the consent countries, after Accept inside them: no cookieless pings first). Clarity
+ * records sessions, so it waits for an explicit yes everywhere. No IDs means no scripts.
+ */
 export function startAnalytics(
   next: CommonEventProps,
   consent: Consent,
   ids: AnalyticsIds = envIds(),
+  { explicit = false }: { explicit?: boolean } = {},
 ): void {
   context = next;
-  if (ids.ga4 && !gaLoaded) {
-    gaLoaded = true;
-    window.dataLayer = window.dataLayer ?? [];
-    // gtag.js reads the arguments object itself, so this must not be an arrow function.
-    window.gtag = function gtag() {
-      window.dataLayer?.push(arguments);
-    };
-    window.gtag("consent", "default", {
-      analytics_storage: consent,
-      ad_storage: "denied",
-      ad_user_data: "denied",
-      ad_personalization: "denied",
-    });
-    window.gtag("js", new Date());
-    window.gtag("config", ids.ga4);
-    loadScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ids.ga4)}`);
-  }
-  applyConsent(consent, ids);
+  applyConsent(consent, ids, { explicit });
 }
 
-export function applyConsent(consent: Consent, ids: AnalyticsIds = envIds()): void {
+export function applyConsent(
+  consent: Consent,
+  ids: AnalyticsIds = envIds(),
+  { explicit = false }: { explicit?: boolean } = {},
+): void {
   granted = consent === "granted";
+  if (granted) loadGa(consent, ids);
   window.gtag?.("consent", "update", { analytics_storage: consent });
-  if (granted && ids.clarity && !clarityLoaded) {
+  if (granted && explicit && ids.clarity && !clarityLoaded) {
     clarityLoaded = true;
     const queue: unknown[] = [];
     const clarity = function clarity() {
