@@ -27,7 +27,7 @@ CLARITY_ID=yxv3ilksct
 root="$(pwd)"
 secrets="$HOME/.vzc-secrets"
 # Every step is idempotent; retry the Cloudflare API's occasional "fetch failed".
-retry() { local n; for n in 1 2 3; do "$@" && return 0; echo "   (attempt $n failed, retrying)" >&2; sleep $((n * 5)); done; return 1; }
+retry() { local n; for n in 1 2 3 4 5; do "$@" && return 0; echo "   (attempt $n failed, retrying)" >&2; sleep $((n * 10)); done; return 1; }
 api() { retry sh -c 'cd "$0/apps/api" && pnpm --silent exec wrangler "$@"' "$root" "$@"; }
 web() { retry sh -c 'cd "$0/apps/web" && pnpm --silent exec wrangler "$@"' "$root" "$@"; }
 value() { grep -E "^$1=" "$2" | head -1 | cut -d= -f2-; }
