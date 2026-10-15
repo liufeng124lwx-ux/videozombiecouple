@@ -47,7 +47,9 @@ export const SCENES: Record<SceneId, Scene> = {
 
 export type FrameId = "A" | "B" | "C";
 export type Face = "survivor" | "infected";
-export type ShotId = 1 | 2 | 3 | 4;
+export type ShotId = 1 | 2 | 3 | 4 | 5;
+/** Colour grade the composer applies: the standoff, the memory, the ending at first light. */
+export type Grade = "cold" | "warm" | "dawn";
 
 export const REQUIRED_FACES: Record<FrameId, Face[]> = {
   A: ["infected"],
@@ -61,14 +63,18 @@ export const STORYBOARD: {
   first: FrameId;
   last?: FrameId;
   faces: Face[];
+  grade: Grade;
 }[] = [
-  { id: 1, targetSec: 3, first: "A", faces: ["infected"] },
-  { id: 2, targetSec: 2, first: "A", faces: [] },
-  { id: 3, targetSec: 3, first: "A", last: "B", faces: ["survivor", "infected"] },
-  { id: 4, targetSec: 3, first: "C", faces: ["survivor", "infected"] },
+  { id: 1, targetSec: 3, first: "A", faces: ["infected"], grade: "cold" },
+  { id: 2, targetSec: 2, first: "A", faces: [], grade: "cold" },
+  { id: 3, targetSec: 3, first: "A", last: "B", faces: ["survivor", "infected"], grade: "cold" },
+  { id: 4, targetSec: 3, first: "C", faces: ["survivor", "infected"], grade: "warm" },
+  // The ending: back in the ruins, still holding each other as first light comes in.
+  { id: 5, targetSec: 3, first: "B", faces: ["survivor", "infected"], grade: "dawn" },
 ];
 
 export const CANDIDATES_PER_FRAME = 2;
+/** The last frame is held this long under the end title. */
 export const CAPTION_SEC = 1;
 export const VIDEO = { width: 720, height: 1280, fps: 24 } as const;
 
@@ -137,6 +143,7 @@ export function shotPrompt(_sceneId: SceneId, shot: ShotId, kind: Kind): string 
     2: `Slow push-in to a close-up of ${w.hands}. Shallow depth of field, cold blue light.`,
     3: `The survivor ${w.lowers}, and opens both arms. The ${w.other} steps forward into the embrace; they hold each other tightly. Slow orbit camera. Emotional, gentle.`,
     4: "Slow-motion pull back. They laugh while hugging, wind moves their hair. Golden hour sunlight, warm glow. Natural, joyful motion.",
+    5: `Back in the same ruined place as the first frame. The survivor and the ${w.other} keep holding each other, perfectly still, eyes closed. The first light of dawn slowly spreads through the broken windows and turns from cold blue to soft gold on them. The camera slowly pulls back and rises, revealing the empty room around them, dust floating in the light. Quiet, peaceful, bittersweet. No sudden movement.`,
   }[shot];
   return `${body} ${MOTION} ${SAFE}`;
 }

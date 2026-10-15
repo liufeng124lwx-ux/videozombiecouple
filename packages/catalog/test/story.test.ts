@@ -16,15 +16,21 @@ import {
 const SAFE = "No blood, no gore, no biting, no gunfire, no text.";
 
 describe("story catalog", () => {
-  it("storyboard plus caption is 12 seconds and shot 3 runs A→B", () => {
-    expect(STORYBOARD.reduce((t, s) => t + s.targetSec, 0) + CAPTION_SEC).toBe(12);
+  it("storyboard plus the held title is 15 seconds; shot 3 runs A→B, shot 5 returns to B at dawn", () => {
+    expect(STORYBOARD.reduce((t, s) => t + s.targetSec, 0) + CAPTION_SEC).toBe(15);
+    expect(STORYBOARD.find((s) => s.id === 5)).toMatchObject({
+      first: "B",
+      grade: "dawn",
+      targetSec: 3,
+    });
+    expect(STORYBOARD.map((s) => s.grade)).toEqual(["cold", "cold", "cold", "warm", "dawn"]);
     expect(STORYBOARD.find((s) => s.id === 3)).toMatchObject({
       first: "A",
       last: "B",
       targetSec: 3,
     });
     // Kling's shortest clip is 3 s: the embrace shot fits without a cut.
-    expect(STORYBOARD.map((s) => s.targetSec)).toEqual([3, 2, 3, 3]);
+    expect(STORYBOARD.map((s) => s.targetSec)).toEqual([3, 2, 3, 3, 3]);
   });
 
   it("every prompt carries the safety line for every scene and kind", () => {
@@ -34,6 +40,14 @@ describe("story catalog", () => {
           expect(keyframePrompt(scene, f, kind)).toContain(SAFE);
         for (const s of STORYBOARD) expect(shotPrompt(scene, s.id, kind)).toContain(SAFE);
       }
+  });
+
+  it("the ending goes back to the ruins at first light and pulls away", () => {
+    for (const kind of KINDS) {
+      const p = shotPrompt("cabin-wheat", 5, kind);
+      expect(p).toMatch(/dawn|first light/i);
+      expect(p).toMatch(/pull(s)? back/i);
+    }
   });
 
   it("pet prompts never mention a gun", () => {

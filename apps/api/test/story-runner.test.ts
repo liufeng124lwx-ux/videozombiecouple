@@ -156,7 +156,7 @@ describe("StoryRunner", () => {
     expect(await runner.render(h.noCharge)).toEqual({ ok: false, reason: "not_ready" });
   });
 
-  it("renders B, four shots and compose, then commits the video credits", async () => {
+  it("renders B, five shots and compose, then commits the video credits", async () => {
     const h = await setup();
     const calls = scripted(h);
     const { spec, runner } = await readyStory(h);
@@ -169,13 +169,15 @@ describe("StoryRunner", () => {
       "cold",
       "cold",
       "warm",
+      "dawn",
     ]);
-    expect(calls.composeRequests[0]?.shots.map((s) => s.seconds)).toEqual([3, 2, 3, 3]);
+    expect(calls.composeRequests[0]?.shots.map((s) => s.seconds)).toEqual([3, 2, 3, 3, 3]);
     // Shot 3 ends on the embrace (keyframe B): keep the end of the clip, not the start.
     expect(calls.composeRequests[0]?.shots.map((s) => s.anchor)).toEqual([
       "start",
       "start",
       "end",
+      "start",
       "start",
     ]);
     expect(h.wallet.calls).toContainEqual(["commit", "test", spec.id, 10, spec.id]);

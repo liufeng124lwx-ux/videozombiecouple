@@ -11,7 +11,7 @@ describe("page facts", () => {
   });
 
   it("knows the story numbers", () => {
-    expect(fact("video.seconds")).toBe("12");
+    expect(fact("video.seconds")).toBe("15");
     expect(fact("video.width")).toBe("720");
     expect(fact("video.height")).toBe("1280");
     expect(fact("preview.daily")).toBe("3");

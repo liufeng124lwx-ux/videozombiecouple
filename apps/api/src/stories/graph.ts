@@ -52,10 +52,16 @@ export function previewSteps(): StepRecord[] {
   ];
 }
 
-/** Spec §4.2 S3–S5: keyframe B, four shots (shot 3 ends on B), then compose. */
+/** Spec §4.2 S3–S5: keyframe B, the shots (shot 3 ends on B, shot 5 starts from it), then compose. */
 export function videoSteps(): StepRecord[] {
   const shots = STORYBOARD.map((shot) =>
-    step(`shot:${shot.id}`, "kie", "video", shot.last === "B" ? ["kf:B"] : [], "shot"),
+    step(
+      `shot:${shot.id}`,
+      "kie",
+      "video",
+      shot.first === "B" || shot.last === "B" ? ["kf:B"] : [],
+      "shot",
+    ),
   );
   return [
     step("kf:B", "kie", "video", [], "keyframe"),

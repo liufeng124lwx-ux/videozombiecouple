@@ -1,7 +1,13 @@
 from grade import Part, build_compose_cmd, build_poster_cmd, total_seconds
 
 
-PARTS = [Part("s1.mp4", 3, "cold"), Part("s2.mp4", 2, "cold"), Part("s3.mp4", 3, "cold", "end"), Part("s4.mp4", 3, "warm")]
+PARTS = [
+    Part("s1.mp4", 3, "cold"),
+    Part("s2.mp4", 2, "cold"),
+    Part("s3.mp4", 3, "cold", "end"),
+    Part("s4.mp4", 3, "warm"),
+    Part("s5.mp4", 3, "dawn"),
+]
 
 
 def test_cold_and_warm_grades_and_output_flags():
@@ -14,12 +20,22 @@ def test_cold_and_warm_grades_and_output_flags():
     assert cmd[-1] == "out.mp4"
 
 
-def test_caption_is_the_last_one_second_segment_and_music_fades_out():
+def test_the_ending_holds_the_last_frame_and_the_title_fades_in_over_it():
     joined = " ".join(build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4"))
-    assert "-loop 1 -t 1 -i cap.png" in joined
+    # No black card any more: the shots are joined, the last frame is held, the title sits on top.
     assert "concat=n=5:v=1:a=0" in joined
-    assert "afade=t=out:st=11.2:d=0.8" in joined
-    assert total_seconds(PARTS) == 12
+    assert "tpad=stop_mode=clone:stop_duration=1" in joined
+    assert "-loop 1 -i cap.png" in joined
+    assert "fade=t=in:st=12.6:d=0.8:alpha=1" in joined
+    assert "overlay=0:0" in joined
+    # The music gets a long, gentle ending.
+    assert "afade=t=out:st=13:d=2" in joined
+    assert total_seconds(PARTS) == 15
+
+
+def test_the_dawn_shot_has_its_own_grade():
+    joined = " ".join(build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4"))
+    assert joined.count("colorbalance=rs=0.04:rh=0.06") == 1
 
 
 def test_poster_is_taken_one_second_into_the_memory_shot():

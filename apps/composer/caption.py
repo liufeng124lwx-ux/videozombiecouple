@@ -1,4 +1,5 @@
-"""The end title card (spec §5.1 shot 5): the line in a serif italic, names and date beneath."""
+"""The end title (spec §5.1): the line in a serif italic, names and date beneath, laid over the
+last frames of the dawn shot on a soft dark veil so the picture still shows through."""
 
 from pathlib import Path
 
@@ -7,7 +8,9 @@ from PIL import Image, ImageDraw, ImageFont
 from grade import HEIGHT, WIDTH
 
 FONTS = Path(__file__).parent / "fonts"
-BG = (8, 6, 4)
+# The veil: darkest across the middle where the words sit, lighter toward the edges.
+VEIL = (8, 6, 4)
+VEIL_EDGE, VEIL_MIDDLE = 110, 185
 WARM = (255, 224, 178)
 DIM = (200, 170, 130)
 
@@ -22,7 +25,13 @@ def _fit(draw: ImageDraw.ImageDraw, text: str, font_path: Path, size: int, max_w
 
 
 def render_caption(line1: str, line2: str | None, out: str) -> str:
-    img = Image.new("RGB", (WIDTH, HEIGHT), BG)
+    img = Image.new("RGBA", (WIDTH, HEIGHT), (*VEIL, VEIL_EDGE))
+    veil = ImageDraw.Draw(img)
+    band = HEIGHT // 3
+    for i in range(band):
+        # A smooth band around the middle third, so the title reads over any picture.
+        a = VEIL_EDGE + (VEIL_MIDDLE - VEIL_EDGE) * (1 - abs(i - band / 2) / (band / 2))
+        veil.line([(0, band + i), (WIDTH, band + i)], fill=(*VEIL, int(a)))
     draw = ImageDraw.Draw(img)
     serif = FONTS / "CormorantGaramond-Italic.ttf"
     f1 = _fit(draw, line1, serif, 58, WIDTH - 96)

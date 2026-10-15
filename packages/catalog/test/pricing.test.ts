@@ -27,9 +27,9 @@ describe("pricing (spec §7)", () => {
     expect(PRODUCTS.some((p) => p.kind === "plan")).toBe(true);
   });
 
-  it("counts four keyframe candidates for a preview and B plus four shots for a video", () => {
+  it("counts four keyframe candidates for a preview and B plus five shots for a video", () => {
     const routes = ROUTES.map((r) => ({ ...r, costUsd: r.capability === "keyframe" ? 0.1 : 1 }));
-    expect(storyCostUsd(routes)).toEqual({ preview: 0.4, video: 4.1 });
+    expect(storyCostUsd(routes)).toEqual({ preview: 0.4, video: 5.1 });
   });
 
   it("flags a video priced below twice its model cost", () => {

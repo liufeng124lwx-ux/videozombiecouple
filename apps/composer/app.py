@@ -132,7 +132,7 @@ def compose_route(body: ComposeBody):
 
 
 def _compose(body: ComposeBody):
-    if not body.shots or any(s.grade not in ("cold", "warm") or s.anchor not in ("start", "end") for s in body.shots):
+    if not body.shots or any(s.grade not in ("cold", "warm", "dawn") or s.anchor not in ("start", "end") for s in body.shots):
         raise HTTPException(400, "bad shots")
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp)

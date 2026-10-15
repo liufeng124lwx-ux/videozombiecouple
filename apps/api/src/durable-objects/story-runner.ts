@@ -661,7 +661,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       return {
         key,
         seconds: shot.targetSec,
-        grade: shot.first === "C" ? "warm" : "cold",
+        grade: shot.grade,
         anchor: shot.last ? "end" : "start",
       } as const;
     });

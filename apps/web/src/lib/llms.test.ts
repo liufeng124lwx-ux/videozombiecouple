@@ -1,3 +1,4 @@
+import { fact } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
 import { llmsTxt } from "./llms.ts";
 
@@ -6,7 +7,7 @@ describe("llms.txt", () => {
     const text = llmsTxt("https://videozombiecouple.com");
     expect(text.startsWith("# VideoZombieCouple")).toBe(true);
     expect(text).toContain("$4.99");
-    expect(text).toContain("12-second");
+    expect(text).toContain(`${fact("video.seconds")}-second`);
     expect(text).toContain("https://videozombiecouple.com/zombie-love-story-ai");
     expect(text).toContain("pet-zombie-video");
     // Drafts never appear.

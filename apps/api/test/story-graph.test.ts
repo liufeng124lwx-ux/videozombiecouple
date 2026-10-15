@@ -92,14 +92,15 @@ describe("story graph", () => {
     expect(readySteps(state()).some((x) => x.phase === "video")).toBe(false);
   });
 
-  it("in the video phase shot 3 waits for keyframe B and compose waits for every shot", () => {
+  it("in the video phase shots 3 and 5 wait for keyframe B and compose waits for every shot", () => {
     const s = state({ status: "rendering", picks: { A: "kf/S/a.jpg", C: "kf/S/c.jpg" } });
     for (const id of ["score:sources", "kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2", "score:AC"])
       set(s, id, "succeeded");
     expect(ids(s).sort()).toEqual(["kf:B", "shot:1", "shot:2", "shot:4"]);
     set(s, "kf:B", "succeeded");
     expect(ids(s)).toContain("shot:3");
-    for (const id of ["shot:1", "shot:2", "shot:3", "shot:4"]) set(s, id, "succeeded");
+    expect(ids(s)).toContain("shot:5");
+    for (const id of ["shot:1", "shot:2", "shot:3", "shot:4", "shot:5"]) set(s, id, "succeeded");
     expect(ids(s)).toEqual(["compose"]);
   });
 
