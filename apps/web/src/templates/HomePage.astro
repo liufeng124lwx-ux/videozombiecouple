@@ -80,18 +80,39 @@ const likeness = await Promise.all(
   })),
 );
 const preset = page.preset ?? {};
-// The title flanks the film: its first word on the left, the rest on the right (design lock A).
-const [titleLeft = "", ...rest] = h1.split(" ");
-const titleRight = rest.join(" ");
+// One-sheet hero: the film's opening frame, blurred, is the poster's backdrop (tiny; it's blurred).
+const backdrop = await sampleImage(filmPoster(heroFilm.id), "100vw", [360]);
+// Poster billing: alternating large and small words, true facts only (design lock "One-Sheet").
+const billing = t("home.billing", { seconds: fact("video.seconds") }, locale).split("|");
 ---
-<section class="hero premiere" aria-label={h1}>
-  <div class="premiere-stage">
-    <h1 class="premiere-title">
-      <span class="pt-left">{titleLeft}</span>
-      {" "}
-      <span class="pt-right">{titleRight}</span>
-    </h1>
-    <figure class="premiere-film">
+<section class="hero onesheet" aria-label={h1}>
+  <div class="onesheet-backdrop" aria-hidden="true">
+    <img src={backdrop.src} alt="" width="360" height="640" decoding="async" fetchpriority="low" />
+  </div>
+  <div class="wrap onesheet-grid">
+    <div class="onesheet-copy">
+      <p class="onesheet-kicker">{t("home.kicker", {}, locale)}</p>
+      <h1 class="onesheet-title">{h1}</h1>
+      <p class="onesheet-rule" aria-hidden="true"><span></span></p>
+      <p class="billing">
+        {billing.map((word, i) => <span class={i % 2 ? "b-sm" : "b-lg"}>{word}</span>)}
+      </p>
+      {d.lede && <p class="lede">{d.lede}</p>}
+      <div class="onesheet-actions">
+        <a class="btn btn-primary btn-lg" href="#make">{t("home.cta", {}, locale)}</a>
+        <a class="btn btn-lg btn-line" href="#film">{t("home.watch", {}, locale)}</a>
+      </div>
+      {
+        d.trust && (
+          <ul class="trust">
+            {d.trust.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+    <figure class="onesheet-film">
       <HeroFilm
         client:load
         src={filmSrc(heroFilm.id)}
@@ -99,23 +120,6 @@ const titleRight = rest.join(" ");
         label={`Example film: ${filmPairInfo?.who ?? ""}`}
       />
     </figure>
-    <div class="premiere-actions">
-      <a class="btn btn-primary btn-lg" href="#make">{t("home.cta", {}, locale)}</a>
-      <a class="btn btn-lg btn-line" href="#film">{t("home.watch", {}, locale)}</a>
-    </div>
-  </div>
-  <div class="wrap premiere-credits">
-    {d.scene && <p class="scene">{d.scene}</p>}
-    {d.lede && <p class="lede">{d.lede}</p>}
-    {
-      d.trust && (
-        <ul class="trust">
-          {d.trust.map((item) => (
-            <li>{item}</li>
-          ))}
-        </ul>
-      )
-    }
   </div>
 </section>
 

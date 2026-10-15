@@ -262,6 +262,6 @@ describe("StoryTool", () => {
     expect(
       (screen.getByRole("button", { name: "Swap who turns" }) as HTMLButtonElement).disabled,
     ).toBe(true);
-    expect(screen.getByText("The pet who turns")).toBeTruthy();
+    expect(screen.getByText("Role: The pet who turns")).toBeTruthy();
   });
 });

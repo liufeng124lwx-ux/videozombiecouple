@@ -338,67 +338,76 @@ export default function StoryTool({
     <div class="tool" data-phase={s.phase} data-clarity-mask="true">
       {(s.phase === "setup" || s.phase === "uploading") && (
         <div class="tool-setup">
-          <div class="kind-toggle" role="radiogroup" aria-label={t("story.kind.label")}>
-            {(["human", "pet"] as const).map((k) => (
+          <div class="tool-step cast">
+            <p class="step-title">
+              {t(s.kind === "pet" ? "story.step.castPet" : "story.step.cast")}
+            </p>
+            <div class="kind-toggle" role="radiogroup" aria-label={t("story.kind.label")}>
+              {(["human", "pet"] as const).map((k) => (
+                <button
+                  type="button"
+                  key={k}
+                  role="radio"
+                  aria-checked={s.kind === k}
+                  class="chip"
+                  disabled={busy}
+                  onClick={() => dispatch({ type: "kind", kind: k })}
+                >
+                  {t(`story.kind.${k}`)}
+                </button>
+              ))}
+            </div>
+            <div class="slots">
+              <PhotoSlot
+                slot="survivor"
+                kind={s.kind}
+                photo={s.photos.survivor}
+                checking={s.checking.survivor}
+                disabled={busy}
+                onFile={onFile}
+              />
               <button
                 type="button"
-                key={k}
-                role="radio"
-                aria-checked={s.kind === k}
-                class="chip"
-                disabled={busy}
-                onClick={() => dispatch({ type: "kind", kind: k })}
+                class="swap"
+                aria-label={t("story.swap")}
+                title={t("story.swap")}
+                disabled={busy || s.kind === "pet" || !(s.photos.survivor || s.photos.infected)}
+                onClick={() => dispatch({ type: "swap" })}
               >
-                {t(`story.kind.${k}`)}
+                ⇄
               </button>
-            ))}
+              <PhotoSlot
+                slot="infected"
+                kind={s.kind}
+                photo={s.photos.infected}
+                checking={s.checking.infected}
+                disabled={busy}
+                onFile={onFile}
+              />
+            </div>
+            <ul class="tips small">
+              <li class="check">{t("story.tips.front")}</li>
+              <li class="check">{t("story.tips.one")}</li>
+              <li class="check">{t("story.tips.light")}</li>
+              <li class="check">{t("story.tips.adults")}</li>
+            </ul>
           </div>
-          <div class="slots">
-            <PhotoSlot
-              slot="survivor"
-              kind={s.kind}
-              photo={s.photos.survivor}
-              checking={s.checking.survivor}
+          <div class="tool-step set">
+            <p class="step-title">{t("story.step.scene")}</p>
+            <ScenePicker
+              scene={s.scene}
+              posters={posters}
               disabled={busy}
-              onFile={onFile}
+              onPick={(scene) => dispatch({ type: "scene", scene })}
             />
-            <button
-              type="button"
-              class="swap"
-              aria-label={t("story.swap")}
-              title={t("story.swap")}
-              disabled={busy || s.kind === "pet" || !(s.photos.survivor || s.photos.infected)}
-              onClick={() => dispatch({ type: "swap" })}
-            >
-              ⇄
-            </button>
-            <PhotoSlot
-              slot="infected"
-              kind={s.kind}
-              photo={s.photos.infected}
-              checking={s.checking.infected}
+            <TitleCardFields
+              names={s.title.names}
+              date={s.title.date}
               disabled={busy}
-              onFile={onFile}
+              onChange={(names, date) => dispatch({ type: "title", names, date })}
             />
           </div>
-          <ul class="tips small">
-            <li class="check">{t("story.tips.front")}</li>
-            <li class="check">{t("story.tips.one")}</li>
-            <li class="check">{t("story.tips.light")}</li>
-            <li class="check">{t("story.tips.adults")}</li>
-          </ul>
-          <ScenePicker
-            scene={s.scene}
-            posters={posters}
-            disabled={busy}
-            onPick={(scene) => dispatch({ type: "scene", scene })}
-          />
-          <TitleCardFields
-            names={s.title.names}
-            date={s.title.date}
-            disabled={busy}
-            onChange={(names, date) => dispatch({ type: "title", names, date })}
-          />
+
           <p class="fine">{t("story.privacy", { photosDays: fact("retention.photosDays") })}</p>
           {s.error && (
             <p class="err-text small" role="alert">

@@ -1,6 +1,9 @@
 ---
 import "@fontsource-variable/archivo/standard.css";
 import "@fontsource/courier-prime/latin-400.css";
+import "@fontsource/cormorant-garamond/latin-500-italic.css";
+// The home H1 is set in Cormorant italic (design lock "One-Sheet").
+import cormorant from "@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2?url";
 // The first screen's H1 (Archivo, condensed 800) is the LCP element: preload its one variable file.
 import archivo from "@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2?url";
 import "../styles/tokens.css";
@@ -48,6 +51,7 @@ const {
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0b0f14" />
     <link rel="preload" href={archivo} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={cormorant} as="font" type="font/woff2" crossorigin />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
     <meta name="description" content={description} />

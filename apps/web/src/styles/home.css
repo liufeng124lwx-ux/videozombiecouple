@@ -1,104 +1,183 @@
-/* Home and landing — "Premiere Night": the page is a screening room, the film its only light. */
-.hero.premiere {
+/* Home and landing — "One-Sheet" (docs/design/one-sheet-2026-10-15.md): the first screen is a
+   theatrical poster whose key art is the example film, playing. */
+.hero.onesheet {
   position: relative;
   overflow: hidden;
-  background: radial-gradient(52% 58% at 50% 40%, var(--spill) 0%, transparent 72%), var(--void);
+  isolation: isolate;
+  background: var(--void);
   transition: --spill 1.2s ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero.premiere {
+  .hero.onesheet {
     transition: none;
   }
 }
-.premiere-stage {
-  /* The film is as tall as the screen allows, leaving room for the header, beats and buttons. */
-  --film-h: min(820px, calc(100svh - 64px - 150px));
-  --film-w: calc(var(--film-h) * 9 / 16);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  padding: 20px var(--gutter) 28px;
+/* The film's own opening frame, blurred: the room the poster hangs in. */
+.onesheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
 }
-.premiere-film {
-  position: relative;
-  z-index: 2;
-  width: var(--film-w);
-  max-width: 100%;
+.onesheet-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(10px) brightness(0.85) saturate(1.2);
+  transform: scale(1.15);
 }
-.premiere-title {
+/* The light the film throws (per beat), darker toward the copy so the title reads. */
+.onesheet-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      46% 72% at 72% 46%,
+      color-mix(in srgb, var(--spill) 75%, transparent),
+      transparent 72%
+    ),
+    linear-gradient(90deg, rgb(7 9 12 / 0.9) 0%, rgb(7 9 12 / 0.55) 45%, rgb(7 9 12 / 0.2) 100%),
+    linear-gradient(0deg, var(--void) 0%, transparent 24%);
+}
+.onesheet-grid {
+  /* The film is as tall as the screen allows, minus the header and the beats under it. */
+  --film-h: min(880px, calc(100svh - 64px - 140px));
+  display: grid;
+  padding-block: 24px 44px;
+}
+.onesheet-kicker {
+  margin: 0 0 14px;
+  font: 600 13px / 1.3 var(--font-display);
+  font-stretch: 75%;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+.onesheet-title {
   margin: 0;
+  font: italic 500 clamp(48px, 7vw, 116px) / 0.94 var(--font-title);
+  font-stretch: normal;
+  letter-spacing: -0.012em;
+  text-transform: none;
+  text-wrap: balance;
   color: var(--gilt);
-  font-size: clamp(64px, 17vw, 120px);
-  line-height: 0.86;
-  text-align: center;
 }
-.premiere-title span {
-  display: block;
-}
-.premiere-actions {
+.onesheet-rule {
   position: relative;
-  z-index: 2;
+  max-width: 440px;
+  height: 1px;
+  margin: 26px 0 20px;
+  background: linear-gradient(90deg, var(--gilt-rule), var(--gilt) 50%, var(--gilt-rule));
+}
+.onesheet-rule span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--gilt);
+  background: var(--void);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+/* Poster billing: big words and small connecting words in one condensed block. */
+.billing {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  align-items: baseline;
+  gap: 0 0.36em;
+  max-width: 470px;
+  margin: 0 0 22px;
+  font-family: var(--font-display);
+  font-stretch: 62%;
+  line-height: 1.08;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.billing .b-lg {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.billing .b-sm {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+.onesheet .lede {
+  max-width: 30em;
+  margin: 0 0 24px;
+  color: var(--text-2);
+}
+.onesheet-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+.onesheet .trust {
+  justify-content: flex-start;
+  margin-top: 22px;
 }
 .btn-line {
   background: transparent;
   border-color: var(--gilt-rule);
 }
-/* Phones: the film first, the title right under it. */
+/* The key art: the example film in a gilt frame on a dark mat, glowing a little. */
+.onesheet-film {
+  margin: 0;
+  justify-self: center;
+  width: min(100%, calc(var(--film-h) * 9 / 16));
+}
+.onesheet-film .reel {
+  box-shadow:
+    0 0 0 1px var(--gilt),
+    0 0 0 7px rgb(7 9 12 / 0.78),
+    0 0 0 8px var(--gilt-rule),
+    0 0 70px 8px var(--frame-glow);
+}
+/* Phones: kicker and title, then the film, then the rest of the poster. */
 @media (max-width: 899px) {
-  .premiere-stage {
-    --film-h: min(72svh, calc(86vw * 16 / 9));
+  .onesheet-grid {
+    --film-h: min(68svh, calc((100vw - 2 * var(--gutter)) * 16 / 9));
   }
-  .premiere-title {
-    order: 2;
+  .onesheet-copy {
+    display: contents;
   }
-  .premiere-film {
+  .onesheet-kicker {
     order: 1;
   }
-  .premiere-actions {
+  .onesheet-title {
+    order: 2;
+    font-size: clamp(44px, 12.5vw, 72px);
+  }
+  .onesheet-film {
     order: 3;
+    margin: 26px 0 6px;
+  }
+  .onesheet-rule {
+    order: 4;
+  }
+  .billing {
+    order: 5;
+  }
+  .onesheet .lede {
+    order: 6;
+  }
+  .onesheet-actions {
+    order: 7;
+  }
+  .onesheet .trust {
+    order: 8;
   }
 }
-/* Wide screens: the title's words flank the film, tucked a little behind it. */
 @media (min-width: 900px) {
-  .premiere-title {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    font-size: clamp(96px, calc((100vw - var(--film-w)) / 2 / 3.7), 250px);
+  .onesheet-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(40px, 6vw, 110px);
+    min-height: calc(100svh - 64px);
+    padding-block: 28px 36px;
   }
-  .premiere-title span {
-    position: absolute;
-    top: calc(20px + var(--film-h) * 0.42);
-    transform: translateY(-50%);
-    max-width: calc((100vw - var(--film-w)) / 2 + 0.4em);
-  }
-  .premiere-title .pt-left {
-    right: calc(50% + var(--film-w) / 2 - 0.14em);
-    text-align: right;
-  }
-  .premiere-title .pt-right {
-    left: calc(50% + var(--film-w) / 2 - 0.14em);
-    text-align: left;
-  }
-}
-.premiere-credits {
-  display: grid;
-  gap: 14px;
-  justify-items: center;
-  padding-bottom: 56px;
-  text-align: center;
-  border-top: 1px solid var(--gilt-rule);
-  padding-top: 28px;
-}
-.premiere-credits .lede {
-  margin: 0 auto;
 }
 .trust {
   list-style: none;

@@ -35,7 +35,7 @@ function SceneClip({ poster, on }: { poster: ScenePoster; on: boolean }) {
   );
 }
 
-/** A 3:4 photo slot labelled like a call sheet (design lock: THE SURVIVOR / THE ONE WHO TURNS). */
+/** A 3:4 photo slot as a screen-test polaroid (design lock "One-Sheet"): SCREEN TEST 001 / ROLE. */
 export function PhotoSlot(props: {
   slot: Slot;
   kind: Kind;
@@ -60,21 +60,27 @@ export function PhotoSlot(props: {
     e.currentTarget.value = "";
   };
   return (
-    <div class={`slot${photo ? " filled" : ""}${warn ? " warn" : ""}`}>
-      <p class="scene slot-label">{label}</p>
-      <label class="slot-frame" for={id}>
-        {photo ? (
-          <img src={photo.url} alt={label} />
-        ) : (
-          <span class="slot-empty">
-            <span class="slot-plus" aria-hidden="true">
-              +
+    <div class={`slot slot-${slot}${photo ? " filled" : ""}${warn ? " warn" : ""}`}>
+      <div class="polaroid">
+        <span class="tape" aria-hidden="true" />
+        <label class="slot-frame" for={id}>
+          {photo ? (
+            <img src={photo.url} alt={label} />
+          ) : (
+            <span class="slot-empty">
+              <span class="slot-plus" aria-hidden="true">
+                +
+              </span>
+              {t("story.slot.add")}
             </span>
-            {t("story.slot.add")}
-          </span>
-        )}
-        {checking && <span class="slot-busy">{t("story.slot.checking")}</span>}
-      </label>
+          )}
+          {checking && <span class="slot-busy">{t("story.slot.checking")}</span>}
+        </label>
+        <p class="polaroid-caption">
+          <span>{t("story.slot.test", { n: slot === "survivor" ? "001" : "002" })}</span>
+          <span class="slot-label">{t("story.slot.role", { role: label })}</span>
+        </p>
+      </div>
       <input
         id={id}
         class="visually-hidden"
@@ -100,7 +106,7 @@ export function PhotoSlot(props: {
   );
 }
 
-/** Three 9:16 scene tiles; the picked one plays its clip. */
+/** The scenes as cinema tickets (design lock "One-Sheet"); the picked one plays its clip. */
 export function ScenePicker(props: {
   scene: SceneId;
   posters: Partial<Record<SceneId, ScenePoster>>;
@@ -109,7 +115,7 @@ export function ScenePicker(props: {
 }) {
   return (
     <fieldset class="scenes">
-      <legend class="scene">{t("story.scene.label")}</legend>
+      <legend class="visually-hidden">{t("story.scene.label")}</legend>
       <div class="scene-tiles" role="radiogroup">
         {SCENE_IDS.map((id) => {
           const scene = SCENES[id];
@@ -125,13 +131,24 @@ export function ScenePicker(props: {
               disabled={props.disabled || !scene.live}
               onClick={() => props.onPick(id)}
             >
-              {poster ? (
-                <SceneClip poster={poster} on={on} />
-              ) : (
-                <span class="scene-blank" aria-hidden="true" />
-              )}
               <span class="scene-name">{scene.label}</span>
-              {!scene.live && <span class="badge">{t("story.scene.soon")}</span>}
+              <span class="ticket-window">
+                {poster ? (
+                  <SceneClip poster={poster} on={on} />
+                ) : (
+                  <span class="scene-blank" aria-hidden="true" />
+                )}
+              </span>
+              <span class="ticket-line">
+                {t(`story.scene.line.${id}` as "story.scene.line.cabin-wheat")}
+              </span>
+              <span class="ticket-stub" aria-hidden="true">
+                {scene.live
+                  ? on
+                    ? `${t("story.scene.selected")} ★`
+                    : `${t("story.scene.select")} ☆`
+                  : t("story.scene.soon")}
+              </span>
             </button>
           );
         })}

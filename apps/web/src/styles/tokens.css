@@ -30,6 +30,10 @@
   /* gilt: ONLY the giant title words and 1px rules, never a button or a fill */
   --gilt: #e9dfb8;
   --gilt-rule: rgb(233 223 184 / 0.28);
+  /* One-sheet (docs/design/one-sheet-2026-10-15.md): paper only on the tool's polaroids and tickets. */
+  --paper: #e8dfc8;
+  --paper-ink: #2a2620;
+  --frame-glow: rgb(233 180 100 / 0.22);
 
   /* memory glow: decorative only, over warm frames and the end title card */
   --glow-1: #ffd49a;
