@@ -60,7 +60,8 @@ describe("pages", () => {
   });
 
   it("set the H1 to the page's core keyword (spec §6)", () => {
-    expect(pageById("home")?.locales.en.h1).toBe("Zombie Video Couple");
+    // SEO review 2026-10-15: "zombie couple" and "ai zombie" are the searched words; "zombie love story" means something else on Google.
+    expect(pageById("home")?.locales.en.h1).toBe("AI Zombie Couple Video");
     expect(pageById("zombie-love-story-ai")?.locales.en.h1).toBe("Zombie Love Story AI");
   });
 

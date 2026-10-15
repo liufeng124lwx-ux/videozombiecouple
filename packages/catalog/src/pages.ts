@@ -45,7 +45,7 @@ const legal = (id: string, slug: string, h1: string): PageConfig => ({
 
 /** Spec §6 and §9: phase one ships home, the love-story page and pricing; phase two the rest. */
 export const PAGES: readonly PageConfig[] = [
-  page("home", "home", "", "Zombie Video Couple", "live", [
+  page("home", "home", "", "AI Zombie Couple Video", "live", [
     "zombie-love-story-ai",
     "pet-zombie-video",
   ]),
