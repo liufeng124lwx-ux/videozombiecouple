@@ -22,6 +22,17 @@ export const SAMPLE_PAIRS: readonly SamplePair[] = [
 
 export const HERO_PAIR = "p03";
 
+/** The pet version's example: an AI-generated woman and her cat (eval persona q01). */
+export const PET_PAIR: SamplePair = {
+  id: "q01",
+  who: "a woman with long brown hair and her orange tabby cat",
+};
+
+/** Any example by id (the pet example is not part of the couples' gallery). */
+export function samplePair(id: string): SamplePair | undefined {
+  return [...SAMPLE_PAIRS, PET_PAIR].find((p) => p.id === id);
+}
+
 export type Frame = "A" | "B" | "C" | "survivor" | "infected";
 
 export function sampleFile(pair: string, frame: Frame | "film-poster"): string {
@@ -45,3 +56,28 @@ export function sampleAlt(pair: SamplePair, frame: Frame): string {
 
 /** The hero's cold frame: the LCP image of the home and landing pages (preloaded in <head>). */
 export const HERO_SIZES = "(min-width: 900px) 420px, 82vw";
+
+/**
+ * Finished example films (AI-generated people and pets, made by the real pipeline on staging).
+ * `public/samples/films/<id>.mp4` is the whole film, `<id>-loop.mp4` a silent 4 s piece around the
+ * match cut (scene picker), and `film-<id>-poster.jpg` its opening frame.
+ */
+export type SampleFilm = {
+  id: "cabin" | "chapel" | "beach" | "pet";
+  scene: "cabin-wheat" | "rain-chapel" | "lighthouse-beach";
+  pair: string;
+  kind: "human" | "pet";
+};
+
+export const SAMPLE_FILMS: readonly SampleFilm[] = [
+  { id: "cabin", scene: "cabin-wheat", pair: "p02", kind: "human" },
+  { id: "chapel", scene: "rain-chapel", pair: "p02", kind: "human" },
+  { id: "beach", scene: "lighthouse-beach", pair: "p03", kind: "human" },
+  { id: "pet", scene: "cabin-wheat", pair: "q01", kind: "pet" },
+];
+
+export const filmSrc = (id: SampleFilm["id"]) => `/samples/films/${id}.mp4`;
+export const filmLoop = (id: SampleFilm["id"]) => `/samples/films/${id}-loop.mp4`;
+export const filmPoster = (id: SampleFilm["id"]) => `film-${id}-poster.jpg`;
+/** The warm memory frame: what a paused film shows in the gallery, so the scenes read apart. */
+export const filmMemory = (id: SampleFilm["id"]) => `film-${id}-memory.jpg`;

@@ -17,6 +17,10 @@ const pages = defineCollection({
     scene: text.optional(),
     lede: text.optional(),
     trust: z.array(text).optional(),
+    /** Example pair for the hero (lib/samples.ts); the home page's couple when absent. */
+    hero: z.string().optional(),
+    /** Example film in the hero (lib/samples.ts SAMPLE_FILMS); "cabin" when absent. */
+    film: z.enum(["cabin", "chapel", "beach", "pet"]).optional(),
     /** The three beats of the film (standoff, embrace, memory). */
     beats: z.array(item).length(3).optional(),
     /** "Will it look like us?" section. */

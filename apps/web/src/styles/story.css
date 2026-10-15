@@ -352,3 +352,14 @@
   font-size: clamp(40px, 8vw, 80px);
   margin: 8px 0 8px;
 }
+
+/* Scene tiles: the picked scene plays its clip, the others rest on their first frame. */
+.scene-clip {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+}
+.scene-tile.soon .scene-clip {
+  opacity: 0.45;
+}

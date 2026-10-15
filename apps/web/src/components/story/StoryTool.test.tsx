@@ -171,6 +171,14 @@ describe("StoryTool", () => {
     expect(container.firstElementChild?.getAttribute("data-clarity-mask")).toBe("true");
   });
 
+  it("scene tiles show each scene's film clip", async () => {
+    const posters = { "cabin-wheat": { still: "/s.jpg", clip: "/c.mp4" } };
+    const { container } = render(<StoryTool posters={posters} pollMs={10} />);
+    const clip = container.querySelector(".scene-tile video") as HTMLVideoElement;
+    expect(clip.getAttribute("src")).toBe("/c.mp4");
+    expect(clip.getAttribute("poster")).toBe("/s.jpg");
+  });
+
   it("resumes a running story after reload", async () => {
     localStorage.setItem("vzc-story", "S1");
     client.getStory.mockResolvedValue(view("rendering", { preview: { A: "a", C: "c" } }));

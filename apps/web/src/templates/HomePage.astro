@@ -3,15 +3,27 @@ import "../styles/story.css";
 import "../styles/home.css";
 import "../styles/pricing.css";
 import { type CollectionEntry, render } from "astro:content";
-import { fact, type LocaleId, type PageConfig } from "@vzc/catalog";
+import { fact, type LocaleId, type PageConfig, SCENES } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import F from "../components/F.astro";
 import Faq from "../components/Faq.astro";
-import GradeWipe from "../components/GradeWipe.tsx";
+import FilmGallery from "../components/FilmGallery.tsx";
+import HeroFilm from "../components/HeroFilm.tsx";
 import PackRows from "../components/pricing/PackRows.tsx";
 import StoryTool from "../components/story/StoryTool.tsx";
 import { sampleImage } from "../lib/sample-images.ts";
-import { HERO_PAIR, HERO_SIZES, SAMPLE_PAIRS, sampleAlt, sampleFile } from "../lib/samples.ts";
+import {
+  filmLoop,
+  filmMemory,
+  filmPoster,
+  filmSrc,
+  HERO_PAIR,
+  SAMPLE_FILMS,
+  SAMPLE_PAIRS,
+  sampleAlt,
+  sampleFile,
+  samplePair,
+} from "../lib/samples.ts";
 
 interface Props {
   locale: LocaleId;
@@ -24,11 +36,42 @@ interface Props {
 const { locale, h1, page, entry, variant } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
-const hero = SAMPLE_PAIRS.find((p) => p.id === HERO_PAIR) ?? SAMPLE_PAIRS[0];
+const hero = samplePair(d.hero ?? HERO_PAIR) ?? SAMPLE_PAIRS[0];
 if (!hero) throw new Error("no sample pair");
 
-const heroA = await sampleImage(sampleFile(hero.id, "A"), HERO_SIZES);
-const heroC = await sampleImage(sampleFile(hero.id, "C"), HERO_SIZES);
+const POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
+const heroFilm = SAMPLE_FILMS.find((f) => f.id === (d.film ?? "cabin")) ?? SAMPLE_FILMS[0];
+if (!heroFilm) throw new Error("no sample film");
+const heroPoster = await sampleImage(filmPoster(heroFilm.id), POSTER_SIZES, [540]);
+const filmPairInfo = samplePair(heroFilm.pair);
+const heroSources = filmPairInfo
+  ? await Promise.all(
+      (["survivor", "infected"] as const).map(async (f) => ({
+        src: (await sampleImage(sampleFile(filmPairInfo.id, f), "72px", [144])).src,
+        alt: sampleAlt(filmPairInfo, f),
+      })),
+    )
+  : [];
+const GALLERY_SIZES = "(min-width: 900px) 260px, 44vw";
+const gallery = await Promise.all(
+  SAMPLE_FILMS.map(async (f) => ({
+    id: f.id,
+    src: filmSrc(f.id),
+    poster: (await sampleImage(filmMemory(f.id), GALLERY_SIZES, [360])).src,
+    scene: f.kind === "pet" ? `${SCENES[f.scene].label} · pet` : SCENES[f.scene].label,
+    who: `AI example: ${samplePair(f.pair)?.who ?? ""}`,
+  })),
+);
+const petPoster = await sampleImage(filmMemory("pet"), "(min-width: 900px) 300px, 70vw", [360]);
+// Scene picker: each scene's poster frame and its silent loop around the match cut.
+const posters = Object.fromEntries(
+  await Promise.all(
+    SAMPLE_FILMS.filter((f) => f.kind === "human").map(async (f) => [
+      f.scene,
+      { still: (await sampleImage(filmPoster(f.id), "120px", [240])).src, clip: filmLoop(f.id) },
+    ]),
+  ),
+);
 const BEAT_SIZES = "(min-width: 900px) 300px, 62vw";
 const beats = await Promise.all(
   (["A", "B", "C"] as const).map((f) => sampleImage(sampleFile(hero.id, f), BEAT_SIZES)),
@@ -44,11 +87,6 @@ const likeness = await Promise.all(
     c: await sampleImage(sampleFile(pair.id, "C"), ROW_SIZES, [240, 360]),
   })),
 );
-const filmPair = SAMPLE_PAIRS.find((p) => p.film);
-const filmPoster = filmPair?.film
-  ? await sampleImage(`${filmPair.film.poster}.jpg`, "(min-width: 900px) 360px, 82vw")
-  : null;
-const posters = { "cabin-wheat": { cold: heroA.src, warm: heroC.src } };
 const preset = page.preset ?? {};
 ---
 <section class="hero">
@@ -72,16 +110,13 @@ const preset = page.preset ?? {};
       }
     </div>
     <figure class="hero-poster">
-      <GradeWipe
-        client:idle
-        mode="auto"
-        priority
-        cold={{ ...heroA, alt: sampleAlt(hero, "A") }}
-        warm={{ ...heroC, alt: sampleAlt(hero, "C") }}
+      <HeroFilm
+        client:load
+        src={filmSrc(heroFilm.id)}
+        poster={heroPoster.src}
+        label={`Example film: ${filmPairInfo?.who ?? ""}`}
+        sources={heroSources}
       />
-      <figcaption class="scene">
-        <span>{t("story.frame.standoff", {}, locale)}</span><span>{t("story.sample", {}, locale)}</span><span>{t("story.frame.memory", {}, locale)}</span>
-      </figcaption>
     </figure>
   </div>
 </section>
@@ -91,6 +126,16 @@ const preset = page.preset ?? {};
     <StoryTool client:load posters={posters} preset={preset} />
   </div>
 </section>
+
+<section class="section films" id="film">
+  <div class="wrap">
+    <p class="scene">{t("home.film.kicker", {}, locale)}</p>
+    <h2>{t("home.films.title", {}, locale)}</h2>
+    <p class="lede">{t("home.films.text", {}, locale)}</p>
+    <FilmGallery client:visible films={gallery} />
+  </div>
+</section>
+
 
 {
   d.beats && (
@@ -147,29 +192,6 @@ const preset = page.preset ?? {};
   )
 }
 
-{
-  filmPair?.film && filmPoster && (
-    <section class="section film" id="film">
-      <div class="wrap film-grid">
-        <div>
-          <p class="scene">{t("home.film.kicker", {}, locale)}</p>
-          <h2>{t("home.film.title", {}, locale)}</h2>
-          <p class="lede">{t("home.film.text", { seconds: fact("video.seconds") }, locale)}</p>
-        </div>
-        <video
-          class="film-player"
-          src={filmPair.film.src}
-          poster={filmPoster.src}
-          controls
-          playsinline
-          preload="none"
-          width="720"
-          height="1280"
-        />
-      </div>
-    </section>
-  )
-}
 
 {
   variant === "home" && d.tips && (
@@ -256,10 +278,26 @@ const preset = page.preset ?? {};
 {
   variant === "home" && d.pet && (
     <section class="section pet-band">
-      <div class="wrap">
-        <p class="scene">EXT. BACKYARD — DUSK</p>
-        <h2>{d.pet.title}</h2>
-        <p class="lede">{d.pet.text}</p>
+      <div class="wrap pet-grid">
+        <div>
+          <p class="scene">EXT. BACKYARD — DUSK</p>
+          <h2>{d.pet.title}</h2>
+          <p class="lede">{d.pet.text}</p>
+          <a class="btn btn-lg" href="/pet-zombie-video">{t("home.pet.cta", {}, locale)}</a>
+        </div>
+        <video
+          class="pet-clip"
+          src={filmLoop("pet")}
+          poster={petPoster.src}
+          muted
+          loop
+          autoplay
+          playsinline
+          preload="none"
+          width="360"
+          height="640"
+          aria-label={`AI example: ${samplePair("q01")?.who ?? ""}`}
+        />
       </div>
     </section>
   )

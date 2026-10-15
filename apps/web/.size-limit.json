@@ -6,9 +6,15 @@
     "gzip": true
   },
   {
-    "name": "grade wipe (hero)",
-    "path": "dist/_astro/GradeWipe.*.js",
+    "name": "hero film (first screen of home and landing pages)",
+    "path": "dist/_astro/HeroFilm.*.js",
     "limit": "1.5 kB",
+    "gzip": true
+  },
+  {
+    "name": "film gallery",
+    "path": "dist/_astro/FilmGallery.*.js",
+    "limit": "1 kB",
     "gzip": true
   },
   {
@@ -19,7 +25,7 @@
   },
   {
     "name": "shared strings and helpers",
-    "path": "dist/_astro/index.*.js",
+    "path": ["dist/_astro/index.*.js", "dist/_astro/jsxRuntime.module.*.js"],
     "limit": "14 kB",
     "gzip": true
   },

@@ -58,7 +58,7 @@ export const PAGES: readonly PageConfig[] = [
     "landing",
     "pet-zombie-video",
     "Pet Zombie Video",
-    "draft",
+    "live",
     ["home", "zombie-love-story-ai"],
     { kind: "pet" },
   ),

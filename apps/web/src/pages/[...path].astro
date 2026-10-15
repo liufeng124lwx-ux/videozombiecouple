@@ -6,7 +6,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { pageContent } from "../lib/content.ts";
 import { type RouteProps, staticPaths } from "../lib/routes.ts";
 import { sampleImage } from "../lib/sample-images.ts";
-import { HERO_PAIR, HERO_SIZES, sampleFile } from "../lib/samples.ts";
+import { filmPoster } from "../lib/samples.ts";
 import { alternateLinks, ogImagePath, pageSchemas } from "../lib/seo.ts";
 import { absoluteUrl, buildMode } from "../lib/site.ts";
 import AccountPage from "../templates/AccountPage.astro";
@@ -38,10 +38,11 @@ const schemas = pageSchemas({
   content: entry?.data ?? null,
 });
 const links = alternateLinks(page, buildMode(), absoluteUrl);
-// Start the hero image with the HTML, not after the stylesheets (LCP on phones).
+// Start the hero film's poster with the HTML, not after the stylesheets (LCP on phones).
+const HERO_POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
 const hero =
   page.kind === "home" || page.kind === "landing"
-    ? await sampleImage(sampleFile(HERO_PAIR, "A"), HERO_SIZES)
+    ? await sampleImage(filmPoster(entry?.data.film ?? "cabin"), HERO_POSTER_SIZES, [540])
     : null;
 ---
 <BaseLayout
@@ -63,7 +64,7 @@ const hero =
         as="image"
         href={hero.src}
         imagesrcset={hero.srcset}
-        imagesizes={HERO_SIZES}
+        imagesizes={HERO_POSTER_SIZES}
         fetchpriority="high"
       />
     )

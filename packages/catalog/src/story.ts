@@ -30,7 +30,7 @@ export const SCENES: Record<SceneId, Scene> = {
   "rain-chapel": {
     id: "rain-chapel",
     label: "Rainy city → Chapel",
-    live: false,
+    live: true,
     cold: "Abandoned city street at night in heavy rain, wet asphalt reflecting cold blue streetlight, overturned cars, 35mm film grain.",
     warm: "Small sunlit wooden chapel decorated with white flowers, warm afternoon light through tall windows, 35mm film grain.",
     musicKey: "music/rain-chapel.m4a",
@@ -38,7 +38,7 @@ export const SCENES: Record<SceneId, Scene> = {
   "lighthouse-beach": {
     id: "lighthouse-beach",
     label: "Lighthouse → Beach",
-    live: false,
+    live: true,
     cold: "Inside a ruined lighthouse at dusk, cold blue light, storm clouds through broken windows, 35mm film grain.",
     warm: "Sandy beach at golden hour, gentle waves, warm sunset glow, soft haze, 35mm film grain.",
     musicKey: "music/lighthouse-beach.m4a",

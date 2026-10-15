@@ -140,7 +140,7 @@ describe("sitemaps and robots (spec 2.4)", () => {
 
   it("lists the catalog's live pages, never drafts, the story page, the account or policies", () => {
     expect([...sitemapGroups("production")]).toEqual([
-      ["en", ["/", "/zombie-love-story-ai", "/pricing", "/about", "/contact"]],
+      ["en", ["/", "/zombie-love-story-ai", "/pet-zombie-video", "/pricing", "/about", "/contact"]],
     ]);
   });
 

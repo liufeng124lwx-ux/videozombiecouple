@@ -62,15 +62,25 @@ describe("pages", () => {
       expect(pageById(id)?.noindex).toBe(true);
   });
 
-  it("ship phase one live and keep phase two as drafts (spec §9)", () => {
+  it("ship phase two's pet page; the prompts article stays a draft (spec §9)", () => {
     const live = PAGES.filter((p) => isLive(p) && p.kind !== "legal").map((p) => p.id);
-    expect(live).toEqual(["home", "zombie-love-story-ai", "pricing", "story", "account"]);
+    expect(live).toEqual([
+      "home",
+      "zombie-love-story-ai",
+      "pet-zombie-video",
+      "pricing",
+      "story",
+      "account",
+    ]);
     expect(pageById("pet-zombie-video")?.preset).toEqual({ kind: "pet" });
   });
 
   it("show only live related pages", () => {
     const home = pageById("home") as PageConfig;
-    expect(liveRelated(home).map((p) => p.id)).toEqual(["zombie-love-story-ai"]);
+    expect(liveRelated(home).map((p) => p.id)).toEqual([
+      "zombie-love-story-ai",
+      "pet-zombie-video",
+    ]);
   });
 
   it("build root-relative paths", () => {

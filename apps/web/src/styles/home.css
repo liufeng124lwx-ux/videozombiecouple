@@ -45,20 +45,156 @@
   color: var(--ember);
 }
 .hero-poster {
-  max-width: 420px;
-  width: 82%;
+  width: 100%;
+  max-width: min(380px, calc((100svh - 260px) * 9 / 16));
   margin: 0 auto;
 }
-.hero-poster figcaption {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
+/* Phones: the film is the first thing you see, the headline follows. */
+@media (max-width: 899px) {
+  .hero-poster {
+    order: -1;
+    max-width: min(86vw, calc((100svh - 150px) * 9 / 16));
+  }
+}
+
+/* The hero film: a 9:16 reel, its controls, the beats lighting up as it plays */
+.reel {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-btn);
+  overflow: hidden;
+}
+.reel video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+.reel-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 6px;
+  background: rgb(11 15 20 / 0.7);
+  color: var(--text-2);
   font-size: 10px;
 }
-.hero-poster figcaption span:nth-child(2) {
+.reel-controls {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+}
+.reel-btn {
+  height: 32px;
+  min-width: 32px;
+  padding: 0 10px;
+  border: 1px solid rgb(230 236 242 / 0.35);
+  border-radius: var(--r-btn);
+  background: rgb(11 15 20 / 0.7);
+  color: var(--text);
+  font: 500 12px / 1 var(--font-ui);
+  cursor: pointer;
+}
+.reel-btn[aria-pressed="true"] {
+  border-color: var(--ember);
+}
+.reel-beats {
+  display: grid;
+  grid-template-columns: 5fr 3fr 4fr;
+  gap: 4px;
+  margin-top: 10px;
+  list-style: none;
+  font: 500 12px / 1.2 var(--font-ui);
   color: var(--text-3);
-  text-align: center;
+}
+.reel-beats li {
+  padding-top: 8px;
+  border-top: 2px solid var(--hairline);
+  transition:
+    color 0.3s,
+    border-color 0.3s;
+}
+.reel-beats li .scene {
+  display: block;
+  font-size: 10px;
+  color: inherit;
+}
+.reel-beats li.on {
+  color: var(--text);
+  border-top-color: var(--ember);
+}
+.reel-sources {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.reel-sources .scene {
+  font-size: 10px;
+}
+.reel-sources img {
+  width: 40px;
+  height: 52px;
+  object-fit: cover;
+  border: 1px solid var(--hairline);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reel-beats li {
+    transition: none;
+  }
+}
+
+/* Films made here: four reels side by side (two by two on phones) */
+.films .lede {
+  margin: 12px 0 28px;
+}
+.film-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  list-style: none;
+}
+@media (min-width: 900px) {
+  .film-gallery {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+.film-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-btn);
+  background: var(--surface-1);
+  overflow: hidden;
+  cursor: pointer;
+}
+.film-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.film-gallery .loud .film-tile {
+  border-color: var(--ember);
+}
+.film-sound {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 8px;
+  background: rgb(11 15 20 / 0.7);
+  color: var(--text);
+  font: 500 11px / 1 var(--font-ui);
+}
+.film-gallery .scene {
+  margin-top: 10px;
 }
 
 /* Beats: a sideways filmstrip, cold to warm */
@@ -133,28 +269,6 @@
   aspect-ratio: 9 / 16;
   object-fit: cover;
   width: 100%;
-}
-
-/* Example film */
-.film-grid {
-  display: grid;
-  gap: 28px;
-  align-items: center;
-}
-@media (min-width: 900px) {
-  .film-grid {
-    grid-template-columns: 1fr 360px;
-  }
-}
-.film-grid .lede {
-  margin-top: 14px;
-}
-.film-player {
-  width: 100%;
-  max-width: 360px;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  justify-self: center;
 }
 
 /* Tips, steps, compare: lines, not cards (A24) */
@@ -277,4 +391,29 @@
 }
 .closing-card .btn {
   justify-self: center;
+}
+
+/* Pet band: the copy and a looping pet clip */
+.pet-grid {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+}
+.pet-grid .lede {
+  margin: 12px 0 20px;
+}
+@media (min-width: 900px) {
+  .pet-grid {
+    grid-template-columns: 1fr 300px;
+  }
+}
+.pet-clip {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  justify-self: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-btn);
+  background: var(--surface-1);
 }

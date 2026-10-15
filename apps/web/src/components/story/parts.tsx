@@ -1,10 +1,39 @@
 import { fact, type Kind, SCENE_IDS, SCENES, type SceneId } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import type { JSX } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { Photo, Slot } from "../../lib/story/machine.ts";
-import GradeWipe from "../GradeWipe.tsx";
 
-export type ScenePoster = { cold: string; warm: string };
+/** A scene's opening frame and its silent loop around the match cut (lib/samples.ts). */
+export type ScenePoster = { still: string; clip: string };
+
+/** Plays while picked or hovered; otherwise rests on its first frame. */
+function SceneClip({ poster, on }: { poster: ScenePoster; on: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [hover, setHover] = useState(false);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if ((on || hover) && !still) void v.play?.()?.catch(() => undefined);
+    else v.pause?.();
+  }, [on, hover]);
+  return (
+    <video
+      ref={ref}
+      class="scene-clip"
+      src={poster.clip}
+      poster={poster.still}
+      muted
+      loop
+      playsInline
+      preload="none"
+      aria-hidden="true"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    />
+  );
+}
 
 /** A 3:4 photo slot labelled like a call sheet (design lock: THE SURVIVOR / THE ONE WHO TURNS). */
 export function PhotoSlot(props: {
@@ -71,7 +100,7 @@ export function PhotoSlot(props: {
   );
 }
 
-/** Three 9:16 scene tiles; each is a grade wipe (cold half, warm half). */
+/** Three 9:16 scene tiles; the picked one plays its clip. */
 export function ScenePicker(props: {
   scene: SceneId;
   posters: Partial<Record<SceneId, ScenePoster>>;
@@ -97,12 +126,7 @@ export function ScenePicker(props: {
               onClick={() => props.onPick(id)}
             >
               {poster ? (
-                <GradeWipe
-                  mode="still"
-                  value={50}
-                  cold={{ src: poster.cold, alt: "" }}
-                  warm={{ src: poster.warm, alt: "" }}
-                />
+                <SceneClip poster={poster} on={on} />
               ) : (
                 <span class="scene-blank" aria-hidden="true" />
               )}

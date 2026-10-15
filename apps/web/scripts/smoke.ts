@@ -90,16 +90,25 @@ async function until(id: string, want: string[], minutes: number): Promise<View>
   throw new Error("unreachable");
 }
 
+// Optional: SMOKE_SCENE / SMOKE_KIND / SMOKE_PHOTOS ("survivor.jpg,infected.jpg") to try a scene
+// or the pet version before it goes live; SMOKE_OUT saves the finished film for review.
+const scene = process.env.SMOKE_SCENE ?? "cabin-wheat";
+const kind = process.env.SMOKE_KIND ?? "human";
+const [survivorPhoto, infectedPhoto] = (
+  process.env.SMOKE_PHOTOS ??
+  "src/assets/samples/p02-survivor.jpg,src/assets/samples/p02-infected.jpg"
+).split(",");
+
 async function realStory() {
-  const survivorKey = await upload("src/assets/samples/p02-survivor.jpg");
-  const infectedKey = await upload("src/assets/samples/p02-infected.jpg");
+  const survivorKey = await upload(survivorPhoto as string);
+  const infectedKey = await upload(infectedPhoto as string);
   const created = await call("/v1/stories", {
     method: "POST",
     body: JSON.stringify({
       survivorKey,
       infectedKey,
-      kind: "human",
-      scene: "cabin-wheat",
+      kind,
+      scene,
       names: "Mara & Eli",
       idempotencyKey: `smoke-${Date.now()}`,
     }),
@@ -129,6 +138,12 @@ async function realStory() {
   step("film", done.status === "done" && !!done.video, done.errorCode ?? done.status);
   const film = await fetch(done.video?.url as string, { headers: { range: "bytes=0-1023" } });
   step("film downloads", film.status === 206 || film.status === 200, String(film.status));
+  if (process.env.SMOKE_OUT) {
+    const whole = await fetch(done.video?.url as string);
+    const { writeFileSync } = await import("node:fs");
+    writeFileSync(process.env.SMOKE_OUT, new Uint8Array(await whole.arrayBuffer()));
+    console.log(`smoke:      saved ${process.env.SMOKE_OUT}`);
+  }
   const shared = await fetch(`${api}/v1/share/${storyId}?t=${done.shareToken}`, {
     headers: { origin: site as string },
   });

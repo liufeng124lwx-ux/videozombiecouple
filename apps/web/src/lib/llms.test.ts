@@ -8,6 +8,8 @@ describe("llms.txt", () => {
     expect(text).toContain("$4.99");
     expect(text).toContain("12-second");
     expect(text).toContain("https://videozombiecouple.com/zombie-love-story-ai");
-    expect(text).not.toContain("pet-zombie-video");
+    expect(text).toContain("pet-zombie-video");
+    // Drafts never appear.
+    expect(text).not.toContain("zombie-love-story-prompts");
   });
 });
