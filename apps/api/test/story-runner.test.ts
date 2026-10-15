@@ -216,6 +216,29 @@ describe("StoryRunner", () => {
     expect(h.wallet.calls.some((c) => c[0] === "commit")).toBe(false);
   });
 
+  it("renders a failed video again with a new hold, reusing the shots that worked", async () => {
+    const h = await setup();
+    const calls = scripted(h, { composeErrors: COMPOSER_MAX_FAILURES });
+    const { spec, runner } = await readyStory(h);
+    await runner.render(await creditHold(h, spec.id, 20));
+    expect((await untilStatus(h, runner, "failed", 240)).videoAttempts).toBe(1);
+    expect(h.wallet.calls).toContainEqual(["release", "test", spec.id, spec.id]);
+    const retry = {
+      kind: "credits",
+      userId: "test",
+      reservationId: `${spec.id}:v2`,
+      reserved: 10,
+    } as const;
+    const wallet = h.wallets.instance("test");
+    expect((await wallet.reserve("test", retry.reservationId, 10, spec.id)).ok).toBe(true);
+    expect(await runner.render(retry)).toEqual({ ok: true });
+    const done = await untilStatus(h, runner, "done", 240);
+    expect(done.videoAttempts).toBe(2);
+    expect(h.wallet.calls).toContainEqual(["commit", "test", `${spec.id}:v2`, 10, spec.id]);
+    // The first attempt's shots were kept: only compose ran again.
+    expect(calls.compose).toBe(COMPOSER_MAX_FAILURES + 1);
+  });
+
   it("retries a failing composer with backoff, then succeeds", async () => {
     const h = await setup();
     const calls = scripted(h, { composeErrors: 2 });
@@ -300,6 +323,10 @@ describe("StoryRunner", () => {
     const { spec, runner } = await readyStory(h);
     const charge = await creditHold(h, spec.id);
     expect(await runner.render(charge)).toEqual({ ok: true });
-    expect(await runner.render(charge)).toEqual({ ok: false, reason: "already" });
+    expect(await runner.render(charge)).toEqual({
+      ok: false,
+      reason: "already",
+      activeReservation: spec.id,
+    });
   });
 });

@@ -44,7 +44,11 @@ export async function holdPreview(c: Context<AppEnv>, storyId: string): Promise<
  * Spec §7: the video holds TIERS.video.credits from the wallet until it is delivered (commit) or
  * fails (release). Paused accounts and the per-account daily line still apply.
  */
-export async function holdVideo(c: Context<AppEnv>, storyId: string): Promise<Hold> {
+export async function holdVideo(
+  c: Context<AppEnv>,
+  storyId: string,
+  reservationId: string = storyId,
+): Promise<Hold> {
   const userId = c.get("userId");
   if (!userId) return { ok: false, code: "LOGIN_REQUIRED" };
   const paused = await c.env.DB.prepare("SELECT paid_paused_at FROM users WHERE id=?")
@@ -56,18 +60,18 @@ export async function holdVideo(c: Context<AppEnv>, storyId: string): Promise<Ho
   if (c.get("paidPaused")) return { ok: false, code: "PAUSED" };
   const credits = TIERS.video.credits;
   const cap = await dailyCreditCap(c.env, userId, Date.now());
-  if (!(await reserveSpend(c.env, userId, storyId, credits, cap)))
+  if (!(await reserveSpend(c.env, userId, reservationId, credits, cap)))
     return { ok: false, code: "DAILY_LIMIT" };
   const wallet = c.env.WALLET.get(c.env.WALLET.idFromName(userId));
   let reserved: Awaited<ReturnType<typeof wallet.reserve>>;
   try {
-    reserved = await wallet.reserve(userId, storyId, credits, storyId);
+    reserved = await wallet.reserve(userId, reservationId, credits, storyId);
   } catch (error) {
-    await limiter(c.env, spendCounter(userId)).release(storyId);
+    await limiter(c.env, spendCounter(userId)).release(reservationId);
     throw error;
   }
   if (!reserved.ok) {
-    await limiter(c.env, spendCounter(userId)).release(storyId);
+    await limiter(c.env, spendCounter(userId)).release(reservationId);
     return { ok: false, code: "CREDITS_LOW" };
   }
   return {
@@ -75,7 +79,7 @@ export async function holdVideo(c: Context<AppEnv>, storyId: string): Promise<Ho
     charge: {
       kind: "credits",
       userId,
-      reservationId: storyId,
+      reservationId,
       reserved: credits,
       spendCounter: spendCounter(userId),
     },

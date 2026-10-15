@@ -125,8 +125,53 @@ describe("story API", () => {
     expect([one.status, two.status]).toEqual([202, 202]);
     await h.untilStory(id, "done");
     const balance = await h.wallets.instance(userId).balance(userId);
+    // No hold is left behind by the request that lost the race.
+    expect(h.db.prepare("SELECT state FROM credit_reservations WHERE state='held'").all()).toEqual(
+      [],
+    );
     expect(balance.total).toBe(30 - TIERS.video.credits);
     expect(h.wallet.calls.filter((c) => c[0] === "commit")).toHaveLength(1);
+  });
+
+  it("renders a failed video again under a new reservation, so it is charged once on success", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { userId, session } = await signedIn(h);
+    await h.wallets
+      .instance(userId)
+      .grant(userId, {
+        kind: "pack",
+        credits: 30,
+        expiresAt: null,
+        sourceRef: "order-y",
+        reason: "test",
+      });
+    let composeErrors = 99;
+    const fake = (await import("../src/services/composer.ts")).fakeComposer(h.env as never);
+    h.env.COMPOSER_IMPL = {
+      score: fake.score,
+      compose: async (r: Parameters<typeof fake.compose>[0]) => {
+        if (composeErrors-- > 0) throw new Error("composer down");
+        return fake.compose(r);
+      },
+    };
+    const id = (await create(h, session)).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-1" },
+    });
+    await h.untilStory(id, "failed");
+    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(30);
+    composeErrors = 0;
+    const again = await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-2" },
+    });
+    expect(again.status).toBe(202);
+    await h.untilStory(id, "done");
+    expect((await h.wallets.instance(userId).balance(userId)).total).toBe(30 - TIERS.video.credits);
   });
 
   it("only the owner can read a story", async () => {

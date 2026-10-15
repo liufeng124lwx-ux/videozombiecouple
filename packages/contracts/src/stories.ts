@@ -47,5 +47,7 @@ export type StoryView = {
   progress: { done: number; total: number; etaMs: number | null };
   errorCode: ErrorCode | null;
   recomposeLeft: number;
+  /** Paid render attempts started (a failed video can be rendered again with a new hold). */
+  videoAttempts: number;
   createdAt: number;
 };

@@ -70,7 +70,9 @@ const isActive = (a: AttemptRecord) =>
   a.state === "queued" || a.state === "submitting" || a.state === "pending";
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-export type RenderOutcome = { ok: true } | { ok: false; reason: "not_ready" | "already" };
+export type RenderOutcome =
+  | { ok: true }
+  | { ok: false; reason: "not_ready" | "already"; activeReservation?: string | null };
 export type RecomposeOutcome = { ok: true } | { ok: false; reason: "used" | "not_done" };
 
 function newAttempt(step: StepRecord, route: Route): AttemptRecord {
@@ -144,16 +146,50 @@ export class StoryRunner extends DurableObject<Bindings> {
     });
   }
 
-  /** Spec §4.1 step 3: the paid video starts only from a ready preview, once. */
+  /**
+   * Spec §4.1 step 3: the paid video starts from a ready preview, once. A video that failed (its
+   * hold was given back) can start again with a NEW hold; shots that already worked are kept.
+   */
   render(videoCharge: ChargeHold): Promise<RenderOutcome> {
     return this.#serial(async () => {
       const state = await this.#load();
-      if (!state || (state.status !== "preview_ready" && state.videoCharge === null))
-        return { ok: false, reason: "not_ready" };
-      if (state.videoCharge !== null) return { ok: false, reason: "already" };
+      if (!state) return { ok: false, reason: "not_ready" };
+      const retry = state.status === "failed" && state.videoSettled && state.videoCharge !== null;
+      const reservation = (c: ChargeHold | null) =>
+        c?.kind === "credits" ? c.reservationId : null;
+      const already = {
+        ok: false,
+        reason: "already",
+        activeReservation: reservation(state.videoCharge),
+      } as const;
+      if (state.status !== "preview_ready" && !retry)
+        return state.videoCharge !== null ? already : { ok: false, reason: "not_ready" };
+      if (state.status === "preview_ready" && state.videoCharge !== null) return already;
+      // A released reservation id must never be reused: the wallet would accept it without charging.
+      if (
+        retry &&
+        reservation(videoCharge) !== null &&
+        reservation(videoCharge) === reservation(state.videoCharge)
+      )
+        return already;
+      if (retry)
+        for (const step of Object.values(state.steps))
+          if (step.phase === "video" && step.state !== "succeeded")
+            Object.assign(step, {
+              state: "waiting",
+              attempts: [],
+              fallbacks: [],
+              failures: 0,
+              nextRunAt: null,
+              error: null,
+              failKind: null,
+            });
       state.videoCharge = videoCharge;
+      state.videoSettled = false;
+      state.videoAttempts = (state.videoAttempts ?? 0) + 1;
       state.status = "rendering";
       state.errorCode = null;
+      state.finishedAt = null;
       await this.#save(state);
       await this.#tick(state);
       return { ok: true };
@@ -854,35 +890,41 @@ export class StoryRunner extends DurableObject<Bindings> {
     void state;
   }
 
+  /** A consistent snapshot: every field is read before the first await (renders run meanwhile). */
   async #view(state: StoryState): Promise<StoryView> {
+    const snap = structuredClone(state);
     const phase =
-      state.status === "previewing" || state.status === "preview_failed" ? "preview" : "video";
-    const steps = Object.values(state.steps).filter((s) => s.phase === phase);
+      snap.status === "previewing" || snap.status === "preview_failed" ? "preview" : "video";
+    const steps = Object.values(snap.steps).filter((s) => s.phase === phase);
     const done = steps.filter((s) => s.state === "succeeded").length;
     const sign = (key: string) => presign(this.env, key, "GET", RETENTION.signedUrlSeconds);
-    const showPreview = state.picks.A && state.picks.C && state.status !== "preview_failed";
+    const showPreview = snap.picks.A && snap.picks.C && snap.status !== "preview_failed";
+    const output = snap.output && snap.status === "done" ? snap.output : null;
+    const base = {
+      id: snap.spec.id,
+      status: snap.status,
+      kind: snap.spec.kind,
+      scene: snap.spec.scene,
+      names: snap.spec.names,
+      date: snap.spec.date,
+      progress: { done, total: steps.length, etaMs: this.#eta(snap, phase, steps) },
+      errorCode: snap.errorCode,
+      recomposeLeft: snap.recomposeLeft,
+      videoAttempts: snap.videoAttempts ?? 0,
+      createdAt: snap.spec.createdAt,
+    };
     return {
-      id: state.spec.id,
-      status: state.status,
-      kind: state.spec.kind,
-      scene: state.spec.scene,
-      names: state.spec.names,
-      date: state.spec.date,
+      ...base,
       preview: showPreview
-        ? { A: await sign(state.picks.A as string), C: await sign(state.picks.C as string) }
+        ? { A: await sign(snap.picks.A as string), C: await sign(snap.picks.C as string) }
         : null,
-      video:
-        state.output && state.status === "done"
-          ? {
-              url: await sign(state.output.videoKey),
-              poster: await sign(state.output.posterKey),
-              expiresAt: (state.finishedAt ?? Date.now()) + RETENTION.outputDays * 86_400_000,
-            }
-          : null,
-      progress: { done, total: steps.length, etaMs: this.#eta(state, phase, steps) },
-      errorCode: state.errorCode,
-      recomposeLeft: state.recomposeLeft,
-      createdAt: state.spec.createdAt,
+      video: output
+        ? {
+            url: await sign(output.videoKey),
+            poster: await sign(output.posterKey),
+            expiresAt: (snap.finishedAt ?? Date.now()) + RETENTION.outputDays * 86_400_000,
+          }
+        : null,
     };
   }
 

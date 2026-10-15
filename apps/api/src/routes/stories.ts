@@ -184,17 +184,20 @@ export async function renderStory(c: Context<AppEnv>) {
   const current = await runnerFor(c, id).view();
   if (!current) return fail(c, "NOT_FOUND");
   if (current.status === "rendering" || current.status === "done") return c.json({ ok: true }, 202);
-  if (current.status !== "preview_ready") return fail(c, "NOT_READY");
-  const hold = await holdVideo(c, id);
+  if (current.status !== "preview_ready" && current.status !== "failed")
+    return fail(c, "NOT_READY");
+  // Each paid attempt holds credits under its own reservation id (a released one must not be reused).
+  const reservationId = current.videoAttempts === 0 ? id : `${id}:v${current.videoAttempts + 1}`;
+  const hold = await holdVideo(c, id, reservationId);
   if (!hold.ok) return fail(c, hold.code);
   const outcome = await runnerFor(c, id).render(hold.charge);
   if (!outcome.ok) {
-    // "already": a concurrent request won; this request's hold is the same reservation id, so
-    // releasing would undo the winner's — leave it. "not_ready": nothing started, give it back.
-    if (outcome.reason === "not_ready") {
+    // "already": a concurrent request won. If it holds the same reservation id, releasing would
+    // undo the winner's hold — leave it; otherwise give this request's own hold back.
+    const mine = hold.charge.kind === "credits" ? hold.charge.reservationId : null;
+    if (outcome.reason === "not_ready" || outcome.activeReservation !== mine)
       await settle(c.env, id, hold.charge, null);
-      return fail(c, "NOT_READY");
-    }
+    if (outcome.reason === "not_ready") return fail(c, "NOT_READY");
     return c.json({ ok: true }, 202);
   }
   await c.env.DB.prepare("UPDATE stories SET render_key=?, rendered_at=? WHERE id=?")
