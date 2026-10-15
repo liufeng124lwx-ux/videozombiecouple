@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import {
+  ABUSE,
   CAPABILITIES,
   CAPTION_SEC,
   type CapabilityId,
@@ -690,7 +691,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       step.error = "FACE_NOT_FOUND";
       return;
     }
-    if (result.minAge !== null && result.minAge < 18) {
+    if (result.minAge !== null && result.minAge < ABUSE.minEstimatedAge) {
       step.state = "failed";
       step.error = "UNDERAGE";
       return;
@@ -765,7 +766,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       step.error = "FACE_NOT_FOUND";
       return;
     }
-    if (result.minAge !== null && result.minAge < 18) {
+    if (result.minAge !== null && result.minAge < ABUSE.minEstimatedAge) {
       step.state = "failed";
       step.error = "UNDERAGE";
       return;

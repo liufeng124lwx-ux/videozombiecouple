@@ -60,6 +60,12 @@ export const ABUSE = {
   maxRejections: 5,
   /** How long a device mark lasts (accounts stay marked until an admin clears them). */
   suspiciousDeviceMs: 30 * 86_400_000,
+  /**
+   * The youngest estimated age a photo may show. The service is for adults (18+), but face age
+   * estimates are off by ±5 years or more: a margin keeps teenagers out at the cost of asking some
+   * young-looking adults for a clearer photo.
+   */
+  minEstimatedAge: 21,
 } as const;
 
 /** Spec 6.6: full refund for an untouched pack, or a new plan barely used, inside these windows. */

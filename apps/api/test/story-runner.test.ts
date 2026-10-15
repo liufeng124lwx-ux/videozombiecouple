@@ -375,6 +375,23 @@ describe("StoryRunner", () => {
     expect([...h.r2.objects.keys()].filter((k) => k.startsWith(`kf/${spec.id}/`))).toEqual([]);
   });
 
+  it("keeps a margin over 18: an estimated 20 is refused, an estimated 21 passes", async () => {
+    const at = async (minAge: number) => {
+      const h = await setup();
+      scripted(h, { score: { minAge } });
+      const { spec, runner } = await h.story();
+      await runner.start(spec);
+      for (let i = 0; i < 60; i++) {
+        const view = (await runner.view()) as { status: string; errorCode: string | null };
+        if (view.status !== "previewing") return view.errorCode ?? view.status;
+        await h.advance(10_000);
+      }
+      return "timeout";
+    };
+    expect(await at(20)).toBe("UNDERAGE");
+    expect(await at(21)).toBe("preview_ready");
+  });
+
   it("fails the preview with UNDERAGE when a source looks under 18", async () => {
     const h = await setup();
     scripted(h, { score: { minAge: 14 } });

@@ -377,7 +377,8 @@ export const en = {
     "Your photos have already been deleted for your privacy, so this film can’t be remade.",
   "error.FACE_NOT_FOUND":
     "We couldn’t find a clear face in one of the photos. Use a front-facing photo of one person. Nothing was charged.",
-  "error.UNDERAGE": "This tool is only for photos of adults. Nothing was charged.",
+  "error.UNDERAGE":
+    "This tool is only for photos of adults. If you are one, try a clearer, recent photo. Nothing was charged.",
   "error.PHOTO_REJECTED":
     "One of these photos can't be used: please choose a clothed, everyday photo. Nothing was charged.",
   "error.COMPOSE_FAILED": "We couldn’t finish your video. Your credits were given back. Try again.",
