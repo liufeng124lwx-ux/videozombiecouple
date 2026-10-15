@@ -1,11 +1,12 @@
 import { t } from "@vzc/i18n";
 import { useEffect, useRef, useState } from "preact/hooks";
 
-/** Where each beat starts in the film (seconds): the storyboard's 3/2/3/3 shots and the title. */
+/** Where each beat starts in the film (seconds): standoff (shots 1–2), embrace, memory, dawn. */
 const BEATS = [
   { key: "story.frame.standoff", from: 0 },
   { key: "story.frame.embrace", from: 5 },
   { key: "story.frame.memory", from: 8 },
+  { key: "story.frame.dawn", from: 11 },
 ] as const;
 
 type Props = {

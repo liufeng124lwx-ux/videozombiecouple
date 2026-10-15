@@ -86,6 +86,7 @@ export const en = {
   "story.frame.standoff": "Standoff",
   "story.frame.memory": "Memory",
   "story.frame.embrace": "Embrace",
+  "story.frame.dawn": "Dawn",
   "story.kind.human": "Couple",
   "story.kind.pet": "With a pet",
   "story.kind.label": "Who's in it",
