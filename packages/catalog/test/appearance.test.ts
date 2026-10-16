@@ -32,20 +32,35 @@ describe("appearance lines", () => {
     expect(parseAppearance("IMAGE 1: kippah, short hair").survivor).toBe("small cap, short hair");
   });
 
-  it("drops a line that infers religion, ethnicity, nationality, health or age", () => {
-    for (const bad of [
-      "Muslim woman in a headscarf",
-      "Asian man, short black hair",
-      "looks about 35 years old, short hair",
-      "Caucasian, blond hair",
-      "appears pregnant",
-      "wheelchair user, short hair",
-      "Indian, long black braid",
-    ])
+  it("never lets a banned inference survive; the line keeps only its hair, head, beard and glasses items", () => {
+    for (const [bad, kept] of [
+      ["Muslim woman in a headscarf", ""],
+      ["Asian man, short black hair", "short black hair"],
+      ["looks about 35 years old, short hair", "short hair"],
+      ["Caucasian, blond hair", "blond hair"],
+      ["appears pregnant", ""],
+      ["wheelchair user, short hair", "short hair"],
+      ["Indian, long black braid", "long black braid"],
+      ["Indian braid, short hair", "short hair"],
+      ["Thai woman, long black hair", "long black hair"],
+      ["senior man, bald head", "bald head"],
+      ["autistic, short hair", "short hair"],
+      ["american flag shirt, short hair", "short hair"],
+      ["earrings, red lipstick", ""],
+      ["long red hair, freckles", "long red hair"],
+      ["child-like face, curly hair", "curly hair"],
+    ] as const)
       expect(parseAppearance(`IMAGE 1: ${bad}\nIMAGE 2: long red hair`), bad).toEqual({
-        survivor: "",
+        survivor: kept,
         infected: "long red hair",
       });
+  });
+
+  it("caps at an item boundary", () => {
+    const items = Array.from({ length: 20 }, (_, i) => `hair ${i}`).join(", ");
+    const out = parseAppearance(`IMAGE 1: ${items}`).survivor;
+    expect(out.length).toBeLessThanOrEqual(APPEARANCE_MAX_CHARS);
+    expect(out).toMatch(/hair \d+$/);
   });
 
   it("keeps hair colours like white and black hair (they are not ethnicity)", () => {

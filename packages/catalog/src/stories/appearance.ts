@@ -29,16 +29,77 @@ const RENAME: readonly [RegExp, string][] = [
 const BANNED =
   /\b(muslim|islam\w*|christian\w*|catholic|jewish|jew|sikh\w*|hindu\w*|buddhis\w*|religio\w*|arab\w*|asian|african|caucasian|latin[oa]|latinx|hispanic|indian|ethnic\w*|race|racial|nationality|american|european|chinese|japanese|korean|mexican|disab\w*|wheelchair|ill(ness)?|disease|sick|pregnan\w*|years?\s+old|\d+\s*(years?|yrs?)|elderly|teen\w*|child)\b/i;
 
+/** An item survives only if it names something on the head or face (allow-list; BANNED is a second gate). */
+const ALLOWED = new RegExp(
+  `\\b(${[
+    "hair",
+    "hairline",
+    "bald",
+    "shaved",
+    "buzz cut",
+    "crew cut",
+    "bob",
+    "pixie",
+    "fringe",
+    "bangs",
+    "curls",
+    "curly",
+    "wavy",
+    "straight",
+    "braid",
+    "braids",
+    "braided",
+    "plait",
+    "ponytail",
+    "bun",
+    "top knot",
+    "afro",
+    "dreadlocks",
+    "locs",
+    "cornrows",
+    "mohawk",
+    "undercut",
+    "headscarf",
+    "head wrap",
+    "scarf",
+    "hood",
+    "hat",
+    "cap",
+    "beanie",
+    "headband",
+    "bandana",
+    "small cap",
+    "beard",
+    "stubble",
+    "moustache",
+    "mustache",
+    "goatee",
+    "sideburns",
+    "clean-shaven",
+    "glasses",
+    "sunglasses",
+    "spectacles",
+    "no glasses",
+    "no head covering",
+  ].join("|")})\\b`,
+  "i",
+);
+
 function clean(line: string): string {
   let out = line
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
   for (const [pattern, word] of RENAME) out = out.replace(pattern, word);
-  if (BANNED.test(out)) return "";
+  const items = out
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item && ALLOWED.test(item) && !BANNED.test(item));
+  while (items.length > 1 && items.join(", ").length > APPEARANCE_MAX_CHARS) items.pop();
+  out = items.join(", ");
   if (out.length > APPEARANCE_MAX_CHARS) {
     const cut = out.slice(0, APPEARANCE_MAX_CHARS);
-    out = cut.slice(0, Math.max(cut.lastIndexOf(","), cut.lastIndexOf(" "))).trim();
+    out = cut.slice(0, cut.lastIndexOf(" ")).trim();
   }
   return out;
 }
