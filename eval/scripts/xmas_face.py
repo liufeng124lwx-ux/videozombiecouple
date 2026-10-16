@@ -139,7 +139,11 @@ def main(run_dir: Path):
     for scene, pair, frame, cand, path, from_film in frames_in(run_dir, faces_of, scenes):
         if pair not in pairs:
             continue
-        found = app.get(cv2.imread(str(path))) or []
+        img = cv2.imread(str(path))
+        if img is None:  # a truncated download: report it, don't stop the whole run
+            print(f"warning: cannot read {path}; skipped")
+            continue
+        found = app.get(img) or []
         sims, gender_ok, missing = match_roles(found, {role: ref(pair, role) for role in faces_of[frame]}, faces_of[frame])
         vals = [v for v in sims.values() if v is not None]
         rows.append({
