@@ -7,5 +7,5 @@
     "types": ["node", "astro/client"]
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist", "public/vendor"]
 }

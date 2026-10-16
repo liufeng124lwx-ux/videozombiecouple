@@ -9,5 +9,7 @@ export default defineConfig({
   output: "static",
   trailingSlash: "never",
   build: { format: "file" },
+  // Astro 7 defaults to "jsx" whitespace, which drops spaces between inline elements; keep v5's.
+  compressHTML: true,
   integrations: [preact({ compat: false }), mdx(), afterLoadDirective()],
 });
