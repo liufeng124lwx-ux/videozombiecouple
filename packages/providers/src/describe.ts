@@ -67,9 +67,10 @@ export class KieDescriber implements DescribeAdapter {
     const payload = isObject(raw) && isObject(raw.data) ? raw.data : isObject(raw) ? raw : null;
     const text = claude ? claudeText(payload) : openaiText(payload);
     if (!text) throw new ProviderError("provider_error", "describe returned no text");
+    // Credits are read from the unwrapped payload only (bare body, or `data` inside an envelope).
     const credits = payload?.credits_consumed;
     const costUsd =
-      typeof credits === "number"
+      typeof credits === "number" && Number.isFinite(credits) && credits >= 0
         ? Math.round(credits * USD_PER_KIE_CREDIT * 1e6) / 1e6
         : route.costUsd;
     return { text, costUsd };

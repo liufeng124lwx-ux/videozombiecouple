@@ -3,7 +3,7 @@ import { CAPABILITIES, isTaskCapability, TASK_CAPABILITY_IDS, taskPool } from ".
 
 describe("capabilities", () => {
   it("describe is a synchronous text call, not a kie task", () => {
-    expect(CAPABILITIES.describe).toEqual({ id: "describe", pool: "kie-text", p50Ms: 5_000 });
+    expect(CAPABILITIES.describe).toEqual({ id: "describe", pool: "kie-text", p50Ms: 20_000 });
     expect(TASK_CAPABILITY_IDS).toEqual(["keyframe", "shot"]);
     expect(isTaskCapability("describe")).toBe(false);
     expect(isTaskCapability("keyframe")).toBe(true);

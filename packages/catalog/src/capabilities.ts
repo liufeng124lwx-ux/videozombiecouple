@@ -15,7 +15,7 @@ export type Capability = {
 export const CAPABILITIES: Record<CapabilityId, Capability> = {
   keyframe: { id: "keyframe", pool: "kie-image", p50Ms: 30_000 },
   shot: { id: "shot", pool: "kie-video", p50Ms: 90_000 },
-  describe: { id: "describe", pool: "kie-text", p50Ms: 5_000 },
+  describe: { id: "describe", pool: "kie-text", p50Ms: 20_000 },
 };
 
 /** Capabilities that run as kie tasks (createTask + poll) through a dispatcher pool. */

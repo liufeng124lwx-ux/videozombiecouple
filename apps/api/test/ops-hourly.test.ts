@@ -175,7 +175,8 @@ describe("health check (spec 8.2)", () => {
     const send = async (_e: Bindings, text: string) => void sent.push(text);
     const ok = await healthCheck(
       h.env as unknown as Bindings,
-      "describe" as never,
+      // @ts-expect-error describe is not a task capability; the runtime guard still refuses it.
+      "describe",
       NOON,
       send,
       async () => {},

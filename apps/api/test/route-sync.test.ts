@@ -75,7 +75,7 @@ describe("route sync on deploy (spec 4.5)", () => {
         model: seed.model,
         aspects: [],
         enabled: true,
-        timeoutMs: 30_000,
+        timeoutMs: seed.timeoutMs,
       });
   });
 });

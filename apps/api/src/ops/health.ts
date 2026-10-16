@@ -1,4 +1,4 @@
-import { type CapabilityId, isTaskCapability, OPS } from "@vzc/catalog";
+import { isTaskCapability, OPS, type TaskCapabilityId } from "@vzc/catalog";
 import { pickSeconds, planRoutes } from "@vzc/providers";
 import { providerKit } from "../services/provider-kit.ts";
 import { presign } from "../services/r2-presign.ts";
@@ -18,7 +18,7 @@ const HEALTH_PROMPT =
  */
 export async function healthCheck(
   env: Bindings,
-  capability: CapabilityId,
+  capability: TaskCapabilityId,
   now: number,
   send: Send = deliver,
   sleep: (ms: number) => Promise<void> = realSleep,

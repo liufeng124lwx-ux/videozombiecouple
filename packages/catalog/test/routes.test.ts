@@ -40,4 +40,10 @@ describe("routes", () => {
     expect(d).toHaveLength(2);
     expect(d.every((r) => r.aspects.length === 0 && r.costUsd <= 0.005)).toBe(true);
   });
+
+  it("gives describe routes timeouts above their measured latency (Claude 19 s, Gemini 13–55 s)", () => {
+    const t = (id: string) => ROUTES.find((r) => r.id === id)?.timeoutMs;
+    expect(t("describe:claude-haiku:1")).toBe(45_000);
+    expect(t("describe:gemini-flash:2")).toBe(60_000);
+  });
 });

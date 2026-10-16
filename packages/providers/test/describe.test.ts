@@ -96,6 +96,30 @@ describe("KieDescriber", () => {
     expect(err?.message).not.toMatch(/secret\.test|u2/);
   });
 
+  it("turns a request timeout into kind timeout, with no URL or key in the message", async () => {
+    const slow = (async () => {
+      throw new DOMException("x", "TimeoutError");
+    }) as unknown as typeof fetch;
+    const err = await new KieDescriber("sk-secret", slow)
+      .describe(route("describe:claude-haiku:1"), "P", ["https://photos.test/a.jpg", "u2"])
+      .then(() => null)
+      .catch((e: unknown) => e as ProviderError);
+    expect(err).toBeInstanceOf(ProviderError);
+    expect(err?.kind).toBe("timeout");
+    expect(err?.message).not.toMatch(/photos\.test|sk-secret|https?:/);
+  });
+
+  it("ignores a credits_consumed that is not a finite, non-negative number", async () => {
+    const r = route("describe:claude-haiku:1");
+    for (const credits of ['"NaN"', "-1", "null", '"0.06"']) {
+      const f = fetcherReturning(
+        `{"credits_consumed":${credits},"content":[{"type":"text","text":"IMAGE 1: a"}]}`,
+      );
+      const out = await new KieDescriber("k", f.fn).describe(r, "P", ["u1", "u2"]);
+      expect(out.costUsd).toBe(r.costUsd);
+    }
+  });
+
   it("turns a network failure into a ProviderError", async () => {
     const boom = (async () => {
       throw new TypeError("fetch failed");
