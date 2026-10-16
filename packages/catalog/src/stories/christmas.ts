@@ -6,12 +6,14 @@ import type { FrameRef, Story, StoryScene } from "./types.ts";
 // survivor = the one who remembers (photo 1), infected = the one who forgets (photo 2).
 
 // `room`: the dark living room without the armchair (close-ups); `now` adds it (wide shot).
-type Setting = { room: string; memory: string; window: string };
+// `live`: orderable in production (snow-cabin and city-flat opened 2026-10-16; farmhouse stays preview-only).
+type Setting = { room: string; memory: string; window: string; live: boolean };
 const ARMCHAIR = "an armchair facing the window with its back to the doorway";
 
 const SETTINGS: Record<string, Setting & { label: string }> = {
   "snow-cabin": {
     label: "Snowy cabin",
+    live: true,
     room: "a small wooden cabin living room on Christmas Eve, lamps off, cold blue moonlight from the snow outside through a frosted window, an unlit Christmas tree with a few old ornaments",
     memory:
       "a tiny first apartment on a golden winter afternoon, moving boxes against the wall, a one-metre Christmas tree, two new white enamel mugs on the windowsill",
@@ -19,6 +21,7 @@ const SETTINGS: Record<string, Setting & { label: string }> = {
   },
   "city-flat": {
     label: "Old city flat",
+    live: true,
     room: "an old city apartment living room on Christmas Eve, lamps off, cold blue light from the snowy street through a tall frosted window, an unlit Christmas tree",
     memory:
       "a Christmas market at golden hour, string lights, wooden stalls, a small tree on a stall table",
@@ -26,6 +29,7 @@ const SETTINGS: Record<string, Setting & { label: string }> = {
   },
   farmhouse: {
     label: "Farmhouse",
+    live: false,
     room: "a farmhouse living room on Christmas Eve, lamps off, cold blue light from the snowy fields through a frosted window, an unlit Christmas tree",
     memory:
       "a snowy field on a golden afternoon, the young couple beside a small freshly cut Christmas tree",
@@ -44,7 +48,7 @@ const SCENES: Record<string, StoryScene> = Object.fromEntries(
     {
       id,
       label: s.label,
-      live: false,
+      live: s.live,
       musicKey: asset(id, "music.m4a"),
       assets: {
         ornament: shared("ornament.jpg"),

@@ -33,17 +33,8 @@ describe("pricing (spec §7, christmas spec §6)", () => {
     expect([...perVideo].sort((a, b) => b - a)).toEqual(perVideo);
   });
 
-  it("sells the video packs; the Christmas film only once a Christmas scene is live", () => {
-    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack5"]);
-    const scene = CHRISTMAS.scenes["snow-cabin"];
-    if (!scene) throw new Error("no snow-cabin");
-    const was = scene.live;
-    try {
-      (scene as { live: boolean }).live = true;
-      expect(saleProducts().map((p) => p.key)).toEqual(["pack1", "pack3", "pack5", "christmas1"]);
-    } finally {
-      (scene as { live: boolean }).live = was;
-    }
+  it("christmas1 is on sale once a christmas scene is live", () => {
+    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack5", "christmas1"]);
   });
 
   it("knows the Christmas film by product key even when it is not for sale", () => {

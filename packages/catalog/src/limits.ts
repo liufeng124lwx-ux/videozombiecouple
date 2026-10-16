@@ -139,7 +139,7 @@ export const BUDGETS = {
 /** Cost guardrails spec 4: credits one account may spend per UTC day. */
 export const SPEND_CAPS = {
   /** Accounts whose first paid order is under `newPayerDays` old, or who never paid. */
-  newPayerDailyCredits: 50,
+  newPayerDailyCredits: 100,
   newPayerDays: 7,
   dailyCredits: 1200,
 } as const;

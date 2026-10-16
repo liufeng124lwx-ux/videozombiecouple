@@ -54,6 +54,9 @@ function build(): Record<string, string> {
   if (!xmas) throw new Error("the Christmas film has no product");
   out["story.christmas.usd"] = usd(xmas.usd);
   out["story.christmas.credits"] = count(CHRISTMAS.credits);
+  // Wait times measured on staging (R2: 11-14 min per Christmas film; a zombie film takes about 5).
+  out["story.christmas.minutes"] = count(15);
+  out["story.zombie.minutes"] = count(5);
   return out;
 }
 

@@ -10,13 +10,16 @@ import {
 } from "../src/index.ts";
 
 describe("50 Christmases", () => {
-  it("is well formed, 32 seconds, 20 credits, people only, not orderable yet", () => {
+  it("is well formed, 32 seconds, 20 credits, people only; snow-cabin and city-flat open, farmhouse not", () => {
     expect(validateStory(CHRISTMAS)).toEqual([]);
     expect(totalSeconds(CHRISTMAS, "human")).toBe(32);
     expect(CHRISTMAS.credits).toBe(20);
     expect(CHRISTMAS.kinds).toEqual(["human"]);
     expect(Object.keys(CHRISTMAS.scenes)).toEqual(["snow-cabin", "city-flat", "farmhouse"]);
-    expect(Object.values(CHRISTMAS.scenes).every((s) => !s.live)).toBe(true);
+    const live = Object.values(CHRISTMAS.scenes)
+      .filter((s) => s.live)
+      .map((s) => s.id);
+    expect(live).toEqual(["snow-cabin", "city-flat"]);
     expect(STORIES.christmas).toBe(CHRISTMAS);
     expect(storyOf({ story: "christmas" })).toBe(CHRISTMAS);
   });
@@ -216,15 +219,22 @@ describe("50 Christmases", () => {
     // forgetWarm went back to the photo's blonde, while forgetCold was silver.
     const aged = ["wide", "forgetCold", "rememberClose", "tree", "forgetWarm", "embrace"];
     for (const scene of Object.keys(CHRISTMAS.scenes)) {
-      const get = (id: string) => CHRISTMAS.keyframes.find((k) => k.id === id)!.prompt(scene, "human");
+      const get = (id: string) =>
+        CHRISTMAS.keyframes.find((k) => k.id === id)!.prompt(scene, "human");
       for (const id of aged) {
         expect(get(id), id).toContain("about 78 years old");
         expect(get(id), id).toContain("all of their hair and any beard fully white or silver");
       }
       expect(get("memory")).not.toMatch(/white or silver|78 years/);
-      expect(get("tree")).toContain("the same white or silver hair, hairstyle and age as in IMAGE 3");
-      expect(get("embrace")).toContain("the same white or silver hair, hairstyle and age as in IMAGE 3");
-      expect(get("forgetWarm")).toContain("the same white or silver hair, hairstyle and age as in IMAGE 2");
+      expect(get("tree")).toContain(
+        "the same white or silver hair, hairstyle and age as in IMAGE 3",
+      );
+      expect(get("embrace")).toContain(
+        "the same white or silver hair, hairstyle and age as in IMAGE 3",
+      );
+      expect(get("forgetWarm")).toContain(
+        "the same white or silver hair, hairstyle and age as in IMAGE 2",
+      );
     }
   });
 
