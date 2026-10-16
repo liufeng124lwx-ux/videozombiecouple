@@ -98,6 +98,10 @@ docker run --rm --cpus=2 --memory=7g --shm-size=1g -v /tmp/repo.tar:/repo.tar:ro
   - 开发服务器：**需要** `vite.optimizeDeps.exclude`（五个 `@jsquash/*` 包）。不加时 wasm 请求返回 HTML，报 `expected magic word 00 61 73 6d, found 3c 21 44 4f`。正式构建不受影响。已写进 `astro.config.ts`。
   - Node 测试里用 `src/lib/local/node-codecs.ts` 先把编译好的 wasm 交给各编码器的 `init`；webp 用 `webp_enc_simd.wasm`。与计划不同的一处：`oxipng.initSync` 直接收 `WebAssembly.Module`，不是 `{ module }`。
   - 构建产物（`dist/_astro/`，size-limit 用，文件名带哈希）：`mozjpeg_enc-*.wasm`、`webp_enc_simd-*.{js,wasm}`、`webp_enc-*.{js,wasm}`（非 SIMD 回退）、`avif_enc-*.{js,wasm}`、`avif_enc_mt-*.{js,wasm}`、`avif_enc_mt.worker-*.js`（多线程 AVIF，用不到）、`squoosh_oxipng-*.js` + `squoosh_oxipng_bg-*.wasm`、`squoosh_resize_bg-*.wasm`、`jsquash_magic_kernel_bg-*.wasm`、`squooshhqx_bg-*.wasm`，另有三个 `encode-*.js`（jpeg / webp / avif 的包装）。
+- **加新故事不改生成流程。**
+  - 现象：丧尸片的 A/B/C 关键帧和 5 个镜头写死在 `graph.ts`、运行器和合成里，第二个故事塞不进去。
+  - 做法：故事是 `packages/catalog/src/stories/` 里的一份数据（关键帧引用、分镜、叠字、字幕卡、积分）。生成步骤和依赖由关键帧引用自动排出；场景共用的成片用 `{ clip }`，不发起模型调用。
+  - 守护：`packages/catalog/test/stories.test.ts`（丧尸包装与原数据逐项相等、`validateStory`）、`apps/api/test/story-graph.test.ts`（丧尸步骤与依赖不变）。
 
 ## 五、邮件和健康检查
 
