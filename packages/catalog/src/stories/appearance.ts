@@ -31,9 +31,18 @@ const RENAME: readonly [RegExp, string][] = [
   [/\b(kippah|kippa|yarmulke|kufi|taqiyah)\b/gi, "small cap"],
 ];
 
-/** Inferences the line must never carry; hair colours like "white hair" are allowed. */
+/**
+ * Inferences the line must never carry; hair colours like "white hair" are allowed. Any item naming a
+ * person or skin is dropped whole, so "Black woman with afro" cannot survive as "black with afro".
+ */
 const BANNED =
-  /\b(muslim|islam\w*|christian\w*|catholic|jewish|jew|sikh\w*|hindu\w*|buddhis\w*|religio\w*|arab\w*|asian|african|caucasian|latin[oa]|latinx|hispanic|indian|ethnic\w*|race|racial|nationality|american|european|chinese|japanese|korean|mexican|disab\w*|wheelchair|ill(ness)?|disease|sick|pregnan\w*|years?\s+old|\d+\s*(years?|yrs?)|elderly|teen\w*|child)\b/i;
+  /\b(muslim|islam\w*|christian\w*|catholic|jewish|jew|sikh\w*|hindu\w*|buddhis\w*|religio\w*|arab\w*|asian|african|caucasian|latin[oa]|latinx|hispanic|indian|ethnic\w*|race|racial|nationality|american|european|chinese|japanese|korean|mexican|disab\w*|wheelchair|ill(ness)?|disease|sick|pregnan\w*|years?\s+old|\d+\s*(years?|yrs?)|elderly|teen\w*|child|people|person|m[ae]n|wom[ae]n|male|female|boys?|girls?|lady|ladies|guys?|skin\w*|complexion)\b/i;
+
+/** Dropping the negation would flip the item ("without a beard" → "beard"); "no …" is allowed phrasing. */
+const NEGATION = /\b(not|without|never|lacks?|lacking)\b|n't\b/i;
+
+/** A letter outside a-z left after NFKC is a homoglyph ("mуslim" with a Cyrillic у). */
+const NON_ASCII_LETTER = /[^\P{L}a-zA-Z]/u;
 
 const words = (list: string) => list.split(/\s+/).filter(Boolean);
 
@@ -45,10 +54,10 @@ const SHAPES = words(
 );
 /** An item must name at least one of these to be about the head or face. */
 const HEAD_NOUNS = words(
-  "hair bald headscarf hat cap beard stubble moustache mustache goatee glasses sunglasses spectacles ponytail bun braid braids plait plaits pixie bob afro dreadlocks locs cornrows curls mohawk undercut fringe bangs head hood beanie bandana headband sideburns clean-shaven scarf wrap",
+  "hair bald headscarf hat cap beard stubble moustache mustache goatee glasses sunglasses spectacles ponytail bun braid braids plait plaits pixie bob afro dreadlocks locs cornrows curls mohawk undercut fringe bangs head hood beanie bandana headband sideburns clean-shaven scarf wrap buzz crew shaved knot hairline frames",
 );
 const NOUNS = words(
-  "jaw chin neck hairline shaved buzz crew cut braided top knot frames rimmed round rectangular thin-rimmed thick-rimmed small",
+  "jaw chin neck cut braided top rimmed round rectangular thin-rimmed thick-rimmed small",
 );
 const CONNECTIVES = words("a an the and with no covering covers all most in up pulled around on");
 const TRIM_START = new Set(words("a an the and with"));
@@ -69,13 +78,24 @@ const known = (token: string) =>
   APPEARANCE_VOCABULARY.has(token) ||
   (token.includes("-") && token.split("-").every((part) => APPEARANCE_VOCABULARY.has(part)));
 
-/** One comma item → only its vocabulary words, or "" when nothing about the head or face is left. */
+/**
+ * One comma item → only its vocabulary words, or "" when nothing about the head or face is left.
+ * When a word after the last head noun is not vocabulary, the item ends at that noun, so no dangling
+ * fragment ("with a black" from "with a black elastic tie") is left behind.
+ */
 function cleanItem(item: string): string {
-  if (BANNED.test(item)) return "";
-  const tokens = item
+  if (BANNED.test(item) || NEGATION.test(item) || NON_ASCII_LETTER.test(item)) return "";
+  const raw = item
     .toLowerCase()
     .split(/[^a-z-]+/)
-    .filter((t) => t && known(t))
+    .filter(Boolean);
+  let last = raw.length - 1;
+  while (last >= 0 && !HEAD_NOUN_SET.has(raw[last] as string)) last--;
+  if (last < 0) return "";
+  const end = raw.slice(last + 1).every(known) ? raw.length : last + 1;
+  const tokens = raw
+    .slice(0, end)
+    .filter(known)
     .filter((t, i, all) => t !== all[i - 1]);
   while (tokens.length && TRIM_START.has(tokens[0] as string)) tokens.shift();
   while (tokens.length && TRIM_END.has(tokens[tokens.length - 1] as string)) tokens.pop();

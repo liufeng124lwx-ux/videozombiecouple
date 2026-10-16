@@ -75,23 +75,25 @@ describe("appearance lines", () => {
       ["gray hair suggesting senior", "gray hair"],
       ["dreadlocks common in Jamaican culture", "dreadlocks"],
       ["Rastafarian dreadlocks", "dreadlocks"],
-      ["hair of a Pakistani woman", "hair"],
+      ["hair of a Pakistani woman", ""],
       ["hair of a Nigerian", "hair"],
-      ["hair typical of Black people", "hair black"],
+      ["hair typical of Black people", ""],
       ["hair that looks Middle Eastern", "hair"],
       ["beard in the Amish style", "beard"],
       ["beard like a rabbi", "beard"],
       ["payot sideburns", "sideburns"],
       ["Hasidic hat", "hat"],
-      ["hair covering worn by nuns", "hair covering"],
+      ["hair covering worn by nuns", "hair"],
       ["cap with a cross", "cap"],
       ["bald from chemotherapy", "bald"],
       ["bald due to cancer", "bald"],
-      ["hair thinning with age", "hair thinning"],
+      ["hair thinning with age", "hair"],
       ["hair looks 60", "hair"],
       ["hair in his sixties", "hair"],
-      ["hair of a boy", "hair"],
-      ["hair of a woman in her thirties", "hair"],
+      ["hair of a boy", ""],
+      ["hair of a woman in her thirties", ""],
+      ["Black woman with afro", ""],
+      ["hair of a Black man", ""],
       ["cap saying Make America Great Again", "cap"],
       ["scarf reading ALLAH", "scarf"],
       ["turban-style head wrap", "head wrap"],
@@ -103,6 +105,68 @@ describe("appearance lines", () => {
       expect(out, bad).toBe(kept);
       expect(out, bad).not.toMatch(inference);
     }
+  });
+
+  it("drops whole any item naming a person or skin, so a race word cannot survive as a colour", () => {
+    for (const [bad, kept] of [
+      ["Black woman with afro, short hair", "short hair"],
+      ["hair of a Black man", ""],
+      ["dark skin, short hair", "short hair"],
+      ["brown-skinned, black hair", "black hair"],
+      ["fair complexion, blond hair", "blond hair"],
+      ["black hair like most people", ""],
+      ["blond hair of a young girl", ""],
+      ["white male, grey beard", "grey beard"],
+    ] as const)
+      expect(parseAppearance(`IMAGE 1: ${bad}`).survivor, bad).toBe(kept);
+  });
+
+  it("drops a negated item instead of flipping its meaning; the allowed 'no ...' phrasing stays", () => {
+    for (const [bad, kept] of [
+      ["without a beard", ""],
+      ["not bald, short hair", "short hair"],
+      ["clean-shaven, without glasses", "clean-shaven"],
+      ["headscarf not covering hair", ""],
+      ["never wears a hat", ""],
+      ["hair isn't grey", ""],
+      ["lacks a beard", ""],
+      ["no glasses, no facial hair", "no glasses, no facial hair"],
+    ] as const)
+      expect(parseAppearance(`IMAGE 1: ${bad}`).survivor, bad).toBe(kept);
+  });
+
+  it("cuts an item right after its last hair noun when a word after it was removed", () => {
+    expect(parseAppearance("IMAGE 1: short black hair swept up with volume on top").survivor).toBe(
+      "short black hair",
+    );
+    expect(
+      parseAppearance("IMAGE 1: dark brown hair in a high ponytail with a black elastic tie")
+        .survivor,
+    ).toBe("dark brown hair in a high ponytail");
+    expect(parseAppearance("IMAGE 1: ponytail high up with a black elastic tie").survivor).toBe(
+      "ponytail",
+    );
+    // nothing removed after the last noun: kept as is
+    expect(parseAppearance("IMAGE 1: dark curly hair past the shoulders").survivor).toBe(
+      "dark curly hair past the shoulders",
+    );
+  });
+
+  it("names cuts, knots, hairlines and frames as head and face nouns", () => {
+    for (const ok of [
+      "buzz cut",
+      "crew cut",
+      "shaved head",
+      "top knot",
+      "receding hairline",
+      "black thick-rimmed frames",
+    ])
+      expect(parseAppearance(`IMAGE 1: ${ok}`).survivor, ok).toBe(ok);
+  });
+
+  it("drops an item that still has a non-ASCII letter after NFKC (homoglyphs)", () => {
+    expect(parseAppearance("IMAGE 1: m\u0443slim headscarf").survivor).toBe("");
+    expect(parseAppearance("IMAGE 1: \u0430frican hair, short hair").survivor).toBe("short hair");
   });
 
   it("drops an item with no head or face noun left after filtering", () => {
@@ -248,13 +312,14 @@ describe("appearance lines", () => {
       const look = r0("r0-p09-claude-haiku-5-5.txt");
       expect(look.survivor).toContain("hair");
       expect(look.survivor).toContain("ponytail");
+      expect(look.survivor).toBe("dark brown hair in a high ponytail, no glasses, no facial hair");
       expect(look.infected).toContain("hair");
       expect(look.infected).toContain("pixie");
     });
 
     it("keeps both p01 hair lines from Haiku", () => {
       const look = r0("r0-p01-claude-haiku-5-5.txt");
-      expect(look.survivor).toContain("short black hair");
+      expect(look.survivor).toBe("no head covering, short black hair, light stubble, no glasses");
       expect(look.infected).toContain("long black");
       expect(look.infected).toContain("hair");
     });
