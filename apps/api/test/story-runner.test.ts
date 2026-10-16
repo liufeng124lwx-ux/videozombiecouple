@@ -509,15 +509,19 @@ describe("StoryRunner", () => {
 describe("StoryRunner: stories", () => {
   async function christmas(h: Awaited<ReturnType<typeof setup>>) {
     const { spec, runner } = await h.story({ story: "christmas", scene: "snow-cabin" });
-    for (const name of ["ornament.jpg", "hands.mp4", "window.mp4", "music.m4a"])
-      await h.r2.BUCKET.put(`assets/stories/christmas/snow-cabin/${name}`, new Uint8Array([1]));
+    for (const key of [
+      "shared/ornament.jpg",
+      "shared/hands.mp4",
+      "snow-cabin/window.mp4",
+      "snow-cabin/music.m4a",
+    ])
+      await h.r2.BUCKET.put(`assets/stories/christmas/${key}`, new Uint8Array([1]));
     await runner.start(spec);
     await untilStatus(h, runner, "preview_ready");
     return { spec, runner };
   }
 
-  // enabled by Task 5 (the runner executes the describe step)
-  it.skip("renders a Christmas film: eleven keyframes, seven shots, clips from the scene, 20 credits", async () => {
+  it("renders a Christmas film: eleven keyframes, seven shots, clips from the scene, 20 credits", async () => {
     const h = await setup();
     const calls = scripted(h);
     const { spec, runner } = await christmas(h);
@@ -557,11 +561,173 @@ describe("StoryRunner: stories", () => {
     const kie = stepAttempts(h, spec.id)
       .filter((s) => s.attempts.length > 0)
       .map((s) => s.id);
+    expect(kie[0]).toBe("describe");
     expect(kie.filter((id) => id.startsWith("kf:"))).toHaveLength(11);
     expect(kie.filter((id) => id.startsWith("shot:"))).toHaveLength(7);
     expect(h.wallet.calls.some((c) => c[0] === "commit" && c[2] === spec.id && c[3] === 20)).toBe(
       true,
     );
+  });
+
+  // Every word is on the appearance vocabulary (made-up tokens are dropped by parseAppearance),
+  // and none of these words appears in any prompt, so finding one means the line leaked.
+  const SECRET = "IMAGE 1: salt-and-pepper chin-length dreadlocks\nIMAGE 2: burgundy bandana";
+  const LEAK = /dreadlocks|bandana/i;
+  const submitted = (h: Awaited<ReturnType<typeof setup>>) => JSON.stringify(h.provider.submitted);
+  const describeStep = (h: Awaited<ReturnType<typeof setup>>, id: string) =>
+    (
+      JSON.parse(
+        (h.db.prepare("SELECT steps FROM stories WHERE id=?").get(id) as { steps: string }).steps,
+      ) as {
+        id: string;
+        state: string;
+        error: string | null;
+        attempts: Record<string, unknown>[];
+      }[]
+    ).find((s) => s.id === "describe");
+
+  it("describes the photos first, uses the lines in prompts, and never lets them out", async () => {
+    const logs: string[] = [];
+    const spies = (["log", "info", "warn", "error"] as const).map((m) =>
+      vi
+        .spyOn(console, m)
+        .mockImplementation((...a: unknown[]) => void logs.push(a.map(String).join(" "))),
+    );
+    try {
+      const h = await setup({ FAKE_DESCRIBE: JSON.stringify([SECRET]) });
+      scripted(h);
+      const { spec, runner } = await christmas(h);
+      await runner.render(await creditHold(h, spec.id, 20, 20));
+      const view = await untilStatus(h, runner, "done");
+      // used: the fake provider saw the line in a keyframe prompt
+      expect(submitted(h)).toContain("salt-and-pepper chin-length dreadlocks");
+      expect(submitted(h)).toContain("burgundy bandana");
+      // never out: D1 rows, view, logs, analytics
+      for (const table of ["stories", "orders", "users"]) {
+        const rows = JSON.stringify(h.db.prepare(`SELECT * FROM ${table}`).all());
+        expect(rows).not.toMatch(LEAK);
+      }
+      expect(JSON.stringify(view)).not.toMatch(LEAK);
+      expect(logs.join("\n")).not.toMatch(LEAK);
+      expect(JSON.stringify(h.analytics)).not.toMatch(LEAK);
+      // the describe call is booked with its route and cost only
+      const step = describeStep(h, spec.id);
+      expect(step?.state).toBe("succeeded");
+      expect(step?.attempts).toHaveLength(1);
+      expect(step?.attempts[0]).toMatchObject({ model: "claude-haiku-5-5", state: "succeeded" });
+      expect(step?.attempts[0]?.costUsd).toBeGreaterThan(0);
+    } finally {
+      for (const s of spies) s.mockRestore();
+    }
+  });
+
+  it("clears the lines when the photos expire, and on purge", async () => {
+    const h = await setup({ FAKE_DESCRIBE: JSON.stringify([SECRET]) });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "done");
+    expect(JSON.stringify(await h.runnerState(spec.id))).toMatch(/dreadlocks/);
+    await h.advance(3 * 86_400_000 + 60_000);
+    const after = await h.runnerState(spec.id);
+    expect(after).not.toBeNull();
+    expect(JSON.stringify(after)).not.toMatch(LEAK);
+
+    const again = await setup({ FAKE_DESCRIBE: JSON.stringify([SECRET]) });
+    scripted(again);
+    const second = await christmas(again);
+    await second.runner.render(await creditHold(again, second.spec.id, 20, 20));
+    await untilStatus(again, second.runner, "done");
+    await second.runner.purge();
+    expect(await again.runnerState(second.spec.id)).toBeNull();
+  });
+
+  it("finishes the film without lines when every describe route fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const h = await setup({
+        FAKE_DESCRIBE: JSON.stringify([{ error: "provider_error" }, { error: "timeout" }]),
+      });
+      scripted(h);
+      const { spec, runner } = await christmas(h);
+      await runner.render(await creditHold(h, spec.id, 20, 20));
+      await untilStatus(h, runner, "done");
+      expect(submitted(h)).not.toContain("Appearance to keep");
+      expect(h.wallet.calls.some((c) => c[0] === "commit" && c[3] === 20)).toBe(true);
+      const step = describeStep(h, spec.id);
+      expect(step).toMatchObject({ state: "succeeded", error: "DESCRIBE_FAILED" });
+      expect(step?.attempts.map((a) => [a.model, a.state, a.failKind])).toEqual([
+        ["claude-haiku-5-5", "failed", "provider_error"],
+        ["gemini-3-6-flash-openai", "failed", "timeout"],
+      ]);
+      // a failure is logged with the story, the route and the kind only
+      const lines = warn.mock.calls.map((c) => JSON.parse(String(c[0])) as Record<string, unknown>);
+      expect(lines).toContainEqual({
+        level: "warn",
+        storyId: spec.id,
+        describe: "describe:claude-haiku:1",
+        failKind: "provider_error",
+      });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("a model error that echoes the prompt never carries the lines into D1", async () => {
+    const echo = {
+      kind: "fail",
+      failMsg:
+        "internal error for prompt: Appearance to keep: burgundy bandana. Appearance to keep: salt-and-pepper chin-length dreadlocks.",
+    };
+    const h = await setup({
+      FAKE_DESCRIBE: JSON.stringify([SECRET]),
+      FAKE_SCRIPT: JSON.stringify(
+        Object.fromEntries(
+          ROUTES.filter((r) => r.capability === "keyframe").map((r) => [
+            r.model,
+            Array(40).fill(echo),
+          ]),
+        ),
+      ),
+    });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "failed");
+    const row = JSON.stringify(h.db.prepare("SELECT * FROM stories WHERE id=?").get(spec.id));
+    expect(row).toContain("internal error");
+    expect(row).not.toMatch(LEAK);
+    const state = JSON.stringify(Object.values((await h.runnerState(spec.id))?.steps ?? {}));
+    expect(state).not.toMatch(LEAK);
+  });
+
+  it("drops a line with a banned inference before it reaches a prompt", async () => {
+    const h = await setup({
+      FAKE_DESCRIBE: JSON.stringify([
+        "IMAGE 1: Asian man, short black hair\nIMAGE 2: long red hair",
+      ]),
+    });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "done");
+    const sent = submitted(h);
+    expect(sent).not.toMatch(/Asian/);
+    expect(sent).toContain("long red hair");
+  });
+
+  it("skips the describe call when an admin set describe offline, and still finishes", async () => {
+    const h = await setup({ FAKE_DESCRIBE: JSON.stringify([SECRET]) });
+    h.kv.store.set("flags", JSON.stringify({ offline: ["describe"] }));
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "done");
+    expect(submitted(h)).not.toMatch(LEAK);
+    expect(submitted(h)).not.toContain("Appearance to keep");
+    const step = describeStep(h, spec.id);
+    expect(step).toMatchObject({ state: "succeeded", error: "DESCRIBE_OFFLINE", attempts: [] });
+    expect(h.wallet.calls.some((c) => c[0] === "commit" && c[3] === 20)).toBe(true);
   });
 
   it("a failed Christmas film gives all 20 credits back", async () => {

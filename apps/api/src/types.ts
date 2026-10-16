@@ -80,6 +80,10 @@ export interface Bindings {
   FAKE_PROVIDER?: string;
   /** JSON Record<model, FakeStep[]> for FAKE_PROVIDER runs. */
   FAKE_SCRIPT?: string;
+  /** JSON (string | { error: FailKind })[]: the fake describer's answers for FAKE_PROVIDER runs. */
+  FAKE_DESCRIBE?: string;
+  /** Tests only: every task the fake provider is given is also pushed here. */
+  FAKE_SUBMITTED?: unknown[];
   /** Spec 8.3 alerts: Telegram first, email copy; each is skipped when not set. */
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

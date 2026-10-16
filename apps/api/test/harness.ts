@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { promptVersionOf } from "@vzc/catalog";
 import { UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
+import type { FakeAdapter } from "@vzc/providers";
 import { vi } from "vitest";
 import { Dispatcher } from "../src/durable-objects/dispatcher.ts";
 import { RateLimiter } from "../src/durable-objects/rate-limiter.ts";
@@ -15,7 +16,7 @@ import { ulid } from "../src/services/ids.ts";
 import { randomHex, SESSION_TTL_MS, sha256Hex } from "../src/services/session.ts";
 import type { ChargeHold } from "../src/services/settle.ts";
 import { createUser } from "../src/services/users.ts";
-import type { StorySpec } from "../src/stories/types.ts";
+import type { StorySpec, StoryState } from "../src/stories/types.ts";
 
 export const ORIGIN = "https://videozombiecouple.com";
 export const HMAC_KEY = "test-hmac-key";
@@ -315,6 +316,9 @@ export async function setup(extra: Record<string, unknown> = {}) {
   namespaces.runners = runners as unknown as Namespace;
   env.STORY_RUNNER = runners.binding;
   // --- end durable objects ---
+  /** Every task the fake provider was given, across all runners (FAKE_PROVIDER runs). */
+  const provider = { submitted: [] as FakeAdapter["submitted"] };
+  env.FAKE_SUBMITTED = provider.submitted;
   Object.assign(env, extra);
 
   async function call(
@@ -474,6 +478,11 @@ export async function setup(extra: Record<string, unknown> = {}) {
     return { spec, runner: runners.instance(spec.id) };
   }
 
+  /** The StoryState a story's runner has stored, or null once it was purged. */
+  async function runnerState(id: string) {
+    return ((await runners.entries.get(id)?.store.api.get("state")) ?? null) as StoryState | null;
+  }
+
   /** A charge hold that touches nothing, for runner tests that do not look at billing. */
   const noCharge: ChargeHold = { kind: "none" };
 
@@ -530,6 +539,8 @@ export async function setup(extra: Record<string, unknown> = {}) {
     untilStory,
     readyStory,
     upload,
+    provider,
+    runnerState,
     namespaces,
     limiters,
     dispatchers,

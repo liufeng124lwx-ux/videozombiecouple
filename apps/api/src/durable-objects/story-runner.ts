@@ -3,7 +3,10 @@ import {
   ABUSE,
   CAPABILITIES,
   type CapabilityId,
+  DESCRIBE_PROMPT,
+  EMPTY_APPEARANCE,
   isTaskCapability,
+  parseAppearance,
   REMAKES_PER_FILM,
   RETENTION,
   storyOf,
@@ -18,6 +21,7 @@ import {
   type Route,
   type StatusResult,
 } from "@vzc/providers";
+import { readFlags } from "../middleware/flags.ts";
 import { pauseForKieCap } from "../ops/kie-cap.ts";
 import { recordAttempt } from "../services/analytics.ts";
 import { type ComposerApi, composerFor } from "../services/composer.ts";
@@ -106,6 +110,27 @@ export type RecomposeOutcome = { ok: true } | { ok: false; reason: "used" | "not
 export type RemakeOutcome =
   | { ok: true }
   | { ok: false; reason: "used" | "not_done" | "photos_gone" };
+
+/**
+ * Christmas content spec §7: text bound for D1 (a step's error, an attempt's failMsg) never
+ * carries the appearance lines, even when a model's error quotes the prompt back.
+ */
+export function scrubAppearance(state: StoryState, text: string): string {
+  const lines = [state.appearance?.survivor, state.appearance?.infected].filter(
+    (l): l is string => !!l,
+  );
+  const items = [...new Set([...lines, ...lines.flatMap((l) => l.split(","))])]
+    .map((i) => i.trim())
+    .filter((i) => i.length > 0)
+    .sort((a, b) => b.length - a.length);
+  let out = text;
+  for (const item of items)
+    out = out.replace(
+      new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+"), "gi"),
+      "[appearance]",
+    );
+  return out;
+}
 
 function newAttempt(step: StepRecord, route: Route): AttemptRecord {
   return {
@@ -424,6 +449,7 @@ export class StoryRunner extends DurableObject<Bindings> {
   /** One pass. Whatever throws, the state is saved and the next alarm armed before it leaves. */
   async #tick(state: StoryState): Promise<void> {
     try {
+      this.#forgetAppearance(state);
       for (const step of readySteps(state)) await this.#begin(state, step);
       const phase = activePhase(state);
       if (phase)
@@ -620,6 +646,8 @@ export class StoryRunner extends DurableObject<Bindings> {
     reason: string,
     as: "failed" | "abandoned" = "failed",
   ): Promise<void> {
+    // A model's error text may quote the prompt, which carries the appearance lines (spec §7).
+    reason = scrubAppearance(state, reason);
     attempt.state = as;
     attempt.failKind = kind;
     attempt.failMsg = reason.slice(0, 500);
@@ -665,7 +693,9 @@ export class StoryRunner extends DurableObject<Bindings> {
       if (step.id === "score:sources") await this.#checkSources(state, step);
       else if (step.kind === "mark") await this.#mark(state, step);
       else if (step.kind === "score") await this.#score(state, step);
-      else await this.#compose(state, step);
+      else if (step.kind === "describe") await this.#describe(state, step);
+      else if (step.kind === "compose") await this.#compose(state, step);
+      else throw new Error(`unknown step kind ${step.kind}`);
     } catch (error) {
       step.failures += 1;
       step.error = message(error).slice(0, 200);
@@ -802,6 +832,73 @@ export class StoryRunner extends DurableObject<Bindings> {
       if (chosen) state.picks[frame] = chosen;
     }
     step.state = "succeeded";
+  }
+
+  /**
+   * Christmas content spec §2.3, §7: read each photo's head and hair once; the lines live only in
+   * this object's state. Routes are tried in rank order; when none answers (or an admin set
+   * describe offline) the film goes on without lines. Nothing here logs, records or throws the
+   * answer: attempts carry the route, cost and fail kind only.
+   */
+  async #describe(state: StoryState, step: StepRecord): Promise<void> {
+    const { spec } = state;
+    const done = (error: string | null) => {
+      step.state = "succeeded";
+      step.error = error;
+      step.nextRunAt = null;
+    };
+    if ((await readFlags(this.env.KV)).offline.includes("describe")) {
+      state.appearance = { ...EMPTY_APPEARANCE };
+      return done("DESCRIBE_OFFLINE");
+    }
+    const routes = (await loadRoutes(this.env.DB))
+      .filter((r) => r.capability === "describe" && r.enabled)
+      .sort((a, b) => a.rank - b.rank);
+    const images = [await this.#url(spec.survivorKey), await this.#url(spec.infectedKey)];
+    for (const route of routes) {
+      const attempt = newAttempt(step, route);
+      attempt.state = "submitting";
+      attempt.submittedAt = Date.now();
+      step.attempts.push(attempt);
+      let text: string;
+      try {
+        const answer = await this.#provider().describer.describe(route, DESCRIBE_PROMPT, images);
+        text = answer.text;
+        attempt.costUsd = answer.costUsd;
+      } catch (error) {
+        const kind: FailKind = error instanceof ProviderError ? error.kind : "provider_error";
+        attempt.state = "failed";
+        attempt.failKind = kind;
+        attempt.finishedAt = Date.now();
+        // A call that timed out may still have been billed: book the route's estimate.
+        if (kind === "timeout") {
+          attempt.costUsd = route.costUsd;
+          attempt.costEstimated = true;
+        }
+        this.#record(state, step, attempt);
+        console.warn(
+          JSON.stringify({ level: "warn", storyId: spec.id, describe: route.id, failKind: kind }),
+        );
+        continue;
+      }
+      attempt.state = "succeeded";
+      attempt.finishedAt = Date.now();
+      attempt.costTimeMs = attempt.finishedAt - attempt.submittedAt;
+      this.#record(state, step, attempt);
+      state.appearance = parseAppearance(text);
+      return done(null);
+    }
+    state.appearance = { ...EMPTY_APPEARANCE };
+    done("DESCRIBE_FAILED");
+  }
+
+  /** When the photos expire (RETENTION.workDays after the story was made) the lines go with them. */
+  #appearanceExpiresAt(state: StoryState): number {
+    return state.spec.createdAt + RETENTION.workDays * 86_400_000;
+  }
+
+  #forgetAppearance(state: StoryState): void {
+    if (state.appearance && Date.now() >= this.#appearanceExpiresAt(state)) delete state.appearance;
   }
 
   /** The free zombie photo: the AI mark in the corner and "AI-generated" in the file. */
@@ -1014,6 +1111,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       (state.videoCharge &&
         !state.videoSettled &&
         (state.status === "done" || state.status === "failed"));
+    if (state.appearance) times.push(this.#appearanceExpiresAt(state));
     if (unsettled) {
       const failures = Math.max(1, state.settleFailures ?? 0);
       times.push(now + Math.min(SETTLE_RETRY_MAX_MS, SETTLE_RETRY_MS * 2 ** (failures - 1)));
@@ -1163,7 +1261,11 @@ export class StoryRunner extends DurableObject<Bindings> {
     const left = steps.filter((s) => s.state !== "succeeded" && s.state !== "failed");
     if (left.length === 0) return null;
     const p50 = (s: StepRecord) =>
-      s.kind === "kie" ? CAPABILITIES[s.capability as CapabilityId].p50Ms : COMPOSE_P50_MS;
+      s.kind === "kie"
+        ? CAPABILITIES[s.capability as CapabilityId].p50Ms
+        : s.kind === "describe"
+          ? CAPABILITIES.describe.p50Ms
+          : COMPOSE_P50_MS;
     // Keyframes and shots run in parallel: the slowest open kie step plus the composer steps.
     const kie = Math.max(0, ...left.filter((s) => s.kind === "kie").map(p50));
     const composer = left.filter((s) => s.kind !== "kie").reduce((t, s) => t + p50(s), 0);
