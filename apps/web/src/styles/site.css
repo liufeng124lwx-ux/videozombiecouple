@@ -109,6 +109,16 @@
   display: grid;
   gap: 32px;
 }
+/* Phones: the link columns side by side under the brand. */
+@media (max-width: 719px) {
+  .site-footer .cols {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 16px;
+  }
+  .site-footer .brand {
+    grid-column: 1 / -1;
+  }
+}
 @media (min-width: 720px) {
   .site-footer .cols {
     grid-template-columns: 2fr 1fr 1fr;

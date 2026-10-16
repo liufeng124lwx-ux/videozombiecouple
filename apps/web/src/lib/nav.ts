@@ -6,6 +6,7 @@ const STORIES = [
   "home",
   "zombie-love-story-ai",
   "pet-zombie-video",
+  "ai-zombie-filter",
   "zombie-couple-halloween",
   "zombie-love-story-prompts",
 ];

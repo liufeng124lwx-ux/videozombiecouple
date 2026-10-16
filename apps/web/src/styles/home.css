@@ -577,3 +577,29 @@
   border-radius: var(--r-btn);
   background: var(--surface-1);
 }
+
+/* Phones: the long read starts folded (the text is in the page; search engines read it all). */
+.fold-more {
+  display: none;
+}
+@media (max-width: 759px) {
+  .long-read[data-fold] {
+    max-height: 420px;
+    overflow: hidden;
+    mask-image: linear-gradient(#000 60%, transparent);
+  }
+  .long-read[data-fold] + .fold-more {
+    display: block;
+    margin-top: 8px;
+  }
+  .fold-more .btn {
+    width: 100%;
+  }
+}
+
+/* Phones: one likeness example is enough to make the point (the others stay in the page, unloaded). */
+@media (max-width: 759px) {
+  .likeness-row:nth-child(n + 2) {
+    display: none;
+  }
+}

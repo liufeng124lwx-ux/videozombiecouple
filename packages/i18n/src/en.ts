@@ -87,6 +87,7 @@ export const en = {
   "home.compare.how": "How it works",
   "home.compare.catch": "The catch",
   "home.faq.title": "Questions",
+  "home.readMore": "Read the full guide",
   "home.closing.since": "since the summer we met",
   "story.frame.standoff": "Standoff",
   "story.frame.memory": "Memory",

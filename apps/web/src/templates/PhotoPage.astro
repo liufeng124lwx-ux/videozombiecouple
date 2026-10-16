@@ -110,10 +110,19 @@ const examples = await Promise.all(
 }
 
 <section class="section">
-  <div class="wrap prose long-read">
+  <div class="wrap prose long-read" data-fold>
     <Content components={{ F }} />
   </div>
+  <div class="wrap fold-more">
+    <button type="button" class="btn btn-lg btn-line" data-unfold>{t("home.readMore", {}, locale)}</button>
+  </div>
+  <noscript><style>.long-read[data-fold]{max-height:none;mask-image:none}.fold-more{display:none}</style></noscript>
 </section>
+
+<script>
+  import { wireFolds } from "../lib/fold.ts";
+  wireFolds();
+</script>
 
 {
   d.faq && d.faq.length > 0 && (
