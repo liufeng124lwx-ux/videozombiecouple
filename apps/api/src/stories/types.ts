@@ -1,4 +1,4 @@
-import type { CapabilityId, FrameId, Kind, SceneId } from "@vzc/catalog";
+import type { CapabilityId, Kind, StoryId } from "@vzc/catalog";
 import type { ErrorCode, StoryStatus } from "@vzc/contracts";
 import type { FailKind, Route } from "@vzc/providers";
 import type { ChargeHold } from "../services/settle.ts";
@@ -10,7 +10,9 @@ export type StorySpec = {
   /** null while a guest owns the story; set when the guest buys (and gets an account). */
   userId: string | null;
   kind: Kind;
-  scene: SceneId;
+  /** Christmas spec §4.2; absent on films made before stories existed (zombie). */
+  story?: StoryId;
+  scene: string;
   names: string | null;
   date: string | null;
   /** keep/<id>/survivor.jpg and keep/<id>/infected.jpg */
@@ -85,7 +87,7 @@ export type StoryState = {
   status: StoryStatus;
   steps: Record<string, StepRecord>;
   /** Best keyframe per frame after scoring (R2 keys). */
-  picks: Partial<Record<FrameId, string>>;
+  picks: Partial<Record<string, string>>;
   previewCharge: ChargeHold | null;
   videoCharge: ChargeHold | null;
   previewSettled: boolean;

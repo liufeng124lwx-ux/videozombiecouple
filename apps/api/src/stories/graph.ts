@@ -3,6 +3,7 @@ import {
   type FrameId,
   keyframePrompt,
   portraitPrompt,
+  type SceneId,
   STORYBOARD,
   shotPrompt,
   storyboard,
@@ -166,7 +167,7 @@ export async function kieInputFor(
   const photos = [await url(spec.survivorKey), await url(spec.infectedKey)];
   if (step.id.startsWith("kf:")) {
     const frame = step.id.split(":")[1] as FrameId;
-    const prompt = keyframePrompt(spec.scene, frame, spec.kind);
+    const prompt = keyframePrompt(spec.scene as SceneId, frame, spec.kind);
     if (frame !== "B") return { prompt, images: photos };
     const a = picks.A;
     const c = picks.C;
@@ -181,7 +182,7 @@ export async function kieInputFor(
     return url(key);
   };
   return {
-    prompt: shotPrompt(spec.scene, shot.id, spec.kind),
+    prompt: shotPrompt(spec.scene as SceneId, shot.id, spec.kind),
     images: [],
     first: await frameKey(shot.first),
     ...(shot.last ? { last: await frameKey(shot.last) } : {}),

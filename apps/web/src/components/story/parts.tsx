@@ -1,4 +1,4 @@
-import { fact, type Kind, SCENE_IDS, SCENES, type SceneId } from "@vzc/catalog";
+import { fact, type Kind, SCENE_IDS, SCENES, type SceneId, sceneLabel } from "@vzc/catalog";
 import type { StageView } from "@vzc/contracts";
 import { t } from "@vzc/i18n";
 import type { JSX } from "preact";
@@ -237,7 +237,7 @@ export function RenderMonitor(props: {
   done: number;
   total: number;
   etaMs: number | null;
-  scene: SceneId;
+  scene: string;
 }) {
   const stages = props.stages?.length ? props.stages : DEFAULT_STAGES;
   const frames = props.frames ?? [];
@@ -260,7 +260,7 @@ export function RenderMonitor(props: {
           <div class="slate">
             <span class="slate-stick" />
             <span class="slate-board">
-              <b>{SCENES[props.scene]?.label ?? ""}</b>
+              <b>{sceneLabel(props.scene)}</b>
               <i>{t("story.rendering.slate")}</i>
             </span>
           </div>

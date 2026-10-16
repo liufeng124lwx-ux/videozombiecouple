@@ -1,4 +1,4 @@
-import { MODES, RATE_LIMITS, RETENTION } from "@vzc/catalog";
+import { MODES, RATE_LIMITS, RETENTION, STORIES } from "@vzc/catalog";
 import {
   CreateStorySchema,
   RecomposeSchema,
@@ -68,6 +68,9 @@ export async function createStory(c: Context<AppEnv>) {
   const parsed = CreateStorySchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return fail(c, "BAD_REQUEST");
   const request = parsed.data;
+  const story = STORIES[request.story];
+  const scene = story.scenes[request.scene];
+  if (!scene?.live || !story.kinds.includes(request.kind)) return fail(c, "BAD_REQUEST");
   if (request.consent !== UPLOAD_CONSENT_VERSION) return fail(c, "CONSENT_REQUIRED");
   // Illinois (BIPA): the second person's face is analysed without their own written release, so
   // only the pet version (the uploader's own face) is offered there.
@@ -107,6 +110,7 @@ export async function createStory(c: Context<AppEnv>) {
     owner,
     userId,
     kind: request.kind,
+    story: request.story,
     scene: request.scene,
     names: request.names || null,
     date: request.date || null,
@@ -116,7 +120,7 @@ export async function createStory(c: Context<AppEnv>) {
   };
   try {
     await c.env.DB.prepare(
-      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at,consent_version,consent_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,story,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at,consent_version,consent_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     )
       .bind(
         id,
@@ -126,6 +130,7 @@ export async function createStory(c: Context<AppEnv>) {
         c.get("fpHash"),
         c.get("ipSegmentHash"),
         spec.kind,
+        request.story,
         spec.scene,
         MODES[spec.kind].promptVersion,
         spec.names,

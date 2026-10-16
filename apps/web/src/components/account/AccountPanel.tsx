@@ -1,4 +1,4 @@
-import { type Kind, SCENES, type SceneId, TIERS } from "@vzc/catalog";
+import { type Kind, sceneLabel, TIERS } from "@vzc/catalog";
 import {
   type AccountView,
   type BillingView,
@@ -23,7 +23,7 @@ export type StorySummary = {
   id: string;
   status: StoryStatus | "expired";
   kind: Kind;
-  scene: SceneId;
+  scene: string;
   createdAt: number;
 };
 type Data = {
@@ -42,7 +42,7 @@ const sameSite = (path: string | null): path is string => path !== null && isSam
 const count = (n: number) => n.toLocaleString("en-US");
 
 function StoryRow({ story }: { story: StorySummary }) {
-  const scene = SCENES[story.scene]?.label ?? story.scene;
+  const scene = sceneLabel(story.scene);
   return (
     <li>
       <a href={`/story?id=${encodeURIComponent(story.id)}`}>

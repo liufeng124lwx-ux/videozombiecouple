@@ -1,4 +1,4 @@
-import { KINDS, type Kind, SCENE_IDS, type SceneId } from "@vzc/catalog";
+import { KINDS, type Kind, STORY_IDS, type StoryId } from "@vzc/catalog";
 import { z } from "zod";
 import type { ErrorCode } from "./errors.ts";
 
@@ -20,7 +20,9 @@ export const CreateStorySchema = z.object({
   survivorKey: UploadKeySchema,
   infectedKey: UploadKeySchema,
   kind: z.enum(KINDS),
-  scene: z.enum(SCENE_IDS),
+  /** Christmas spec §4.2: absent = the zombie story. Scene and kind are checked against it. */
+  story: z.enum(STORY_IDS).default("zombie"),
+  scene: z.string().min(1).max(40),
   names: Names.optional(),
   date: DateText.optional(),
   idempotencyKey: IdempotencyKey,
@@ -28,6 +30,8 @@ export const CreateStorySchema = z.object({
   consent: z.string().max(32).optional(),
 });
 export type CreateStoryRequest = z.infer<typeof CreateStorySchema>;
+/** What a client sends: the story may be left out (a zombie film). */
+export type CreateStoryInput = z.input<typeof CreateStorySchema>;
 
 /** POST /v1/photos: the free AI zombie filter, one photo of one person. */
 export const CreatePhotoSchema = z.object({
@@ -61,7 +65,8 @@ export type StoryView = {
   id: string;
   status: StoryStatus;
   kind: Kind;
-  scene: SceneId;
+  story: StoryId;
+  scene: string;
   names: string | null;
   date: string | null;
   preview: { A: string; C: string } | null;
@@ -86,7 +91,7 @@ export type StoryView = {
 
 /** GET /v1/share/:id?t=… — what anyone holding the share link sees. */
 export type SharedFilm = {
-  scene: SceneId;
+  scene: string;
   names: string | null;
   date: string | null;
   video: { url: string; poster: string; expiresAt: number };

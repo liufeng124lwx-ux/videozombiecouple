@@ -11,6 +11,7 @@ const view = (status: StoryView["status"], over: Partial<StoryView> = {}): Story
   id: "S1",
   status,
   kind: "human",
+  story: "zombie",
   scene: "cabin-wheat",
   names: null,
   date: null,

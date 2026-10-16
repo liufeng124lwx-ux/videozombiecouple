@@ -25,10 +25,12 @@ describe("story contracts", () => {
     });
   });
 
-  it("rejects keys outside the upload prefix and unknown scenes or kinds", () => {
+  it("rejects keys outside the upload prefix and unknown stories or kinds", () => {
     expect(UploadKeySchema.safeParse("keep/x.jpg").success).toBe(false);
     expect(UploadKeySchema.safeParse("in/../x.jpg").success).toBe(false);
-    expect(CreateStorySchema.safeParse({ ...base, scene: "mars" }).success).toBe(false);
+    expect(CreateStorySchema.safeParse({ ...base, story: "mars" }).success).toBe(false);
+    expect(CreateStorySchema.safeParse({ ...base, scene: "" }).success).toBe(false);
+    expect(CreateStorySchema.parse(base).story).toBe("zombie");
     expect(CreateStorySchema.safeParse({ ...base, kind: "robot" }).success).toBe(false);
   });
 

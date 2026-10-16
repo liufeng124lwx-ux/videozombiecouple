@@ -33,6 +33,35 @@ async function create(h: H, session: string, body?: Record<string, unknown>) {
 const kfFiles = (h: H) => [...h.r2.objects.keys()].filter((k) => k.startsWith("kf/"));
 
 describe("story API", () => {
+  it("records the story; a film without one is a zombie film", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { session } = await signedIn(h);
+    const res = await create(h, session);
+    expect(res.status).toBe(201);
+    const row = h.db
+      .prepare("SELECT story FROM stories WHERE id=?")
+      .get(res.body.storyId as string);
+    expect(row).toEqual({ story: "zombie" });
+  });
+
+  it("refuses a Christmas scene that is not live, a zombie scene in a Christmas film, and Christmas pets", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1" });
+    const { session } = await signedIn(h);
+    for (const extra of [
+      { story: "christmas", scene: "snow-cabin", kind: "human" },
+      { story: "christmas", scene: "cabin-wheat", kind: "human" },
+      { story: "christmas", scene: "snow-cabin", kind: "pet" },
+      { story: "zombie", scene: "snow-cabin", kind: "human" },
+    ]) {
+      const a = await h.upload();
+      const b = await h.upload();
+      const res = await create(h, session, storyBody(a, b, extra));
+      expect(res.status, JSON.stringify(extra)).toBe(400);
+      expect(res.body.error?.code).toBe("BAD_REQUEST");
+    }
+    expect(h.db.prepare("SELECT COUNT(*) AS n FROM stories").get()).toEqual({ n: 0 });
+  });
+
   it("a guest can start a story: the photos are checked, nothing is generated", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     await h.pass();

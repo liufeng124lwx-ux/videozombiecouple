@@ -1,4 +1,4 @@
-import type { CreatePhotoRequest, CreateStoryRequest, SharedFilm, StoryView } from "@vzc/contracts";
+import type { CreatePhotoRequest, CreateStoryInput, SharedFilm, StoryView } from "@vzc/contracts";
 import { ApiError, api, post } from "../api.ts";
 import { withHumanCheck } from "../human-pass.ts";
 
@@ -38,7 +38,7 @@ export async function uploadPhoto(jpeg: Blob, token: Token): Promise<string> {
   return ticket.key;
 }
 
-export async function createStory(request: CreateStoryRequest, token: Token): Promise<string> {
+export async function createStory(request: CreateStoryInput, token: Token): Promise<string> {
   const { storyId } = await withHumanCheck(
     (headers) => post<{ storyId: string }>("/v1/stories", request, headers),
     token,

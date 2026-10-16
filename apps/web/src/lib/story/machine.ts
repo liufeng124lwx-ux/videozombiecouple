@@ -1,4 +1,4 @@
-import type { Kind, SceneId } from "@vzc/catalog";
+import { type Kind, SCENES, type SceneId } from "@vzc/catalog";
 import type { StoryView } from "@vzc/contracts";
 import type { FaceVerdict } from "./faces.ts";
 
@@ -141,7 +141,7 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
         story: e.view,
         phase,
         kind: e.view.kind,
-        scene: e.view.scene,
+        scene: e.view.scene in SCENES ? (e.view.scene as SceneId) : s.scene,
         error: e.view.errorCode,
       };
     }
