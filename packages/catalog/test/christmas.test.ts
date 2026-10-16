@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { CHRISTMAS, STORIES, storyOf, totalSeconds, validateStory } from "../src/index.ts";
+import {
+  APPEARANCE_MARK,
+  CHRISTMAS,
+  STORIES,
+  storyOf,
+  totalSeconds,
+  validateStory,
+} from "../src/index.ts";
 
 describe("50 Christmases", () => {
   it("is well formed, 32 seconds, 20 credits, people only, not orderable yet", () => {
@@ -86,22 +93,85 @@ describe("50 Christmases", () => {
     expect(byId.rememberClose?.prompt("snow-cabin", "human", look)).toContain("full beard");
     for (const k of CHRISTMAS.keyframes) {
       const plain = k.prompt("snow-cabin", "human");
-      expect(plain, k.id).not.toMatch(/Appearance to keep/);
+      expect(plain, k.id).not.toContain(APPEARANCE_MARK);
       // The generic hair / head-covering clauses failed in 即梦 (research notes §9–10).
       expect(plain, k.id).not.toMatch(/silver-white hair|head covering|beard if they have one/);
     }
   });
 
-  it("follows the 即梦 rules: who to look at, gender, one ornament", () => {
+  it("writes each appearance as its own sentence: aged for old frames, plain for the memory", () => {
+    const look = { survivor: "short dark hair, full beard", infected: "blue floral headscarf" };
     const byId = Object.fromEntries(CHRISTMAS.keyframes.map((k) => [k.id, k]));
-    expect(byId.wide?.prompt("snow-cabin", "human")).toContain("not at the other person");
-    expect(byId.wide?.prompt("snow-cabin", "human")).toContain("unmistakably elderly");
+    const aged = (n: number, line: string) =>
+      `${APPEARANCE_MARK} ${n}, now fifty years older with any visible hair or beard turned white or silver: ${line}.`;
+    expect(APPEARANCE_MARK).toBe("Visible features of the person from IMAGE");
+    const wide = byId.wide?.prompt("snow-cabin", "human", look) ?? "";
+    expect(wide).toContain(aged(1, look.survivor));
+    expect(wide).toContain(aged(2, look.infected));
+    const memory = byId.memory?.prompt("snow-cabin", "human", look) ?? "";
+    expect(memory).toContain(`${APPEARANCE_MARK} 1: ${look.survivor}.`);
+    expect(memory).toContain(`${APPEARANCE_MARK} 2: ${look.infected}.`);
+    expect(memory).not.toContain("fifty years older with any visible hair");
+    expect(memory).toContain(
+      "Each person keeps the face, hair, age, skin tone and gender of their own photo exactly.",
+    );
+    expect(byId.forgetCold?.prompt("snow-cabin", "human", look)).toContain(aged(1, look.infected));
+    expect(byId.rememberClose?.prompt("snow-cabin", "human", look)).toContain(
+      aged(1, look.survivor),
+    );
+    expect(byId.forgetWarm?.prompt("snow-cabin", "human", look)).toContain(aged(1, look.infected));
+    for (const id of ["tree", "embrace"]) {
+      const p = byId[id]?.prompt("snow-cabin", "human", look) ?? "";
+      expect(p, id).toContain(aged(1, look.survivor));
+      expect(p, id).toContain(aged(2, look.infected));
+    }
+    for (const k of CHRISTMAS.keyframes) {
+      const half = k.prompt("snow-cabin", "human", { survivor: "full beard", infected: "" });
+      expect(half, k.id).not.toContain("Appearance to keep");
+      expect(half, k.id).not.toMatch(/IMAGE 2[^.]*now fifty years older with any visible hair/);
+    }
+  });
+
+  it("follows the 即梦 rules: composition, age, gender, skin tone, one ornament", () => {
+    const byId = Object.fromEntries(CHRISTMAS.keyframes.map((k) => [k.id, k]));
+    const get = (id: string) => byId[id]?.prompt("snow-cabin", "human") ?? "";
+    const wide = get("wide");
+    expect(wide).toContain("eyes fixed on the snow");
+    expect(wide).toContain("back to the doorway");
+    expect(wide).toContain("seen in profile from the side");
+    expect(wide).toContain(
+      "stands in the doorway behind the armchair, unseen by the seated person",
+    );
+    expect(wide).toContain("an armchair facing the window with its back to the doorway");
+    expect(wide).not.toContain("an armchair by the window");
+    expect(wide).toContain("Never swap the two people.");
+    for (const id of ["wide", "forgetCold", "rememberClose"])
+      expect(get(id), id).toContain("late seventies");
+    for (const id of ["tree", "forgetWarm", "embrace"]) expect(get(id), id).toContain("grown old");
+    expect(get("wide")).toContain("unmistakably elderly");
     for (const id of ["forgetCold", "rememberClose", "forgetWarm"])
-      expect(byId[id]?.prompt("snow-cabin", "human"), id).toContain("the same gender as IMAGE 1");
+      expect(get(id), id).toContain("the same gender as IMAGE 1");
     for (const id of ["tree", "embrace"])
-      expect(byId[id]?.prompt("snow-cabin", "human"), id).toContain(
-        "only this one heart ornament on the tree",
-      );
+      expect(get(id), id).toContain("only this one heart ornament on the tree");
+    for (const id of ["wide", "forgetCold", "rememberClose"])
+      expect(get(id), id).toContain("and the skin exactly as dark or as light as in IMAGE");
+    for (const id of ["wide", "forgetCold", "rememberClose", "tree", "forgetWarm", "embrace"])
+      expect(get(id), id).toContain("never lighter or darker");
+  });
+
+  it("uses no gendered pronouns in any keyframe or shot prompt", () => {
+    const look = { survivor: "full beard", infected: "blue floral headscarf" };
+    for (const scene of Object.keys(CHRISTMAS.scenes)) {
+      for (const k of CHRISTMAS.keyframes)
+        expect(k.prompt(scene, "human", look), `${scene}/${k.id}`).not.toMatch(
+          /\b(she|he|her|hers|his|him|herself|himself)\b/i,
+        );
+      for (const sh of CHRISTMAS.storyboard("human"))
+        if (sh.prompt)
+          expect(sh.prompt(scene, "human"), `${scene}/shot ${sh.id}`).not.toMatch(
+            /\b(she|he|her|hers|his|him|herself|himself)\b/i,
+          );
+    }
   });
 
   it("says the hook and the turn on screen, without guessing anyone's gender", () => {

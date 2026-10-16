@@ -3,7 +3,7 @@ import type { Story, StoryId } from "./types.ts";
 import { ZOMBIE } from "./zombie.ts";
 
 export * from "./appearance.ts";
-export { CHRISTMAS } from "./christmas.ts";
+export { APPEARANCE_MARK, CHRISTMAS } from "./christmas.ts";
 export * from "./types.ts";
 export { CAPTION_LINE1, ZOMBIE } from "./zombie.ts";
 

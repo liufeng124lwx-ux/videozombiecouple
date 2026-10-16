@@ -1,4 +1,4 @@
-import { CHRISTMAS, ZOMBIE } from "@vzc/catalog";
+import { APPEARANCE_MARK, CHRISTMAS, ZOMBIE } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
 import {
   kieInputFor,
@@ -311,6 +311,6 @@ describe("graph: running a Christmas film", () => {
     expect(wide.prompt).toContain("headscarf");
     s.appearance = undefined;
     const plain = await kieInputFor(s.steps["kf:wide:1"] as never, s, url);
-    expect(plain.prompt).not.toContain("Appearance to keep");
+    expect(plain.prompt).not.toContain(APPEARANCE_MARK);
   });
 });

@@ -26,3 +26,15 @@ Gate (10/22: aged faces recognisable) — passed on p03 in Seedream. Still to do
     - v4 "their own hairstyle and facial hair … only turned grey or white — never add or remove a beard, a head covering or glasses" → p03 OK, p06 lost hijab and beard (became a different, paler couple).
     - v5 = v4 without the generic clause + explicit per-photo lines ("IMAGE 2 wears a blue floral headscarf that covers all of her hair — keep it. IMAGE 1 has a full beard, now white.") → p06 OK: hijab, white beard, aged, recognisable; one run looked out of the window.
     => DESIGN CHANGE for plan 2: a "describe" step before keyframes — a cheap vision model writes one line per photo (head covering, facial hair, hairstyle, glasses; never guesses gender words beyond what's visible), injected into every keyframe prompt that ages or redraws a person. Cost ≈ $0.001–0.01/film. Without it, hijab/beard wearers (or clean-shaven, uncovered people) come out wrong.
+
+## Round c1 (prompts exported from catalog, 2026-10-16)
+- p06 wide c1: hijab, beard, identity kept; aged too little (dark-grey beard, ~60); she looks at him.
+- p07 wide c1: bald kept, aged well; ONE of two runs turned the survivor (grey-haired woman) into a man → candidates + face scoring are required on wide too (already 2 candidates).
+- p09 wide c1: records finished but images never loaded (no error shown) — re-run later in a fresh conversation.
+- p06 wide c2 ("Keep these features, fifty years older, with any visible hair or beard turned white or silver: <line>"; "eyes fixed on the snow outside the window, never looking at the other person"): aging fixed (white beard, hijab kept). Gaze still toward him → wording alone can't hold it; next: compose so the doorway is behind the armchair (she faces the window, back to the door).
+- Grammar: KEEP() ends with "." and is spliced mid-sentence in memory/tree/forgetWarm/embrace (review finding) — fix with the c2 wording.
+- p06 wide c3 (c2 + "an armchair facing the window with its back to the doorway", "sits … facing the window, back to the doorway, seen in profile", "stands in the doorway behind the armchair, unseen by the seated person"): WORKS — she looks out of the window in profile, he watches from the doorway behind; aged; hijab and white beard kept. Adopt for code (gender-neutral: "their back to the doorway").
+- p06 forgetCold c2 (own photo only + aging line): hijab kept, aged, cardigan + window light right; skin looks lighter than the photo → add the zombie filter's proven skin clause ("keep the skin exactly as dark or as light as in the reference, never lighten or darken it").
+- p07 rememberClose c2: right gender (no swap with own-photo-only refs), aged, navy sweater + collar, recognisable; smile too happy (sad smile weak) — leave emotion to the shot.
+- p09 (two women) wide: twice in fresh conversations the records finished but 即梦 showed no images and no error (silent filter?). Not pursued in 即梦 — verify p09 in R1 on GPT Image 2.
+- p01 memory c2 (appearance as standalone sentences, "Each person keeps the face, hair, age, skin tone and gender of their own photo exactly"): WORKS — identities, hand on cheek, ornament, mugs, boxes.

@@ -1,4 +1,4 @@
-import { ROUTES, TIERS } from "@vzc/catalog";
+import { APPEARANCE_MARK, ROUTES, TIERS } from "@vzc/catalog";
 import type { StoryView } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COMPOSER_MAX_FAILURES } from "../src/durable-objects/story-runner.ts";
@@ -652,7 +652,7 @@ describe("StoryRunner: stories", () => {
       const { spec, runner } = await christmas(h);
       await runner.render(await creditHold(h, spec.id, 20, 20));
       await untilStatus(h, runner, "done");
-      expect(submitted(h)).not.toContain("Appearance to keep");
+      expect(submitted(h)).not.toContain(APPEARANCE_MARK);
       expect(h.wallet.calls.some((c) => c[0] === "commit" && c[3] === 20)).toBe(true);
       const step = describeStep(h, spec.id);
       expect(step).toMatchObject({ state: "succeeded", error: "DESCRIBE_FAILED" });
@@ -676,8 +676,7 @@ describe("StoryRunner: stories", () => {
   it("a model error that echoes the prompt never carries the lines into D1", async () => {
     const echo = {
       kind: "fail",
-      failMsg:
-        "internal error for prompt: Appearance to keep: burgundy bandana. Appearance to keep: salt-and-pepper chin-length dreadlocks.",
+      failMsg: `internal error for prompt: ${APPEARANCE_MARK} 2: burgundy bandana. ${APPEARANCE_MARK} 1: salt-and-pepper chin-length dreadlocks.`,
     };
     const h = await setup({
       FAKE_DESCRIBE: JSON.stringify([SECRET]),
@@ -724,7 +723,7 @@ describe("StoryRunner: stories", () => {
     await runner.render(await creditHold(h, spec.id, 20, 20));
     await untilStatus(h, runner, "done");
     expect(submitted(h)).not.toMatch(LEAK);
-    expect(submitted(h)).not.toContain("Appearance to keep");
+    expect(submitted(h)).not.toContain(APPEARANCE_MARK);
     const step = describeStep(h, spec.id);
     expect(step).toMatchObject({ state: "succeeded", error: "DESCRIBE_OFFLINE", attempts: [] });
     expect(h.wallet.calls.some((c) => c[0] === "commit" && c[3] === 20)).toBe(true);
