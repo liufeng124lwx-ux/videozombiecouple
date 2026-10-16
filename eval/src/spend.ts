@@ -64,3 +64,12 @@ export async function meter(key: string, log: (s: string) => void = console.log)
     },
   };
 }
+
+/** One eval round spends at most $10 (CLAUDE.md): a higher, zero or unreadable --budget is refused. */
+export const MAX_ROUND_USD = 10;
+export function budgetFrom(arg: string | undefined): number {
+  const usdBudget = Number(arg);
+  if (!arg || !Number.isFinite(usdBudget) || usdBudget <= 0) throw new Error(`--budget must be a positive number of dollars, got "${arg ?? ""}"`);
+  if (usdBudget > MAX_ROUND_USD) throw new Error(`--budget $${usdBudget} is over the $${MAX_ROUND_USD} round budget (CLAUDE.md)`);
+  return usdBudget;
+}

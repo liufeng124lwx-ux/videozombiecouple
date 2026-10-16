@@ -17,7 +17,7 @@ import { KieClient, UploadCache } from "./kie.ts";
 import { humanPairs, loadPairs } from "./personas.ts";
 import { describeOnce, describeRoutes } from "./run-describe.ts";
 import { runJobs, type Job } from "./runner.ts";
-import { DESCRIBE_USD, estimateFilms, estimateKeyframes, IMAGE_USD, isQuotaError, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
+import { budgetFrom, DESCRIBE_USD, estimateFilms, estimateKeyframes, IMAGE_USD, isQuotaError, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
 
 export { estimateFilms, estimateKeyframes };
 
@@ -91,6 +91,7 @@ async function main() {
       yes: { type: "boolean", default: false },
     },
   });
+  const budget = budgetFrom(args.budget);
   const runDir = join(EVAL, "results", args.run!);
   const scenes = args.scenes ? args.scenes.split(",") : R1_SCENES;
   const unknownScene = scenes.filter((s) => !CHRISTMAS.scenes[s]);
@@ -116,7 +117,7 @@ async function main() {
     console.log("dry run — add --yes to execute");
     return;
   }
-  if (est > Number(args.budget)) throw new Error(`estimate ${usd(est)} exceeds budget $${args.budget}; narrow --pairs/--scenes`);
+  if (est > budget) throw new Error(`estimate ${usd(est)} exceeds budget $${args.budget}; narrow --pairs/--scenes`);
   if (needsOrnament && !existsSync(args.ornament!)) throw new Error("no ornament asset: nothing was spent");
   if (scenes.some((s) => existsSync(join(runDir, "kf", s))) && !args.resume) throw new Error(`${runDir} already has results: pass --resume to continue, or use a new --run`);
 
@@ -201,7 +202,7 @@ async function main() {
         });
       }
       console.log(`round ${i + 1}: ${todo.length} images to make`);
-      const remaining = Number(args.budget) - spent;
+      const remaining = budget - spent;
       const s = await runJobs({ resultsFile: join(runDir, "kf", "xmas-results.jsonl"), jobs: todo, budgetUsd: remaining, concurrency: Number(args.concurrency), execute: true });
       spent += s.spentUsd;
       if (s.aborted) {

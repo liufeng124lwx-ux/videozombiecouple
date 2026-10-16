@@ -109,3 +109,21 @@ test("film cost comes from staging D1: the query names only story ids, the JSON 
   const out = JSON.stringify([{ results: [{ id: "01JABCDEFGHJKMNPQRSTVWXYZ0", cost_usd: 1.87, status: "done", created_at: 1, finished_at: 481000 }], success: true }]);
   assert.deepEqual(parseD1Rows(out), [{ id: "01JABCDEFGHJKMNPQRSTVWXYZ0", cost_usd: 1.87, status: "done", created_at: 1, finished_at: 481000 }]);
 });
+
+test("--budget is capped at the $10 round budget (CLAUDE.md)", async () => {
+  const { budgetFrom } = await import("../src/spend.ts");
+  assert.equal(budgetFrom("10"), 10);
+  assert.equal(budgetFrom("2.5"), 2.5);
+  for (const bad of ["10.01", "50", "0", "-1", "abc", ""]) assert.throws(() => budgetFrom(bad), /budget/, bad);
+});
+
+test("the keyframe and asset scripts refuse a budget over $10 before anything else", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const { resolve } = await import("node:path");
+  for (const script of ["run-xmas-keyframes.ts", "run-assets.ts"]) {
+    const r = spawnSync(process.execPath, [resolve(import.meta.dirname, "..", "src", script), "--budget", "20"], { encoding: "utf8" });
+    assert.notEqual(r.status, 0, script);
+    assert.match(r.stderr + r.stdout, /budget/, script);
+    assert.doesNotMatch(r.stdout, /dry run/, script);
+  }
+});

@@ -16,7 +16,7 @@ import { loadKey } from "./env.ts";
 import { runKieTask, uploadRefs } from "./kie-job.ts";
 import { KieClient, UploadCache } from "./kie.ts";
 import { runJobs, type Job } from "./runner.ts";
-import { IMAGE_USD, isQuotaError, KLING_USD_PER_SEC, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
+import { budgetFrom, IMAGE_USD, isQuotaError, KLING_USD_PER_SEC, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
 
 const EVAL = resolve(import.meta.dirname, "..");
 const CLIP_SEC = 5;
@@ -67,6 +67,7 @@ async function main() {
       yes: { type: "boolean", default: false },
     },
   });
+  const budget = budgetFrom(args.budget);
   const runDir = join(EVAL, "results", args.run!);
   const scenes = args.scenes ? args.scenes.split(",") : Object.keys(CHRISTMAS.scenes);
   const unknown = scenes.filter((s) => !ASSET_PROMPTS.window[s]);
@@ -120,7 +121,7 @@ async function main() {
           return runKieTask({ kie, model: "gpt-image-2-text-to-image", input: { prompt: j.prompt, aspect_ratio: aspect, resolution: "1K" }, estUsd: j.estUsd, timeoutMs: 5 * 60_000, save: save(j.out) });
         },
       }));
-    const s = await runJobs({ resultsFile: join(runDir, "results.jsonl"), jobs: todo, budgetUsd: Number(args.budget), concurrency: Number(args.concurrency), execute: true });
+    const s = await runJobs({ resultsFile: join(runDir, "results.jsonl"), jobs: todo, budgetUsd: budget, concurrency: Number(args.concurrency), execute: true });
     if (s.aborted && isQuotaError(s.aborted)) {
       console.error(QUOTA_MESSAGE);
       process.exitCode = 2;
