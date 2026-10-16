@@ -1,6 +1,11 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { APPEARANCE_MAX_CHARS, DESCRIBE_PROMPT, parseAppearance } from "../src/index.ts";
+import {
+  APPEARANCE_MAX_CHARS,
+  APPEARANCE_VOCABULARY,
+  DESCRIBE_PROMPT,
+  parseAppearance,
+} from "../src/index.ts";
 
 const fixture = (name: string) =>
   JSON.parse(
@@ -62,36 +67,60 @@ describe("appearance lines", () => {
       });
   });
 
-  it("drops items that carry anything beyond head and face words", () => {
-    for (const bad of [
-      "grey hair typical of old age",
-      "gray hair suggesting senior",
-      "dreadlocks common in Jamaican culture",
-      "Rastafarian dreadlocks",
-      "hair of a Pakistani woman",
-      "hair of a Nigerian",
-      "hair typical of Black people",
-      "hair that looks Middle Eastern",
-      "beard in the Amish style",
-      "beard like a rabbi",
-      "payot sideburns",
-      "Hasidic hat",
-      "hair covering worn by nuns",
-      "cap with a cross",
-      "bald from chemotherapy",
-      "bald due to cancer",
-      "hair thinning with age",
-      "hair looks 60",
-      "hair in his sixties",
-      "hair of a boy",
-      "hair of a woman in her thirties",
-      "cap saying Make America Great Again",
-      "scarf reading ALLAH",
-      "turban-style head wrap",
-      "printed hair",
-    ])
+  it("removes every word beyond head and face words, so no inference survives", () => {
+    const inference =
+      /typical|old|age|senior|jamaican|culture|rastafarian|pakistani|nigerian|black people|middle eastern|amish|rabbi|hasidic|nuns|cross|chemotherapy|cancer|sixties|boy|thirties|poor eyesight|make america|allah|payot|turban|style|printed|60/i;
+    for (const [bad, kept] of [
+      ["grey hair typical of old age", "grey hair"],
+      ["gray hair suggesting senior", "gray hair"],
+      ["dreadlocks common in Jamaican culture", "dreadlocks"],
+      ["Rastafarian dreadlocks", "dreadlocks"],
+      ["hair of a Pakistani woman", "hair"],
+      ["hair of a Nigerian", "hair"],
+      ["hair typical of Black people", "hair black"],
+      ["hair that looks Middle Eastern", "hair"],
+      ["beard in the Amish style", "beard"],
+      ["beard like a rabbi", "beard"],
+      ["payot sideburns", "sideburns"],
+      ["Hasidic hat", "hat"],
+      ["hair covering worn by nuns", "hair covering"],
+      ["cap with a cross", "cap"],
+      ["bald from chemotherapy", "bald"],
+      ["bald due to cancer", "bald"],
+      ["hair thinning with age", "hair thinning"],
+      ["hair looks 60", "hair"],
+      ["hair in his sixties", "hair"],
+      ["hair of a boy", "hair"],
+      ["hair of a woman in her thirties", "hair"],
+      ["cap saying Make America Great Again", "cap"],
+      ["scarf reading ALLAH", "scarf"],
+      ["turban-style head wrap", "head wrap"],
+      ["Amish-style beard", "beard"],
+      ["printed hair", "hair"],
+      ["glasses for poor eyesight, hair", "glasses, hair"],
+    ] as const) {
+      const out = parseAppearance(`IMAGE 1: ${bad}`).survivor;
+      expect(out, bad).toBe(kept);
+      expect(out, bad).not.toMatch(inference);
+    }
+  });
+
+  it("drops an item with no head or face noun left after filtering", () => {
+    for (const bad of ["swept forward", "side-parted", "gold hoop earrings", "medium-short length"])
       expect(parseAppearance(`IMAGE 1: ${bad}`).survivor, bad).toBe("");
-    expect(parseAppearance("IMAGE 1: glasses for poor eyesight, hair").survivor).toBe("hair");
+  });
+
+  it("keeps a hyphenated word only when every part is vocabulary", () => {
+    expect(parseAppearance("IMAGE 1: blue floral-patterned headscarf").survivor).toBe(
+      "blue floral-patterned headscarf",
+    );
+    expect(parseAppearance("IMAGE 1: close-cropped black hair").survivor).toBe("black hair");
+    expect(parseAppearance("IMAGE 1: -hair hair-").survivor).toBe("");
+  });
+
+  it("trims dangling connectives at both ends", () => {
+    expect(parseAppearance("IMAGE 1: the hair with a").survivor).toBe("hair");
+    expect(parseAppearance("IMAGE 1: and with an hat up in no").survivor).toBe("hat");
   });
 
   it("passes plain descriptions built from the vocabulary", () => {
@@ -197,5 +226,59 @@ describe("appearance lines", () => {
         "IMAGE 1: blue patterned headscarf covering all hair, short dark beard, no glasses",
       ).survivor,
     ).toBe("blue patterned headscarf covering all hair, short dark beard, no glasses");
+  });
+
+  describe("R0 answers (AI-synthetic personas)", () => {
+    const dir = new URL("./fixtures/", import.meta.url);
+    const r0 = (name: string) => parseAppearance(readFileSync(new URL(name, dir), "utf8"));
+    const files = readdirSync(dir).filter((f) => /^r0-.*\.txt$/.test(f));
+
+    it("has the twelve R0 answers", () => {
+      expect(files).toHaveLength(12);
+    });
+
+    it("keeps Haiku's headscarf line for p06", () => {
+      const look = r0("r0-p06-claude-haiku-5-5.txt");
+      expect(look.infected).toContain("headscarf");
+      expect(look.infected).toContain("covering all hair");
+      expect(look.survivor).toContain("beard");
+    });
+
+    it("keeps both p09 hair lines from Haiku", () => {
+      const look = r0("r0-p09-claude-haiku-5-5.txt");
+      expect(look.survivor).toContain("hair");
+      expect(look.survivor).toContain("ponytail");
+      expect(look.infected).toContain("hair");
+      expect(look.infected).toContain("pixie");
+    });
+
+    it("keeps both p01 hair lines from Haiku", () => {
+      const look = r0("r0-p01-claude-haiku-5-5.txt");
+      expect(look.survivor).toContain("short black hair");
+      expect(look.infected).toContain("long black");
+      expect(look.infected).toContain("hair");
+    });
+
+    it("keeps bald for p07 and the beard for p02 from both models", () => {
+      for (const model of ["claude-haiku-5-5", "gemini-3-6-flash-openai"]) {
+        expect(r0(`r0-p07-${model}.txt`).infected, model).toContain("bald");
+        expect(r0(`r0-p02-${model}.txt`).infected, model).toContain("beard");
+      }
+    });
+
+    it("outputs only vocabulary words for every answer", () => {
+      for (const file of files) {
+        const look = r0(file);
+        for (const line of [look.survivor, look.infected]) {
+          expect(line.length, file).toBeLessThanOrEqual(APPEARANCE_MAX_CHARS);
+          for (const token of line.split(/[ ,]+/).filter(Boolean)) {
+            const known =
+              APPEARANCE_VOCABULARY.has(token) ||
+              token.split("-").every((part) => APPEARANCE_VOCABULARY.has(part));
+            expect(known, `${file}: ${token}`).toBe(true);
+          }
+        }
+      }
+    });
   });
 });

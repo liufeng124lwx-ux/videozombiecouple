@@ -38,29 +38,49 @@ const BANNED =
 const words = (list: string) => list.split(/\s+/).filter(Boolean);
 
 const COLOURS = words(
-  "black brown dark light blond blonde red ginger auburn grey gray white silver golden sandy chestnut salt-and-pepper blue navy green pink purple yellow orange beige cream maroon burgundy patterned pattern floral striped plain",
+  "black brown dark light blond blonde red ginger auburn grey gray greying graying white silver golden sandy chestnut salt-and-pepper blue navy green pink purple yellow orange beige cream maroon burgundy patterned pattern floral striped plain",
 );
 const SHAPES = words(
-  "short long medium medium-length shoulder-length chin-length cropped very full thick thin thinning receding wavy curly coily straight messy tousled neat slicked slicked-back back tied loose side parted swept layered natural spiky wrapped length visible facial",
+  "short long medium medium-length shoulder-length chin-length chest-length waist-length ear-length cropped very full thick thin fine wispy thinning receding wavy curly coily straight textured messy tousled neat trimmed groomed slicked slicked-back back tied loose side parted swept side-swept layered natural spiky wrapped length visible facial high low shoulder shoulders past",
+);
+/** An item must name at least one of these to be about the head or face. */
+const HEAD_NOUNS = words(
+  "hair bald headscarf hat cap beard stubble moustache mustache goatee glasses sunglasses spectacles ponytail bun braid braids plait plaits pixie bob afro dreadlocks locs cornrows curls mohawk undercut fringe bangs head hood beanie bandana headband sideburns clean-shaven scarf wrap",
 );
 const NOUNS = words(
-  "hair jaw chin neck hairline bald head shaved buzz crew cut bob pixie fringe bangs curls braid braids braided plait plaits ponytail bun top knot afro dreadlocks locs cornrows mohawk undercut headscarf wrap scarf hood hat cap beanie headband bandana beard stubble moustache mustache goatee sideburns clean-shaven glasses sunglasses spectacles frames rimmed round rectangular thin-rimmed thick-rimmed small",
+  "jaw chin neck hairline shaved buzz crew cut braided top knot frames rimmed round rectangular thin-rimmed thick-rimmed small",
 );
 const CONNECTIVES = words("a an the and with no covering covers all most in up pulled around on");
+const TRIM_START = new Set(words("a an the and with"));
+const TRIM_END = new Set(words("a an the and with in up no"));
 
-/** An item survives only if every word is on the head/face vocabulary (BANNED is a second gate). */
-const VOCABULARY = new Set([...COLOURS, ...SHAPES, ...NOUNS, ...CONNECTIVES]);
-const NOUN_SET = new Set(NOUNS);
+/** The only words an appearance line can contain (BANNED is a second gate on the whole item). */
+export const APPEARANCE_VOCABULARY: ReadonlySet<string> = new Set([
+  ...COLOURS,
+  ...SHAPES,
+  ...HEAD_NOUNS,
+  ...NOUNS,
+  ...CONNECTIVES,
+]);
+const HEAD_NOUN_SET = new Set(HEAD_NOUNS);
 const MAX_ITEM_WORDS = 12;
 
-function allowedItem(item: string): boolean {
-  if (!/^[a-z-]+( [a-z-]+)*$/.test(item) || item.includes("-style")) return false;
-  const tokens = item.split(" ");
-  return (
-    tokens.length <= MAX_ITEM_WORDS &&
-    tokens.every((t) => VOCABULARY.has(t)) &&
-    tokens.some((t) => NOUN_SET.has(t))
-  );
+const known = (token: string) =>
+  APPEARANCE_VOCABULARY.has(token) ||
+  (token.includes("-") && token.split("-").every((part) => APPEARANCE_VOCABULARY.has(part)));
+
+/** One comma item → only its vocabulary words, or "" when nothing about the head or face is left. */
+function cleanItem(item: string): string {
+  if (BANNED.test(item)) return "";
+  const tokens = item
+    .toLowerCase()
+    .split(/[^a-z-]+/)
+    .filter((t) => t && known(t))
+    .filter((t, i, all) => t !== all[i - 1]);
+  while (tokens.length && TRIM_START.has(tokens[0] as string)) tokens.shift();
+  while (tokens.length && TRIM_END.has(tokens[tokens.length - 1] as string)) tokens.pop();
+  if (tokens.length > MAX_ITEM_WORDS || !tokens.some((t) => HEAD_NOUN_SET.has(t))) return "";
+  return tokens.join(" ");
 }
 
 function clean(line: string): string {
@@ -70,17 +90,7 @@ function clean(line: string): string {
     .replace(/[\p{Z}\s]+/gu, " ")
     .trim();
   for (const [pattern, word] of RENAME) out = out.replace(pattern, word);
-  const items = out
-    .split(",")
-    .map((item) =>
-      item
-        .toLowerCase()
-        .trim()
-        .split(" ")
-        .filter((w, i, all) => w !== all[i - 1])
-        .join(" "),
-    )
-    .filter((item) => allowedItem(item) && !BANNED.test(item));
+  const items = out.split(",").map(cleanItem).filter(Boolean);
   while (items.length > 1 && items.join(", ").length > APPEARANCE_MAX_CHARS) items.pop();
   out = items.join(", ");
   return out.length > APPEARANCE_MAX_CHARS ? "" : out;
