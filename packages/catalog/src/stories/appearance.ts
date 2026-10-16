@@ -6,3 +6,51 @@
 export type Appearance = { survivor: string; infected: string };
 
 export const EMPTY_APPEARANCE: Appearance = { survivor: "", infected: "" };
+
+export const APPEARANCE_MAX_CHARS = 120;
+
+/** Sent with the two photos to the describe route (christmas content spec §2.3). */
+export const DESCRIBE_PROMPT = [
+  "You will see two photos, IMAGE 1 and IMAGE 2, each of one person.",
+  "For each photo, list only what is visible on the head and face: head covering (colour, pattern, how much hair it covers) or none, hair (length, colour, style, or bald), facial hair, glasses.",
+  "Never mention age, religion, ethnicity, nationality, skin colour, health, disability or body shape. Do not guess anything that is not visible.",
+  "Answer with exactly two lines and nothing else:",
+  "IMAGE 1: <comma-separated visible features>",
+  "IMAGE 2: <comma-separated visible features>",
+].join("\n");
+
+const RENAME: readonly [RegExp, string][] = [
+  [/\b(hijab|niqab|khimar|chador|burqa|al-amira)\b/gi, "headscarf"],
+  [/\b(turban|dastar|pagri|keski)\b/gi, "head wrap"],
+  [/\b(kippah|kippa|yarmulke|kufi|taqiyah)\b/gi, "small cap"],
+];
+
+/** Inferences the line must never carry; hair colours like "white hair" are allowed. */
+const BANNED =
+  /\b(muslim|islam\w*|christian\w*|catholic|jewish|jew|sikh\w*|hindu\w*|buddhis\w*|religio\w*|arab\w*|asian|african|caucasian|latin[oa]|latinx|hispanic|indian|ethnic\w*|race|racial|nationality|american|european|chinese|japanese|korean|mexican|disab\w*|wheelchair|ill(ness)?|disease|sick|pregnan\w*|years?\s+old|\d+\s*(years?|yrs?)|elderly|teen\w*|child)\b/i;
+
+function clean(line: string): string {
+  let out = line
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  for (const [pattern, word] of RENAME) out = out.replace(pattern, word);
+  if (BANNED.test(out)) return "";
+  if (out.length > APPEARANCE_MAX_CHARS) {
+    const cut = out.slice(0, APPEARANCE_MAX_CHARS);
+    out = cut.slice(0, Math.max(cut.lastIndexOf(","), cut.lastIndexOf(" "))).trim();
+  }
+  return out;
+}
+
+/** The model's answer → one safe line per photo; anything unusable becomes "". */
+export function parseAppearance(text: string): Appearance {
+  const found: Record<"1" | "2", string | undefined> = { "1": undefined, "2": undefined };
+  for (const raw of text.split(/\r?\n/)) {
+    const m = raw.match(/^\s*[-*•]?\s*image\s*([12])\s*:\s*(.+)$/i);
+    if (!m) continue;
+    const key = m[1] as "1" | "2";
+    if (found[key] === undefined) found[key] = clean(m[2] as string);
+  }
+  return { survivor: found["1"] ?? "", infected: found["2"] ?? "" };
+}
