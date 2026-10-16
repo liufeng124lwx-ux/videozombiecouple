@@ -194,3 +194,47 @@ main {
   color: var(--text-2);
   cursor: pointer;
 }
+
+/* Phones: the page's main action pinned to the bottom (StickyCta), above the home indicator. */
+.sticky-cta {
+  display: none;
+}
+@media (max-width: 759px) {
+  .sticky-cta {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    color: var(--text);
+    border-top: 1px solid var(--hairline);
+    transform: translateY(0);
+    opacity: 1;
+    transition:
+      transform 0.25s ease,
+      opacity 0.25s ease;
+  }
+  .sticky-cta[data-on="false"] {
+    transform: translateY(110%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* The bar never hides the last lines of the page. */
+  body:has(.sticky-cta) .site-footer {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  /* Thumb-sized footer links. */
+  .site-footer a,
+  .footer-link {
+    display: inline-block;
+    padding-block: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sticky-cta {
+    transition: none;
+  }
+}

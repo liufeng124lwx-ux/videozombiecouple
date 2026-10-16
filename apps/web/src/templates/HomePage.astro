@@ -10,6 +10,7 @@ import Faq from "../components/Faq.astro";
 import FilmGallery from "../components/FilmGallery.tsx";
 import HeroFilm from "../components/HeroFilm.tsx";
 import PackRows from "../components/pricing/PackRows.tsx";
+import StickyCta from "../components/site/StickyCta.tsx";
 import StoryTool from "../components/story/StoryTool.tsx";
 import { sampleImage } from "../lib/sample-images.ts";
 import {
@@ -122,6 +123,8 @@ const billing = t("home.billing", { seconds: fact("video.seconds") }, locale).sp
     </figure>
   </div>
 </section>
+
+<StickyCta client:idle href="#make" label={t("home.cta", {}, locale)} target="make" />
 
 <section class="make" id="make" aria-label={t("home.makeLabel", {}, locale)}>
   <div class="wrap">

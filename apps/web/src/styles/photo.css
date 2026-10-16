@@ -117,3 +117,18 @@
   color: var(--ember);
   font-size: 20px;
 }
+
+/* Phones: a smaller print, so the consent and the button are on the first screen. */
+@media (max-width: 759px) {
+  .photo-hero {
+    padding-block: 24px 40px;
+  }
+  .photo-make {
+    margin-top: 18px;
+  }
+  .photo-slot,
+  .photo-print {
+    width: min(46vw, 180px);
+    justify-self: center;
+  }
+}

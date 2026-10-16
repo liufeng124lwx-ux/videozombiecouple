@@ -8,6 +8,7 @@ import { t } from "@vzc/i18n";
 import F from "../components/F.astro";
 import Faq from "../components/Faq.astro";
 import PhotoTool from "../components/photo/PhotoTool.tsx";
+import StickyCta from "../components/site/StickyCta.tsx";
 import { sampleImage } from "../lib/sample-images.ts";
 
 interface Props {
@@ -48,6 +49,8 @@ const examples = await Promise.all(
     }
   </div>
 </section>
+
+<StickyCta client:idle href="#make" label={t("photo.go", {}, locale)} target="make" />
 
 <section class="section photo-examples">
   <div class="wrap">
