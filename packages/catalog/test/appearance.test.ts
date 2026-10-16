@@ -1,5 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { APPEARANCE_MAX_CHARS, DESCRIBE_PROMPT, parseAppearance } from "../src/index.ts";
+
+const fixture = (name: string) =>
+  JSON.parse(
+    readFileSync(new URL(`../../providers/test/fixtures/${name}`, import.meta.url), "utf8"),
+  ) as Record<string, unknown>;
 
 describe("appearance lines", () => {
   it("reads two lines into photo 1 (survivor) and photo 2 (infected)", () => {
@@ -120,7 +126,7 @@ describe("appearance lines", () => {
     );
   });
 
-  it("collapses a run of repeated words and refuses over-long items (more than 8 words)", () => {
+  it("collapses a run of repeated words and refuses over-long items (more than 12 words)", () => {
     expect(parseAppearance(`IMAGE 1: ${"very ".repeat(60)}long hair`).survivor).toBe(
       "very long hair",
     );
@@ -157,5 +163,39 @@ describe("appearance lines", () => {
     expect(DESCRIBE_PROMPT).toContain("IMAGE 1:");
     expect(DESCRIBE_PROMPT).toContain("IMAGE 2:");
     expect(DESCRIBE_PROMPT).toMatch(/never mention (age|religion)/i);
+  });
+
+  it("keeps the head covering and the stubble from the real describe answers", () => {
+    const claude = fixture("describe-claude.json") as { content: { text: string }[] };
+    const gemini = fixture("describe-gemini-openai.json") as {
+      choices: { message: { content: string } }[];
+    };
+    for (const [name, text] of [
+      ["claude", claude.content[0]?.text ?? ""],
+      ["gemini-openai", gemini.choices[0]?.message.content ?? ""],
+    ] as const) {
+      const look = parseAppearance(text);
+      // the covering itself is named, not only "covering all hair"
+      expect(look.survivor, name).toMatch(/headscarf|patterned head covering/);
+      expect(look.survivor, name).toMatch(/blue/);
+      expect(look.infected, name).toContain("stubble");
+      expect(look.infected, name).toMatch(/blond/);
+    }
+  });
+
+  it("asks for short noun phrases and names head coverings headscarf, hat or cap", () => {
+    expect(DESCRIBE_PROMPT).toMatch(/short noun phrases/i);
+    expect(DESCRIBE_PROMPT).toContain(
+      "IMAGE 1: blue patterned headscarf covering all hair, short dark beard, no glasses",
+    );
+    expect(DESCRIBE_PROMPT).toMatch(/"headscarf"/);
+    expect(DESCRIBE_PROMPT).toMatch(/"hat"/);
+    expect(DESCRIBE_PROMPT).toMatch(/"cap"/);
+    // the example itself passes the cleaner unchanged
+    expect(
+      parseAppearance(
+        "IMAGE 1: blue patterned headscarf covering all hair, short dark beard, no glasses",
+      ).survivor,
+    ).toBe("blue patterned headscarf covering all hair, short dark beard, no glasses");
   });
 });

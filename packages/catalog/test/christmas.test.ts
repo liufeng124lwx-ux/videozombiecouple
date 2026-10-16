@@ -149,8 +149,14 @@ describe("50 Christmases", () => {
       expect(get(id), id).toContain("late seventies");
     for (const id of ["tree", "forgetWarm", "embrace"]) expect(get(id), id).toContain("grown old");
     expect(get("wide")).toContain("unmistakably elderly");
-    for (const id of ["forgetCold", "rememberClose", "forgetWarm"])
-      expect(get(id), id).toContain("the same gender as IMAGE 1");
+    expect(get("forgetWarm")).toContain("the same gender as IMAGE 1");
+    for (const id of ["forgetCold", "rememberClose"]) {
+      expect(get(id), id).toContain("features and gender of IMAGE 1");
+      // said once, not twice
+      expect(get(id).match(/gender/g), id).toHaveLength(1);
+      // a close-up has no armchair in frame
+      expect(get(id), id).not.toContain("armchair");
+    }
     for (const id of ["tree", "embrace"])
       expect(get(id), id).toContain("only this one heart ornament on the tree");
     for (const id of ["wide", "forgetCold", "rememberClose"])
@@ -205,9 +211,9 @@ describe("50 Christmases", () => {
     for (const scene of Object.keys(CHRISTMAS.scenes)) {
       for (const k of CHRISTMAS.keyframes) {
         const p = k.prompt(scene, "human");
-        expect(p, k.id).toContain(
-          "No text, no glasses, no exaggerated crying, no distorted hands.",
-        );
+        expect(p, k.id).toContain("No text, no exaggerated crying, no distorted hands.");
+        // nothing about glasses unless a describe line says so
+        expect(p, k.id).not.toMatch(/glasses/);
         if (["wide", "forgetCold", "rememberClose"].includes(k.id))
           expect(p, k.id).toMatch(/late seventies/);
         else if (k.id !== "memory") expect(p, k.id).toMatch(/grown old/);
@@ -221,5 +227,36 @@ describe("50 Christmases", () => {
     expect(CHRISTMAS.keyframes[0]?.prompt("city-flat", "human")).not.toBe(
       CHRISTMAS.keyframes[0]?.prompt("snow-cabin", "human"),
     );
+  });
+
+  it("never says no glasses when a person wears them; the line carries them", () => {
+    const look = { survivor: "short dark hair, round glasses", infected: "long red hair" };
+    for (const scene of Object.keys(CHRISTMAS.scenes))
+      for (const k of CHRISTMAS.keyframes) {
+        const p = k.prompt(scene, "human", look);
+        expect(p, k.id).not.toContain("no glasses");
+        if (k.refs.some((r) => "photo" in r && r.photo === "survivor"))
+          expect(p, k.id).toContain("round glasses");
+      }
+  });
+
+  it("starts every sentence with a capital letter", () => {
+    const look = { survivor: "full beard", infected: "blue floral headscarf" };
+    for (const scene of Object.keys(CHRISTMAS.scenes))
+      for (const k of CHRISTMAS.keyframes)
+        for (const l of [undefined, look]) {
+          const p = k.prompt(scene, "human", l);
+          for (const sentence of p.split(/(?<=\.)\s+/))
+            expect(sentence, `${scene}/${k.id}: ${sentence}`).toMatch(/^[^a-z]/);
+        }
+  });
+
+  it("keeps the memory frame young: no aging words in it", () => {
+    const look = { survivor: "short dark hair", infected: "long red hair" };
+    const memory = CHRISTMAS.keyframes.find((k) => k.id === "memory");
+    for (const l of [undefined, look]) {
+      const p = memory?.prompt("snow-cabin", "human", l) ?? "";
+      expect(p).not.toMatch(/fifty years older|late seventies|grown old|elderly/);
+    }
   });
 });

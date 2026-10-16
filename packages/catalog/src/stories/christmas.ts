@@ -5,26 +5,28 @@ import type { FrameRef, Story, StoryScene } from "./types.ts";
 // Spec 2026-10-15-christmas-story-design.md §2–§3. First drafts: tuned in 即梦 before they go live.
 // survivor = the one who remembers (photo 1), infected = the one who forgets (photo 2).
 
-type Setting = { now: string; memory: string; window: string };
+// `room`: the dark living room without the armchair (close-ups); `now` adds it (wide shot).
+type Setting = { room: string; memory: string; window: string };
+const ARMCHAIR = "an armchair facing the window with its back to the doorway";
 
 const SETTINGS: Record<string, Setting & { label: string }> = {
   "snow-cabin": {
     label: "Snowy cabin",
-    now: "a small wooden cabin living room on Christmas Eve, lamps off, cold blue moonlight from the snow outside through a frosted window, an unlit Christmas tree with a few old ornaments, an armchair facing the window with its back to the doorway",
+    room: "a small wooden cabin living room on Christmas Eve, lamps off, cold blue moonlight from the snow outside through a frosted window, an unlit Christmas tree with a few old ornaments",
     memory:
       "a tiny first apartment on a golden winter afternoon, moving boxes against the wall, a one-metre Christmas tree, two new white enamel mugs on the windowsill",
     window: "a snow-covered wooden cabin at night",
   },
   "city-flat": {
     label: "Old city flat",
-    now: "an old city apartment living room on Christmas Eve, lamps off, cold blue light from the snowy street through a tall frosted window, an unlit Christmas tree, an armchair facing the window with its back to the doorway",
+    room: "an old city apartment living room on Christmas Eve, lamps off, cold blue light from the snowy street through a tall frosted window, an unlit Christmas tree",
     memory:
       "a Christmas market at golden hour, string lights, wooden stalls, a small tree on a stall table",
     window: "an old brick apartment building on a snowy city street at night",
   },
   farmhouse: {
     label: "Farmhouse",
-    now: "a farmhouse living room on Christmas Eve, lamps off, cold blue light from the snowy fields through a frosted window, an unlit Christmas tree, an armchair facing the window with its back to the doorway",
+    room: "a farmhouse living room on Christmas Eve, lamps off, cold blue light from the snowy fields through a frosted window, an unlit Christmas tree",
     memory:
       "a snowy field on a golden afternoon, the young couple beside a small freshly cut Christmas tree",
     window: "a farmhouse alone in snowy fields at night",
@@ -33,6 +35,8 @@ const SETTINGS: Record<string, Setting & { label: string }> = {
 
 const shared = (name: string) => `stories/christmas/shared/${name}`;
 const asset = (scene: string, name: string) => `stories/christmas/${scene}/${name}`;
+
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const SCENES: Record<string, StoryScene> = Object.fromEntries(
   Object.entries(SETTINGS).map(([id, s]) => [
@@ -52,7 +56,8 @@ const SCENES: Record<string, StoryScene> = Object.fromEntries(
 );
 
 const STYLE = "Cinematic film still, vertical 9:16, 35mm film grain.";
-const SAFE = "No text, no glasses, no exaggerated crying, no distorted hands.";
+// Glasses: only an appearance line speaks of them (a "no glasses" here would contradict it).
+const SAFE = "No text, no exaggerated crying, no distorted hands.";
 const MOTION = "Subtle, restrained motion. Faces stay consistent with the reference people.";
 const ORNAMENT = "the red glass heart ornament with a gold ribbon";
 const OLD =
@@ -80,7 +85,7 @@ const PHOTOS: FrameRef[] = [{ photo: "survivor" }, { photo: "infected" }];
 const s = (scene: string) => {
   const found = SETTINGS[scene];
   if (!found) throw new Error(`unknown christmas scene ${scene}`);
-  return found;
+  return { ...found, now: `${found.room}, ${ARMCHAIR}` };
 };
 
 export const CHRISTMAS: Story = {
@@ -99,7 +104,7 @@ export const CHRISTMAS: Story = {
       prompt: (scene, _kind, look) =>
         [
           STYLE,
-          `${s(scene).now}.`,
+          `${capital(s(scene).now)}.`,
           `The person from IMAGE 2 sits in the armchair facing the window, their back to the doorway, seen in profile from the side, wearing ${FORGETS_CLOTHES}, eyes fixed on the snow outside the window; they are ${OLD}, ${SAME(2)}.${AGED(2, l(look).infected)}`,
           `The person from IMAGE 1 stands in the doorway behind the armchair, unseen by the seated person, holding two white enamel mugs with chipped rims, wearing ${REMEMBERS_CLOTHES}; they are ${OLD}, ${SAME(1)}.${AGED(1, l(look).survivor)}`,
           "Wide shot, both faces clearly visible. Never swap the two people.",
@@ -115,9 +120,9 @@ export const CHRISTMAS: Story = {
       prompt: (scene, _kind, look) =>
         [
           STYLE,
-          `${s(scene).memory}, warm golden light, soft haze, slightly overexposed like an old home movie.`,
+          `${capital(s(scene).memory)}, warm golden light, soft haze, slightly overexposed like an old home movie.`,
           `The person from IMAGE 2, wearing a burgundy sweater, rests one hand on the cheek of the person from IMAGE 1, wearing a grey hoodie; both laughing, faces close.${YOUNG(2, l(look).infected)}${YOUNG(1, l(look).survivor)} Each person keeps the face, hair, age, skin tone and gender of their own photo exactly.`,
-          `${ORNAMENT} exactly as in IMAGE 3 hangs on the small tree beside them.`,
+          `${capital(ORNAMENT)} exactly as in IMAGE 3 hangs on the small tree beside them.`,
           "Medium close-up, front three-quarter view, both faces clearly visible. Never swap the two people.",
           SAFE,
         ].join(" "),
@@ -131,8 +136,8 @@ export const CHRISTMAS: Story = {
       prompt: (scene, _kind, look) =>
         [
           STYLE,
-          `Tight head-and-shoulders close-up of the person in IMAGE 1, ${OLD}, ${SAME(1)}, the same gender as IMAGE 1.${AGED(1, l(look).infected)}`,
-          `Wearing ${FORGETS_CLOTHES.split(",")[0]}. Sitting by the frosted window of ${s(scene).now}; cold blue moonlight on one side of the face, the unlit Christmas tree blurred behind.`,
+          `Tight head-and-shoulders close-up of the person in IMAGE 1, ${OLD}, ${SAME(1)}.${AGED(1, l(look).infected)}`,
+          `Wearing ${FORGETS_CLOTHES.split(",")[0]}. Sitting by the frosted window of ${s(scene).room}; cold blue moonlight on one side of the face, the unlit Christmas tree blurred behind.`,
           "Eyes looking out of the window, a distant, empty gaze. Shallow depth of field.",
           SAFE,
         ].join(" "),
@@ -146,8 +151,8 @@ export const CHRISTMAS: Story = {
       prompt: (scene, _kind, look) =>
         [
           STYLE,
-          `Tight head-and-shoulders close-up of the person in IMAGE 1, ${OLD}, ${SAME(1)}, the same gender as IMAGE 1.${AGED(1, l(look).survivor)}`,
-          `Wearing ${REMEMBERS_CLOTHES}. Standing in the dark doorway of ${s(scene).now}; cold blue shadows, the unlit Christmas tree blurred behind.`,
+          `Tight head-and-shoulders close-up of the person in IMAGE 1, ${OLD}, ${SAME(1)}.${AGED(1, l(look).survivor)}`,
+          `Wearing ${REMEMBERS_CLOTHES}. Standing in the dark doorway of ${s(scene).room}; cold blue shadows, the unlit Christmas tree blurred behind.`,
           "A glint of moisture in the eyes, a small, sad smile. Shallow depth of field.",
           SAFE,
         ].join(" "),
