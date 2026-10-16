@@ -1,3 +1,4 @@
+import type { DescribeAdapter } from "@vzc/providers";
 import type { Dispatcher } from "./durable-objects/dispatcher.ts";
 import type { RateLimiter } from "./durable-objects/rate-limiter.ts";
 import type { StoryRunner } from "./durable-objects/story-runner.ts";
@@ -84,6 +85,8 @@ export interface Bindings {
   FAKE_SCRIPT?: string;
   /** JSON (string | { error: FailKind })[]: the fake describer's answers for FAKE_PROVIDER runs. */
   FAKE_DESCRIBE?: string;
+  /** Tests only: a scripted describer for FAKE_PROVIDER runs (wins over FAKE_DESCRIBE). */
+  DESCRIBER_IMPL?: DescribeAdapter;
   /** Tests only: every task the fake provider is given is also pushed here. */
   FAKE_SUBMITTED?: unknown[];
   /** Spec 8.3 alerts: Telegram first, email copy; each is skipped when not set. */

@@ -694,10 +694,106 @@ describe("StoryRunner: stories", () => {
     await runner.render(await creditHold(h, spec.id, 20, 20));
     await untilStatus(h, runner, "failed");
     const row = JSON.stringify(h.db.prepare("SELECT * FROM stories WHERE id=?").get(spec.id));
-    expect(row).toContain("internal error");
+    // a describe story keeps a fixed text per fail kind in D1; the provider's words stay in the DO
+    expect(row).not.toContain("internal error");
     expect(row).not.toMatch(LEAK);
     const state = JSON.stringify(Object.values((await h.runnerState(spec.id))?.steps ?? {}));
     expect(state).not.toMatch(LEAK);
+  });
+
+  it("a truncated echo of an appearance item never reaches the D1 steps JSON", async () => {
+    // "salt-and-pepper chin-len" is a fragment: no whole item matches it, so scrubbing misses it.
+    const echo = { kind: "fail", failMsg: "bad prompt near: salt-and-pepper chin-len" };
+    const h = await setup({
+      FAKE_DESCRIBE: JSON.stringify([SECRET]),
+      FAKE_SCRIPT: JSON.stringify(
+        Object.fromEntries(
+          ROUTES.filter((r) => r.capability === "keyframe").map((r) => [
+            r.model,
+            Array(40).fill(echo),
+          ]),
+        ),
+      ),
+    });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "failed");
+    const steps = (
+      h.db.prepare("SELECT steps FROM stories WHERE id=?").get(spec.id) as {
+        steps: string;
+      }
+    ).steps;
+    expect(steps).not.toMatch(/chin-len|salt-and-pepper|bad prompt/);
+    const failed = (JSON.parse(steps) as { id: string; state: string; error: string | null }[])
+      .filter((st) => st.id.startsWith("kf:") && st.state === "failed")
+      .map((st) => st.error);
+    expect(failed.length).toBeGreaterThan(0);
+    for (const e of failed) expect(e).toMatch(/^[a-z_]+$/);
+  });
+
+  it("answers render() before the describe call finishes; the alarm runs it", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    let called: () => void = () => {};
+    const calledOnce = new Promise<"called">((r) => {
+      called = () => r("called");
+    });
+    let calls = 0;
+    const h = await setup({
+      DESCRIBER_IMPL: {
+        async describe(route: { costUsd: number }) {
+          calls += 1;
+          called();
+          await gate;
+          return {
+            text: "IMAGE 1: short dark hair\nIMAGE 2: long red hair",
+            costUsd: route.costUsd,
+          };
+        },
+      },
+    });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    const rendered = runner.render(await creditHold(h, spec.id, 20, 20));
+    expect(await Promise.race([rendered, calledOnce])).toEqual({ ok: true });
+    expect(calls).toBe(0);
+    release();
+    await untilStatus(h, runner, "done");
+    expect(calls).toBe(1);
+    expect(describeStep(h, spec.id)).toMatchObject({ state: "succeeded", error: null });
+  });
+
+  it("a transient error inside describe (routes unreadable) never fails the paid film", async () => {
+    const h = await setup({ FAKE_DESCRIBE: JSON.stringify([SECRET]) });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    // A fresh DB handle (the route cache is per handle) whose first routes read throws.
+    const real = h.env.DB as D1Database;
+    let broken = 1;
+    h.env.DB = new Proxy(real, {
+      get(target, prop) {
+        if (prop === "prepare")
+          return (sql: string) => {
+            if (broken > 0 && sql.includes("provider_routes")) {
+              broken -= 1;
+              throw new Error("D1_ERROR: network connection lost");
+            }
+            return target.prepare(sql);
+          };
+        const value = Reflect.get(target, prop);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "done");
+    expect(broken).toBe(0);
+    const step = describeStep(h, spec.id);
+    expect(step).toMatchObject({ state: "succeeded", error: "DESCRIBE_FAILED", attempts: [] });
+    expect(submitted(h)).not.toContain(APPEARANCE_MARK);
+    expect(h.wallet.calls.some((c) => c[0] === "commit" && c[3] === 20)).toBe(true);
   });
 
   it("drops a line with a banned inference before it reaches a prompt", async () => {

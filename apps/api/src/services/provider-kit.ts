@@ -45,7 +45,7 @@ export function providerKit(env: Bindings): ProviderKit {
       : undefined;
     return {
       adapter,
-      describer: new FakeDescriber(answers),
+      describer: env.DESCRIBER_IMPL ?? new FakeDescriber(answers),
       fetchOutput: async (_url, inputKey, destKey) => {
         const input = await env.BUCKET.get(inputKey);
         if (!input) throw new ProviderError("provider_error", `input ${inputKey} is gone`);

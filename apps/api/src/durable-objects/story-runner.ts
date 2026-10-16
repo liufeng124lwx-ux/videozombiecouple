@@ -469,7 +469,8 @@ export class StoryRunner extends DurableObject<Bindings> {
   async #begin(state: StoryState, step: StepRecord): Promise<void> {
     if (step.kind !== "kie") {
       step.state = "running";
-      step.nextRunAt = Date.now();
+      // describe takes 13–105 s: the alarm runs it, never the request that started the film.
+      step.nextRunAt = step.kind === "describe" ? Date.now() + 1 : Date.now();
       return;
     }
     const capability = step.capability as CapabilityId;
@@ -683,7 +684,10 @@ export class StoryRunner extends DurableObject<Bindings> {
     }
     step.state = "failed";
     step.failKind = kind;
-    step.error = reason.slice(0, 200);
+    // A describe story's prompts carry the appearance lines and a model may echo a fragment of
+    // them that scrubbing cannot recognise: D1 gets only the fail kind (spec §7); the provider's
+    // words stay in the attempt's failMsg, which never leaves this object.
+    step.error = storyOf(state.spec).describe ? kind : reason.slice(0, 200);
   }
 
   async #stepComposer(state: StoryState, step: StepRecord): Promise<void> {
@@ -847,14 +851,22 @@ export class StoryRunner extends DurableObject<Bindings> {
       step.error = error;
       step.nextRunAt = null;
     };
-    if ((await readFlags(this.env.KV)).offline.includes("describe")) {
+    let routes: Route[];
+    let images: string[];
+    try {
+      if ((await readFlags(this.env.KV)).offline.includes("describe")) {
+        state.appearance = { ...EMPTY_APPEARANCE };
+        return done("DESCRIBE_OFFLINE");
+      }
+      routes = (await loadRoutes(this.env.DB))
+        .filter((r) => r.capability === "describe" && r.enabled)
+        .sort((a, b) => a.rank - b.rank);
+      images = [await this.#url(spec.survivorKey), await this.#url(spec.infectedKey)];
+    } catch {
+      // A transient error here never fails a paid film: it goes on without lines.
       state.appearance = { ...EMPTY_APPEARANCE };
-      return done("DESCRIBE_OFFLINE");
+      return done("DESCRIBE_FAILED");
     }
-    const routes = (await loadRoutes(this.env.DB))
-      .filter((r) => r.capability === "describe" && r.enabled)
-      .sort((a, b) => a.rank - b.rank);
-    const images = [await this.#url(spec.survivorKey), await this.#url(spec.infectedKey)];
     for (const route of routes) {
       const attempt = newAttempt(step, route);
       attempt.state = "submitting";
