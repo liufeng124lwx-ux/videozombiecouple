@@ -207,6 +207,23 @@ describe("50 Christmases", () => {
     });
   });
 
+  it("every aged frame says white hair and an age, and frames built on an aged frame keep its hair", () => {
+    // 即梦 preview 2026-10-16: without a hair clause the embrace came back young with red hair and
+    // forgetWarm went back to the photo's blonde, while forgetCold was silver.
+    const aged = ["wide", "forgetCold", "rememberClose", "tree", "forgetWarm", "embrace"];
+    for (const scene of Object.keys(CHRISTMAS.scenes)) {
+      const get = (id: string) => CHRISTMAS.keyframes.find((k) => k.id === id)!.prompt(scene, "human");
+      for (const id of aged) {
+        expect(get(id), id).toContain("about 78 years old");
+        expect(get(id), id).toContain("all of their hair and any beard fully white or silver");
+      }
+      expect(get("memory")).not.toMatch(/white or silver|78 years/);
+      expect(get("tree")).toContain("the same white or silver hair, hairstyle and age as in IMAGE 3");
+      expect(get("embrace")).toContain("the same white or silver hair, hairstyle and age as in IMAGE 3");
+      expect(get("forgetWarm")).toContain("the same white or silver hair, hairstyle and age as in IMAGE 2");
+    }
+  });
+
   it("every prompt keeps people recognizable and avoids what the models do badly", () => {
     for (const scene of Object.keys(CHRISTMAS.scenes)) {
       for (const k of CHRISTMAS.keyframes) {

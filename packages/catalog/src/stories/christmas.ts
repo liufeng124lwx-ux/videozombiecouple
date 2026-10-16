@@ -60,8 +60,11 @@ const STYLE = "Cinematic film still, vertical 9:16, 35mm film grain.";
 const SAFE = "No text, no exaggerated crying, no distorted hands.";
 const MOTION = "Subtle, restrained motion. Faces stay consistent with the reference people.";
 const ORNAMENT = "the red glass heart ornament with a gold ribbon";
+// Hair is said here, not only in a describe line: without it the models drift back to the photo's
+// hair colour (即梦 preview 2026-10-16).
 const OLD =
-  "in their late seventies, unmistakably elderly: deep wrinkles across the forehead and around the eyes and mouth, sagging skin, age spots, thin hands";
+  "about 78 years old, in their late seventies, unmistakably elderly: all of their hair and any beard fully white or silver and thinner, deep wrinkles across the forehead and around the eyes and mouth, sagging skin, age spots, thin hands";
+const KEEP_AGE = (n: number) => `the same white or silver hair, hairstyle and age as in IMAGE ${n}`;
 const SKIN = (n: number) =>
   `the skin exactly as dark or as light as in IMAGE ${n}, never lighter or darker`;
 const SAME = (n: number) =>
@@ -105,8 +108,9 @@ export const CHRISTMAS: Story = {
         [
           STYLE,
           `${capital(s(scene).now)}.`,
-          `The person from IMAGE 2 sits in the armchair facing the window, their back to the doorway, seen in profile from the side, wearing ${FORGETS_CLOTHES}, eyes fixed on the snow outside the window; they are ${OLD}, ${SAME(2)}.${AGED(2, l(look).infected)}`,
-          `The person from IMAGE 1 stands in the doorway behind the armchair, unseen by the seated person, holding two white enamel mugs with chipped rims, wearing ${REMEMBERS_CLOTHES}; they are ${OLD}, ${SAME(1)}.${AGED(1, l(look).survivor)}`,
+          `The person from IMAGE 2 sits in the armchair facing the window, their back to the doorway, seen in profile from the side, wearing ${FORGETS_CLOTHES}, eyes fixed on the snow outside the window, ${SAME(2)}.${AGED(2, l(look).infected)}`,
+          `The person from IMAGE 1 stands in the doorway behind the armchair, unseen by the seated person, holding two white enamel mugs with chipped rims, wearing ${REMEMBERS_CLOTHES}, ${SAME(1)}.${AGED(1, l(look).survivor)}`,
+          `Both are ${OLD}.`,
           "Wide shot, both faces clearly visible. Never swap the two people.",
           SAFE,
         ].join(" "),
@@ -166,7 +170,7 @@ export const CHRISTMAS: Story = {
       prompt: (_scene, _kind, look) =>
         [
           STYLE,
-          "The same room, the same two elderly people, the same clothes and the same cold blue moonlight as IMAGE 3.",
+          `The same room, the same two elderly people, the same clothes and the same cold blue moonlight as IMAGE 3. Both are ${OLD}, with ${KEEP_AGE(3)}.`,
           `In the foreground, the person standing in IMAGE 3, in the navy wool sweater, with the face of IMAGE 1 grown old, the same gender as IMAGE 1 and ${SKIN(1)}, stands in profile at the unlit Christmas tree, raising ${ORNAMENT} exactly as in IMAGE 4 to a branch at eye level; ${ONE_ORNAMENT}.${AGED(1, l(look).survivor)}`,
           `In the soft-focus background, the person sitting in the armchair in IMAGE 3, in the cream cardigan, with the face of IMAGE 2 grown old, the same gender as IMAGE 2 and ${SKIN(2)}.${AGED(2, l(look).infected)}`,
           "Never swap the two people.",
@@ -182,7 +186,7 @@ export const CHRISTMAS: Story = {
       prompt: (_scene, _kind, look) =>
         [
           STYLE,
-          `Exactly the same framing, person, face, clothes and room as IMAGE 2 — the person from IMAGE 1 grown old, the same gender as IMAGE 1 and ${SKIN(1)} — but now lit by warm amber Christmas-tree lights from the side instead of cold moonlight.${AGED(1, l(look).infected)}`,
+          `Exactly the same framing, person, face, clothes and room as IMAGE 2 — the person from IMAGE 1 grown old, the same gender as IMAGE 1 and ${SKIN(1)} — but now lit by warm amber Christmas-tree lights from the side instead of cold moonlight. They are ${OLD}, with ${KEEP_AGE(2)}.${AGED(1, l(look).infected)}`,
           "The eyes have come into focus and look just off camera at someone they love; tears welling but not falling, lips slightly parted. Shallow depth of field.",
           SAFE,
         ].join(" "),
@@ -196,7 +200,7 @@ export const CHRISTMAS: Story = {
       prompt: (_scene, _kind, look) =>
         [
           STYLE,
-          `The same room, the same two elderly people and the same clothes as IMAGE 3, but the Christmas tree is now fully lit with warm amber lights, ${ONE_ORNAMENT}; pale dawn light at the frosted window, snow still falling.`,
+          `The same room, the same two elderly people and the same clothes as IMAGE 3, but the Christmas tree is now fully lit with warm amber lights, ${ONE_ORNAMENT}; pale dawn light at the frosted window, snow still falling. Both are ${OLD}, with ${KEEP_AGE(3)}.`,
           `They stand by the lit tree, foreheads touching, eyes closed, gentle smiles: the one in the navy sweater has the face of IMAGE 1 grown old, the same gender as IMAGE 1 and ${SKIN(1)}; the one in the cream cardigan has the face of IMAGE 2 grown old, the same gender as IMAGE 2 and ${SKIN(2)}; one hand rests on the other's cheek.${AGED(1, l(look).survivor)}${AGED(2, l(look).infected)}`,
           "Medium shot, both faces in profile, clearly recognizable. Never swap the two people.",
           SAFE,
