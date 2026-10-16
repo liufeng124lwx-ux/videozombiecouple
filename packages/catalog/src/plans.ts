@@ -1,3 +1,4 @@
+import { STORIES } from "./stories/index.ts";
 import type { StoryId } from "./stories/types.ts";
 
 export const PLAN_IDS = ["starter", "plus", "max"] as const;
@@ -118,9 +119,16 @@ export const PRODUCTS: readonly Product[] = [
 ];
 
 /** What the pricing page and scripts/waffo-setup.ts offer (spec §7: video packs only). */
-export const SALE_PRODUCTS: readonly Product[] = PRODUCTS.filter(
-  (p) => SELL_PLANS || p.kind === "pack",
-);
+export function saleProducts(): readonly Product[] {
+  const live = (key: string) => {
+    const story = PACKS.find((p) => p.productKey === key)?.story;
+    return !story || Object.values(STORIES[story].scenes).some((scene) => scene.live);
+  };
+  return PRODUCTS.filter((p) => (SELL_PLANS || p.kind === "pack") && live(p.key));
+}
+
+/** A story's pack is on sale only once one of its scenes is live; until then it has no price to sell. */
+export const SALE_PRODUCTS: readonly Product[] = saleProducts();
 
 export function productByKey(key: string): Product | null {
   return PRODUCTS.find((product) => product.key === key) ?? null;

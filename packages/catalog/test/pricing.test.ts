@@ -12,6 +12,7 @@ import {
   productByKey,
   ROUTES,
   SALE_PRODUCTS,
+  saleProducts,
   storyCostUsd,
   VIDEO_PACKS,
   ZOMBIE,
@@ -29,8 +30,20 @@ describe("pricing (spec §7, christmas spec §6)", () => {
     expect([...perVideo].sort((a, b) => b - a)).toEqual(perVideo);
   });
 
-  it("sells the video packs and one Christmas film, findable by product key", () => {
-    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack5", "christmas1"]);
+  it("sells the video packs; the Christmas film only once a Christmas scene is live", () => {
+    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack5"]);
+    const scene = CHRISTMAS.scenes["snow-cabin"];
+    if (!scene) throw new Error("no snow-cabin");
+    const was = scene.live;
+    try {
+      (scene as { live: boolean }).live = true;
+      expect(saleProducts().map((p) => p.key)).toEqual(["pack1", "pack3", "pack5", "christmas1"]);
+    } finally {
+      (scene as { live: boolean }).live = was;
+    }
+  });
+
+  it("knows the Christmas film by product key even when it is not for sale", () => {
     expect(productByKey("christmas1")).toMatchObject({ kind: "pack", credits: 20, usd: 9.99 });
     expect(VIDEO_PACKS.map((p) => p.id)).toEqual(["pack1", "pack3", "pack5"]);
     expect(PACKS.find((p) => p.id === "christmas1")?.story).toBe("christmas");
