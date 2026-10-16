@@ -1,3 +1,5 @@
+import type { StoryId } from "./stories/types.ts";
+
 export const PLAN_IDS = ["starter", "plus", "max"] as const;
 export type PlanId = (typeof PLAN_IDS)[number];
 export type Interval = "month" | "year";
@@ -41,6 +43,10 @@ export type Pack = {
   usd: number;
   productKey: string;
   badge?: "popular";
+  /** Sold on that story's page only (not in the video pack list). */
+  story?: StoryId;
+  /** Product name at checkout when "N videos" would be wrong. */
+  label?: string;
 };
 
 /** Spec §7: one-time video packs (10 credits = 1 video); credits never expire. Prices: owner, 2026-10-15. */
@@ -48,7 +54,19 @@ export const PACKS: readonly Pack[] = [
   { id: "pack1", credits: 10, usd: 4.99, productKey: "pack1" },
   { id: "pack3", credits: 30, usd: 13.99, productKey: "pack3", badge: "popular" },
   { id: "pack5", credits: 50, usd: 21.99, productKey: "pack5" },
+  // Christmas spec §1.3: one Christmas film, $9.99 (owner, 2026-10-15).
+  {
+    id: "christmas1",
+    credits: 20,
+    usd: 9.99,
+    productKey: "christmas1",
+    story: "christmas",
+    label: "1 Christmas film (50 Christmases)",
+  },
 ];
+
+/** The packs on the pricing page's video list and in per-video prices. */
+export const VIDEO_PACKS: readonly Pack[] = PACKS.filter((p) => !p.story);
 
 /** Spec §7: no subscriptions. The plan types stay because the billing code still reads them. */
 export const SELL_PLANS = false;
@@ -62,7 +80,7 @@ export type Product =
       monthlyCredits: number;
       usd: number;
     }
-  | { kind: "pack"; key: string; credits: number; usd: number };
+  | { kind: "pack"; key: string; credits: number; usd: number; label?: string };
 
 /** Everything a checkout can sell, keyed like the Waffo products' `productKey` metadata. */
 /**
@@ -94,6 +112,7 @@ export const PRODUCTS: readonly Product[] = [
       key: pack.productKey,
       credits: pack.credits,
       usd: pack.usd,
+      ...(pack.label ? { label: pack.label } : {}),
     }),
   ),
 ];

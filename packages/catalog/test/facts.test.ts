@@ -13,6 +13,11 @@ describe("page facts", () => {
 
   it("knows the story numbers", () => {
     expect(fact("video.seconds")).toBe("15");
+    expect(fact("story.zombie.seconds")).toBe("15");
+    expect(fact("story.christmas.seconds")).toBe("32");
+    expect(fact("story.christmas.usd")).toBe("$9.99");
+    expect(fact("story.christmas.credits")).toBe("20");
+    expect(() => fact("pack.christmas1.videos")).toThrow();
     expect(fact("video.width")).toBe("720");
     expect(fact("video.height")).toBe("1280");
     expect(() => fact("preview.daily")).toThrow();

@@ -7,7 +7,8 @@ import {
   RETENTION,
   TAKEDOWN_HOURS,
 } from "./limits.ts";
-import { PACKS } from "./plans.ts";
+import { PACKS, VIDEO_PACKS } from "./plans.ts";
+import { CHRISTMAS, STORIES, totalSeconds } from "./stories/index.ts";
 import { CANDIDATES_PER_FRAME, CAPTION_SEC, PHOTO, STORYBOARD, VIDEO } from "./story.ts";
 import { TIERS } from "./tiers.ts";
 
@@ -38,7 +39,7 @@ function build(): Record<string, string> {
     "photo.keepHours": count(PHOTO.keepHours),
   };
   let cheapest = Number.POSITIVE_INFINITY;
-  for (const pack of PACKS) {
+  for (const pack of VIDEO_PACKS) {
     const videos = videosIn(pack.credits);
     const perVideo = pack.usd / videos;
     cheapest = Math.min(cheapest, perVideo);
@@ -47,6 +48,12 @@ function build(): Record<string, string> {
     out[`pack.${pack.id}.perVideo`] = usd(perVideo);
   }
   out["price.fromPerVideo"] = usd(cheapest);
+  for (const story of Object.values(STORIES))
+    out[`story.${story.id}.seconds`] = count(totalSeconds(story, story.kinds[0] ?? "human"));
+  const xmas = PACKS.find((p) => p.story === "christmas");
+  if (!xmas) throw new Error("the Christmas film has no product");
+  out["story.christmas.usd"] = usd(xmas.usd);
+  out["story.christmas.credits"] = count(CHRISTMAS.credits);
   return out;
 }
 

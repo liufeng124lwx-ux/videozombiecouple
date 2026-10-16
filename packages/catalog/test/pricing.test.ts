@@ -1,64 +1,84 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHRISTMAS,
   filmCostUsd,
   minCreditPrice,
+  netPerCreditUsd,
   netPerVideoUsd,
   PACKS,
+  PAYMENT_FEE,
   PRODUCTS,
   pricingGuard,
   productByKey,
   ROUTES,
   SALE_PRODUCTS,
   storyCostUsd,
+  VIDEO_PACKS,
+  ZOMBIE,
 } from "../src/index.ts";
 
-describe("pricing (spec §7)", () => {
+const synthetic = ROUTES.map((r) => ({ ...r, costUsd: r.capability === "keyframe" ? 0.1 : 1 }));
+
+describe("pricing (spec §7, christmas spec §6)", () => {
   it("finds the cheapest credit in the 5-video pack", () => {
     expect(minCreditPrice()).toBeCloseTo(21.99 / 50, 6);
   });
 
-  it("makes bigger packs cheaper per video", () => {
-    const perVideo = PACKS.map((p) => (p.usd / p.credits) * 10);
+  it("makes bigger video packs cheaper per video", () => {
+    const perVideo = VIDEO_PACKS.map((p) => (p.usd / p.credits) * 10);
     expect([...perVideo].sort((a, b) => b - a)).toEqual(perVideo);
   });
 
-  it("sells packs only, findable by product key", () => {
-    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack5"]);
-    expect(productByKey("pack3")).toMatchObject({ kind: "pack", credits: 30, usd: 13.99 });
-    // Plans stay known to the billing code but are not for sale.
+  it("sells the video packs and one Christmas film, findable by product key", () => {
+    expect(SALE_PRODUCTS.map((p) => p.key)).toEqual(["pack1", "pack3", "pack5", "christmas1"]);
+    expect(productByKey("christmas1")).toMatchObject({ kind: "pack", credits: 20, usd: 9.99 });
+    expect(VIDEO_PACKS.map((p) => p.id)).toEqual(["pack1", "pack3", "pack5"]);
+    expect(PACKS.find((p) => p.id === "christmas1")?.story).toBe("christmas");
     expect(PRODUCTS.some((p) => p.kind === "plan")).toBe(true);
   });
 
-  it("a paid film is four keyframe candidates, B and five shots; nothing is free", () => {
-    const routes = ROUTES.map((r) => ({ ...r, costUsd: r.capability === "keyframe" ? 0.1 : 1 }));
-    expect(storyCostUsd(routes).video).toBeCloseTo(5.5);
-    expect(storyCostUsd(routes)).not.toHaveProperty("preview");
+  it("a zombie film is four candidates, B and five 3-second shots", () => {
+    expect(storyCostUsd(synthetic).video).toBeCloseTo(5.5);
+    expect(storyCostUsd(synthetic, ZOMBIE).video).toBeCloseTo(5.5);
   });
 
-  it("nets each pack after Waffo's fees (5% + $0.50 a payment, 1% payout)", () => {
-    expect(
-      netPerVideoUsd({ id: "pack1", credits: 10, usd: 4.99, productKey: "pack1" }),
-    ).toBeCloseTo(4.2, 2);
-    expect(
-      netPerVideoUsd({ id: "pack5", credits: 50, usd: 21.99, productKey: "pack5" }),
-    ).toBeCloseTo(4.04, 2);
+  it("a Christmas film is nine keyframes and 25 seconds of shots; clips cost nothing", () => {
+    // 9 × 0.1 + (3+3+4+4+3+4+4)/3 × 1
+    expect(storyCostUsd(synthetic, CHRISTMAS).video).toBeCloseTo(0.9 + 25 / 3, 6);
+  });
+
+  it("nets each pack after Stripe's fees (worst case 7.9% + $0.30)", () => {
+    expect(PAYMENT_FEE).toEqual({ rate: 0.079, fixedUsd: 0.3 });
+    const pack1 = PACKS[0];
+    if (!pack1) throw new Error("no pack1");
+    expect(netPerVideoUsd(pack1)).toBeCloseTo((4.99 * 0.921 - 0.3) / 1, 3);
+    const xmas = PACKS.find((p) => p.id === "christmas1");
+    if (!xmas) throw new Error("no christmas1");
+    expect(netPerCreditUsd(xmas) * 20).toBeCloseTo(9.99 * 0.921 - 0.3, 3);
   });
 
   it("counts free remakes and testing in the cost of a film", () => {
-    // 1.125 of models, 30% of films remade once, $0.30 a film for evals and example films.
     expect(filmCostUsd()).toBeCloseTo(1.125 * 1.3 + 0.3, 3);
+    expect(filmCostUsd(ROUTES, CHRISTMAS)).toBeCloseTo(
+      storyCostUsd(ROUTES, CHRISTMAS).video * 1.3 + 0.3,
+      6,
+    );
   });
 
-  it("refuses a pack that nets less than twice the full cost of a film", () => {
-    const cheap = [...PACKS, { id: "pack10", credits: 100, usd: 29.99, productKey: "pack10" }];
-    expect(pricingGuard(ROUTES, cheap)).toEqual([
-      expect.objectContaining({ rule: "video_margin", pack: "pack10" }),
-    ]);
-  });
-
-  it("flags a video priced below twice its model cost", () => {
-    const pricey = ROUTES.map((r) => ({ ...r, costUsd: r.capability === "shot" ? 1 : r.costUsd }));
-    expect(pricingGuard(pricey).map((v) => v.pack)).toEqual(["pack1", "pack3", "pack5"]);
+  it("refuses a pack that nets less than twice the full cost, per story", () => {
+    const cheap = [...PACKS, { id: "pack10", credits: 100, usd: 19.99, productKey: "pack10" }];
+    const found = pricingGuard(ROUTES, cheap).map((v) => `${v.story}:${v.pack}`);
+    expect(found).toContain("zombie:pack10");
+    expect(found).toContain("christmas:pack10");
     expect(pricingGuard()).toEqual([]);
+  });
+
+  it("flags every story when shots get expensive", () => {
+    const pricey = ROUTES.map((r) => ({
+      ...r,
+      costUsd: r.capability === "shot" ? 1 : r.costUsd,
+    }));
+    const stories = new Set(pricingGuard(pricey).map((v) => v.story));
+    expect(stories).toEqual(new Set(["zombie", "christmas"]));
   });
 });

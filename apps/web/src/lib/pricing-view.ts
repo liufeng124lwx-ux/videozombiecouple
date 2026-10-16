@@ -1,4 +1,4 @@
-import { PACKS, TIERS, usd } from "@vzc/catalog";
+import { VIDEO_PACKS as PACKS, TIERS, usd } from "@vzc/catalog";
 
 export type PackCard = {
   id: string;

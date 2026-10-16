@@ -63,10 +63,14 @@ async function stripe(
 const items = SALE_PRODUCTS.flatMap((product) => {
   if (product.kind !== "pack") return [];
   const videos = product.credits / TIERS.video.credits;
+  const name =
+    product.kind === "pack" && product.label
+      ? `VideoZombieCouple — ${product.label}`
+      : `VideoZombieCouple — ${videos} video${videos === 1 ? "" : "s"}`;
   return [
     {
       key: product.key,
-      name: `VideoZombieCouple — ${videos} video${videos === 1 ? "" : "s"}`,
+      name,
       description: `${videos} AI zombie love story film${videos === 1 ? "" : "s"} made from your photos. Credits never expire.`,
       cents: Math.round(product.usd * 100),
       usd: product.usd,

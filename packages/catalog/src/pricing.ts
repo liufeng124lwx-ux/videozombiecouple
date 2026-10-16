@@ -1,6 +1,6 @@
-import { PACKS, type Pack, PLAN_IDS, PLANS, SELL_PLANS } from "./plans.ts";
+import { PACKS, type Pack, PLAN_IDS, PLANS, SELL_PLANS, VIDEO_PACKS } from "./plans.ts";
 import { ROUTES, type RouteSeed } from "./routes.ts";
-import { CANDIDATES_PER_FRAME, STORYBOARD } from "./story.ts";
+import { STORIES, type Story, type StoryId, ZOMBIE } from "./stories/index.ts";
 import { TIERS } from "./tiers.ts";
 
 /** Every way to buy a credit, with its price. */
@@ -15,7 +15,8 @@ export function creditPrices(): { source: string; usdPerCredit: number }[] {
         usdPerCredit: plan.year.usd / (plan.monthlyCredits * 12),
       });
     }
-  for (const pack of PACKS) prices.push({ source: pack.id, usdPerCredit: pack.usd / pack.credits });
+  for (const pack of VIDEO_PACKS)
+    prices.push({ source: pack.id, usdPerCredit: pack.usd / pack.credits });
   return prices;
 }
 
@@ -32,49 +33,72 @@ const primary = (routes: readonly RouteSeed[], capability: RouteSeed["capability
   return rs.filter((r) => r.rank === rank).reduce((sum, r) => sum + r.costUsd, 0);
 };
 
-/** Model cost of one paid film on the primary routes: A/C candidates, B and every shot. */
-export function storyCostUsd(routes: readonly RouteSeed[] = ROUTES): { video: number } {
+/** A route's cost is for the seconds pickSeconds asks for: 3 s at least on the default video route. */
+const SHOT_BASE_SEC = 3;
+
+/** Model cost of one paid film on the primary routes: every keyframe image and every non-clip shot. */
+export function storyCostUsd(
+  routes: readonly RouteSeed[] = ROUTES,
+  story: Story = ZOMBIE,
+): { video: number } {
   const keyframe = primary(routes, "keyframe");
-  return {
-    video: keyframe * (2 * CANDIDATES_PER_FRAME + 1) + primary(routes, "shot") * STORYBOARD.length,
-  };
+  const shot = primary(routes, "shot");
+  const images = story.keyframes.reduce((n, k) => n + k.candidates, 0);
+  const shotSec = story
+    .storyboard("human")
+    .filter((s) => !("clip" in s.first))
+    .reduce((t, s) => t + Math.max(s.sec, SHOT_BASE_SEC) / SHOT_BASE_SEC, 0);
+  return { video: keyframe * images + shot * shotSec };
 }
 
-/** Waffo, merchant of record: 5% + $0.50 a payment (list rate; 4.5% is a promotion), 1% at payout. */
-export const WAFFO_FEE = { rate: 0.05, fixedUsd: 0.5, payoutRate: 0.01 } as const;
+/**
+ * Stripe Managed Payments (merchant of record): card 2.9% + $0.30, Managed Payments 3.5%,
+ * international cards 1.5% more. The worst case is used for the margin check.
+ */
+export const PAYMENT_FEE = { rate: 0.079, fixedUsd: 0.3 } as const; // 2.9% + 3.5% + 1.5%
 /** Share of paid films we expect to be remade once for free (owner's assumption, 2026-10-15). */
 export const REMAKE_RATE = 0.3;
 /** Evals, example films and staging runs, spread over each paid film (≈ $30 a month at 100 films). */
 export const TESTING_PER_FILM_USD = 0.3;
 
-/** What one video of a pack brings in after Waffo's fees. */
+/** What one credit of a pack brings in after the payment fees. */
+export function netPerCreditUsd(pack: Pack): number {
+  return (pack.usd * (1 - PAYMENT_FEE.rate) - PAYMENT_FEE.fixedUsd) / pack.credits;
+}
+
+/** What one zombie video (TIERS.video.credits) of a pack brings in after the fees. */
 export function netPerVideoUsd(pack: Pack): number {
-  const net = pack.usd * (1 - WAFFO_FEE.rate) - WAFFO_FEE.fixedUsd;
-  return (net * (1 - WAFFO_FEE.payoutRate)) / (pack.credits / TIERS.video.credits);
+  return netPerCreditUsd(pack) * TIERS.video.credits;
 }
 
 /** The full cost of one paid film: models, the expected free remakes and testing. */
-export function filmCostUsd(routes: readonly RouteSeed[] = ROUTES): number {
-  return storyCostUsd(routes).video * (1 + REMAKE_RATE) + TESTING_PER_FILM_USD;
+export function filmCostUsd(routes: readonly RouteSeed[] = ROUTES, story: Story = ZOMBIE): number {
+  return storyCostUsd(routes, story).video * (1 + REMAKE_RATE) + TESTING_PER_FILM_USD;
 }
 
 export type GuardViolation = {
   rule: "video_margin";
+  story: StoryId;
   pack: string;
   revenueUsd: number;
   costUsd: number;
 };
 
-/** Every pack must net at least MARGIN_FACTOR times the full cost of a film, per video. */
+/** Every pack that can buy a story must net at least MARGIN_FACTOR times that film's full cost. */
 export function pricingGuard(
   routes: readonly RouteSeed[] = ROUTES,
   packs: readonly Pack[] = PACKS,
+  stories: readonly Story[] = Object.values(STORIES),
 ): GuardViolation[] {
-  const costUsd = filmCostUsd(routes);
-  return packs.flatMap((pack) => {
-    const revenueUsd = netPerVideoUsd(pack);
-    return revenueUsd < costUsd * MARGIN_FACTOR
-      ? [{ rule: "video_margin" as const, pack: pack.id, revenueUsd, costUsd }]
-      : [];
+  return stories.flatMap((story) => {
+    const costUsd = filmCostUsd(routes, story);
+    return packs
+      .filter((pack) => !pack.story || pack.story === story.id)
+      .flatMap((pack) => {
+        const revenueUsd = netPerCreditUsd(pack) * story.credits;
+        return revenueUsd < costUsd * MARGIN_FACTOR
+          ? [{ rule: "video_margin" as const, story: story.id, pack: pack.id, revenueUsd, costUsd }]
+          : [];
+      });
   });
 }

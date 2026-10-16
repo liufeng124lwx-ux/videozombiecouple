@@ -4,7 +4,6 @@ import {
   CAPTION_SEC,
   KINDS,
   keyframePrompt,
-  PACKS,
   PHOTO,
   portraitPrompt,
   SALE_PRODUCTS,
@@ -14,6 +13,7 @@ import {
   shotPrompt,
   storyboard,
   TIERS,
+  VIDEO_PACKS,
 } from "../src/index.ts";
 
 const SAFE = "No blood, no gore, no biting, no gunfire, no text.";
@@ -91,7 +91,7 @@ describe("story catalog", () => {
 
   it("only video packs are sold, and a video costs 10 credits", () => {
     expect(TIERS.video.credits).toBe(10);
-    expect(PACKS.map((p) => [p.id, p.credits, p.usd])).toEqual([
+    expect(VIDEO_PACKS.map((p) => [p.id, p.credits, p.usd])).toEqual([
       ["pack1", 10, 4.99],
       ["pack3", 30, 13.99],
       ["pack5", 50, 21.99],
