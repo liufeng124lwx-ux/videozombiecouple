@@ -94,5 +94,7 @@ export type SharedFilm = {
   scene: string;
   names: string | null;
   date: string | null;
+  /** Which story the film tells; the share page words itself by it. */
+  story: StoryId;
   video: { url: string; poster: string; expiresAt: number };
 };

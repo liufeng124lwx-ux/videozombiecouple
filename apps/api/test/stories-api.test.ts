@@ -501,10 +501,39 @@ describe("story API", () => {
     expect(token).toMatch(/^[0-9a-f]{32}$/);
     const shared = await h.call(`/v1/share/${id}?t=${token}`);
     expect(shared.status).toBe(200);
-    expect(Object.keys(shared.body).sort()).toEqual(["date", "names", "scene", "video"]);
+    expect(Object.keys(shared.body).sort()).toEqual(["date", "names", "scene", "story", "video"]);
     expect((shared.body.video as { url: string }).url).toBeTruthy();
+    expect(shared.body.story).toBe("zombie");
     expect((await h.call(`/v1/share/${id}?t=${"0".repeat(32)}`)).status).toBe(404);
     expect((await h.call(`/v1/share/${id}`)).status).toBe(404);
+  });
+
+  it("shared film carries its story", async () => {
+    const h = await setup({ FAKE_COMPOSER: "1", PREVIEW_SCENES: "christmas/snow-cabin" });
+    const { userId, session } = await signedIn(h);
+    await h.wallets.instance(userId).grant(userId, {
+      kind: "pack",
+      credits: 20,
+      expiresAt: null,
+      sourceRef: "order-xs",
+      reason: "test",
+    });
+    const a = await h.upload();
+    const b = await h.upload();
+    const id = (
+      await create(h, session, storyBody(a, b, { story: "christmas", scene: "snow-cabin" }))
+    ).body.storyId as string;
+    await h.untilStory(id, "preview_ready");
+    await h.call(`/v1/stories/${id}/render`, {
+      method: "POST",
+      session,
+      body: { idempotencyKey: "render-xs" },
+    });
+    await h.untilStory(id, "done");
+    const token = (await h.call(`/v1/stories/${id}`, { session })).body.shareToken as string;
+    const shared = await h.call(`/v1/share/${id}?t=${token}`);
+    expect(shared.status).toBe(200);
+    expect(shared.body.story).toBe("christmas");
   });
 
   it("an unverified buyer's film is kept 3 days, a verified one 30; verifying later extends it; one reminder the day before", async () => {

@@ -228,6 +228,7 @@ describe("StoryTool", () => {
       scene: "cabin-wheat",
       names: "Ana & Leo",
       date: null,
+      story: "zombie",
       video: { url: "https://f/v.mp4", poster: "https://f/p.jpg", expiresAt: 0 },
     });
     render(<StoryTool posters={{}} mode="story" pollMs={10} />);
@@ -235,6 +236,21 @@ describe("StoryTool", () => {
     expect(document.querySelector("video")?.getAttribute("src")).toBe("https://f/v.mp4");
     expect(screen.getByRole("link", { name: "Make your own" }).getAttribute("href")).toBe("/");
     expect(client.getStory).not.toHaveBeenCalled();
+  });
+
+  it("shows a shared Christmas film as 50 Christmases and 32 seconds, never a zombie film", async () => {
+    history.replaceState(null, "", `/story?id=S1&t=${"a".repeat(32)}`);
+    client.getSharedFilm.mockResolvedValue({
+      scene: "snow-cabin",
+      names: "Ana & Leo",
+      date: null,
+      story: "christmas",
+      video: { url: "https://f/v.mp4", poster: "https://f/p.jpg", expiresAt: 0 },
+    });
+    const { container } = render(<StoryTool posters={{}} mode="story" pollMs={10} />);
+    await screen.findByText("50 Christmases");
+    expect(container.textContent).toContain(`${fact("story.christmas.seconds")}-second`);
+    expect(container.textContent?.toLowerCase()).not.toContain("zombie");
   });
 
   it("shares the film's public link", async () => {

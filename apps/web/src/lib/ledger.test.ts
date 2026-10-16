@@ -60,3 +60,20 @@ describe("formatting (design §12)", () => {
     expect(ledgerLabel(entry("admin_adjust", "admin", -3))).toBe("Adjusted by support");
   });
 });
+
+describe("ledger rows for the Christmas film", () => {
+  it("a christmas grant reads as one christmas film", () => {
+    const grant = entry("grant", "christmas1", 20);
+    expect(ledgerLabel(grant)).toBe("1 Christmas film");
+    expect(ledgerAmount(grant.delta, grant)).toBe("+1 Christmas film");
+  });
+
+  it("a 20-credit Christmas hold reads as a Christmas film, a zombie hold stays a video", () => {
+    const hold = { ...entry("reserve", null, -20), story: "christmas" as const };
+    expect(ledgerLabel(hold)).toBe("Christmas film");
+    expect(ledgerAmount(hold.delta, hold)).toBe("−1 Christmas film");
+    const zombie = { ...entry("reserve", null, -10), story: "zombie" as const };
+    expect(ledgerLabel(zombie)).toBe("Story video");
+    expect(ledgerAmount(zombie.delta, zombie)).toBe("−1 video");
+  });
+});

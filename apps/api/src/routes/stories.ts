@@ -219,6 +219,7 @@ export async function getSharedFilm(c: Context<AppEnv>) {
     scene: view.scene,
     names: view.names,
     date: view.date,
+    story: view.story,
     video: view.video,
   };
   return c.json(film);

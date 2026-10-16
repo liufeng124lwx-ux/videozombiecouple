@@ -78,6 +78,54 @@ describe("account (spec 5.5)", () => {
     expect(second.body.next).toBeNull();
   });
 
+  it("a hold row names the story it paid for", async () => {
+    const { h, userId, session, wallet } = await member();
+    await wallet.grant(userId, {
+      kind: "pack",
+      credits: 100,
+      expiresAt: null,
+      sourceRef: null,
+      reason: "pack",
+    });
+    const now = Date.now();
+    for (const [id, story] of [
+      ["01HXXXXXXXXXXXXXXXXXXXXXXA", "christmas"],
+      ["01HXXXXXXXXXXXXXXXXXXXXXXB", "zombie"],
+    ] as const)
+      h.db
+        .prepare(
+          "INSERT INTO stories(id,owner,user_id,visitor_hash,ip_hash,kind,scene,prompt_version,survivor_key,infected_key,status,idempotency_key,story,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        )
+        .run(
+          id,
+          `u:${userId}`,
+          userId,
+          "v",
+          "i",
+          "human",
+          "x",
+          "c1",
+          "s",
+          "i",
+          "rendering",
+          id,
+          story,
+          now,
+          now + 1e9,
+        );
+    await wallet.reserve(userId, "r1", 20, "01HXXXXXXXXXXXXXXXXXXXXXXA");
+    await wallet.reserve(userId, "r2", 10, "01HXXXXXXXXXXXXXXXXXXXXXXB");
+    const entries = (await h.call("/v1/account/ledger", { session })).body.entries as {
+      type: string;
+      jobId: string | null;
+      story?: string;
+    }[];
+    const holds = entries.filter((e) => e.type === "reserve");
+    expect(holds.find((e) => e.jobId?.endsWith("A"))?.story).toBe("christmas");
+    expect(holds.find((e) => e.jobId?.endsWith("B"))?.story).toBe("zombie");
+    expect(entries.find((e) => e.type === "grant")?.story).toBeUndefined();
+  });
+
   it("needs a session", async () => {
     const h = await setup();
     expect((await h.call("/v1/account")).body.error?.code).toBe("UNAUTHORIZED");

@@ -1,3 +1,4 @@
+import type { StoryId } from "@vzc/catalog";
 import {
   type AccountView,
   DeleteAccountSchema,
@@ -57,7 +58,7 @@ export async function ledger(c: Context<AppEnv>) {
   if (!userId) return fail(c, "UNAUTHORIZED");
   const before = Number(c.req.query("before") ?? Number.MAX_SAFE_INTEGER);
   const { results } = await c.env.DB.prepare(
-    "SELECT id, delta, type, reason, job_id, order_id, created_at FROM credit_ledger WHERE user_id=? AND delta<>0 AND id<? ORDER BY id DESC LIMIT ?",
+    "SELECT l.id AS id, l.delta AS delta, l.type AS type, l.reason AS reason, l.job_id AS job_id, l.order_id AS order_id, l.created_at AS created_at, s.story AS story FROM credit_ledger l LEFT JOIN stories s ON s.id=l.job_id WHERE l.user_id=? AND l.delta<>0 AND l.id<? ORDER BY l.id DESC LIMIT ?",
   )
     .bind(userId, Number.isFinite(before) ? before : Number.MAX_SAFE_INTEGER, PAGE + 1)
     .all<{
@@ -68,6 +69,7 @@ export async function ledger(c: Context<AppEnv>) {
       job_id: string | null;
       order_id: string | null;
       created_at: number;
+      story: string | null;
     }>();
   const page = results.slice(0, PAGE);
   const entries: LedgerEntryView[] = page.map((row) => ({
@@ -77,6 +79,7 @@ export async function ledger(c: Context<AppEnv>) {
     reason: row.reason,
     jobId: row.job_id,
     orderId: row.order_id,
+    ...(row.story ? { story: row.story as StoryId } : {}),
     createdAt: row.created_at,
   }));
   c.header("cache-control", "no-store");

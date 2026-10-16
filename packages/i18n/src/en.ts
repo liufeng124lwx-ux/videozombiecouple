@@ -227,6 +227,7 @@ export const en = {
   "story.done.another": "Make another",
   "story.shared.title": "A zombie love story",
   "story.shared.cta": "Make your own",
+  "story.christmas.shared.title": "{years} Christmases",
   "story.shared.note": "Two photos in, a {seconds}-second film out.",
   "story.shared.gone":
     "This film is no longer available. Films are deleted after a few days, so ask its owner for the file.",
@@ -365,6 +366,10 @@ export const en = {
   "ledger.upgrade": "Upgrade to {plan}",
   "ledger.grant": "Videos added",
   "ledger.video": "Story video",
+  "ledger.christmas.pack": "{n} Christmas film",
+  "ledger.christmas.video": "Christmas film",
+  "ledger.amount.christmas.one": "{n} Christmas film",
+  "ledger.amount.christmas.many": "{n} Christmas films",
   "ledger.returned": "Returned: the video didn’t finish",
   "ledger.renewed": "Last period’s plan credits ended",
   "ledger.expired": "Credits expired",

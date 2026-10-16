@@ -45,6 +45,17 @@ describe("packCardsFor", () => {
       expect(VIDEO_PACKS.find((p) => p.id === card.id)?.credits ?? 0).toBeGreaterThanOrEqual(need);
   });
 
+  it("a buyer's balance counts: 10 credits make pack1 enough for a 20-credit film", () => {
+    expect(packCardsFor("christmas", 0).map((c) => c.id)).toEqual(["christmas1", "pack3", "pack5"]);
+    expect(packCardsFor("christmas", 10).map((c) => c.id)).toEqual([
+      "christmas1",
+      "pack1",
+      "pack3",
+      "pack5",
+    ]);
+    expect(packCardsFor("zombie", 0).map((c) => c.id)).toEqual(packCards().map((c) => c.id));
+  });
+
   it("without a story the video packs are unchanged", () => {
     expect(packCardsFor().map((c) => c.id)).toEqual(packCards().map((c) => c.id));
   });

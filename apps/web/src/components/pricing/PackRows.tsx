@@ -4,7 +4,15 @@ import { useState } from "preact/hooks";
 import { type PackCard, packCardsFor } from "../../lib/pricing-view.ts";
 import BuyButton from "./BuyButton.tsx";
 
-type Props = { returnPath: string; preselect?: string; story?: StoryId };
+type Props = {
+  returnPath: string;
+  preselect?: string;
+  story?: StoryId;
+  /** Credits the buyer already holds; they count towards a story's price. */
+  balance?: number;
+  /** The pricing page: every video pack, with the story's own pack first. */
+  allPacks?: boolean;
+};
 
 /** "One Christmas film" for a story's pack, otherwise "N videos". */
 const what = (p: PackCard) =>
@@ -13,8 +21,8 @@ const what = (p: PackCard) =>
     : t(p.videos === 1 ? "pricing.oneVideo" : "pricing.nVideos", { n: p.videos });
 
 /** Spec §7: video packs as ticket-stub rows (design lock), one buy button for the picked row. */
-export default function PackRows({ returnPath, preselect, story }: Props) {
-  const packs = packCardsFor(story);
+export default function PackRows({ returnPath, preselect, story, balance = 0, allPacks }: Props) {
+  const packs = packCardsFor(story, allPacks ? Number.POSITIVE_INFINITY : balance);
   const initial =
     preselect ??
     packs.find((p) => p.story)?.id ??

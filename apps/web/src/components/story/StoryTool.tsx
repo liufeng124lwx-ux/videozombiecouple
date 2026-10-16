@@ -335,11 +335,19 @@ export default function StoryTool({
               />
             </div>
             <div class="done-side">
-              <p class="scene">{t("story.shared.title")}</p>
+              <p class="scene">
+                {shared.story === "christmas"
+                  ? t("story.christmas.shared.title", { years: fact("story.christmas.years") })
+                  : t("story.shared.title")}
+              </p>
               {shared.names && <h3>{shared.names}</h3>}
               {shared.date && <p class="small muted">{shared.date}</p>}
               <p class="small muted">
-                {t("story.shared.note", { seconds: fact("video.seconds") })}
+                {t("story.shared.note", {
+                  seconds: fact(
+                    shared.story === "christmas" ? "story.christmas.seconds" : "video.seconds",
+                  ),
+                })}
               </p>
             </div>
           </div>
@@ -560,6 +568,7 @@ export default function StoryTool({
                 <p class="scene">{t("story.pay.title")}</p>
                 <PackRows
                   returnPath={`/story?id=${s.storyId}&render=1`}
+                  balance={credits ?? 0}
                   {...(tale === "zombie" ? {} : { story: tale })}
                 />
               </div>

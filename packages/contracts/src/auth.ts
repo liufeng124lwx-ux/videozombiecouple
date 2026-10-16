@@ -1,3 +1,4 @@
+import type { StoryId } from "@vzc/catalog";
 import { z } from "zod";
 
 export const EmailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
@@ -63,6 +64,8 @@ export type LedgerEntryView = {
   reason: string | null;
   jobId: string | null;
   orderId: string | null;
+  /** Set when the row belongs to a story film (its hold, release or commit); absent otherwise. */
+  story?: StoryId;
   createdAt: number;
 };
 

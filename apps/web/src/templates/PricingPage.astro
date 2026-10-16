@@ -33,7 +33,7 @@ const { Content } = await render(entry);
       <li>{t("pricing.inc.keep", { guest: fact("retention.guestFilmDays"), member: fact("retention.memberFilmDays") }, locale)}</li>
     </ul>
   </div>
-  <PackRows client:load returnPath="/pricing" />
+  <PackRows client:load returnPath="/pricing" story="christmas" allPacks />
 </section>
 <section class="section">
   <div class="wrap">

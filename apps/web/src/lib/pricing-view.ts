@@ -42,10 +42,11 @@ export function packCards(): PackCard[] {
 }
 
 /**
- * On a story's tool: that story's own pack first, then only the video packs whose credits pay for one
- * whole film of it (a 20-credit Christmas film hides the one-video pack).
+ * On a story's tool: that story's own pack first, then only the video packs that, added to the buyer's
+ * balance, pay for one whole film of it (with nothing in the wallet a 20-credit Christmas film hides the
+ * one-video pack; with 10 credits that pack is the cheapest way to the film).
  */
-export function packCardsFor(story?: StoryId): PackCard[] {
+export function packCardsFor(story?: StoryId, balance = 0): PackCard[] {
   const own = ALL_PACKS.filter(
     (pack) =>
       story !== undefined &&
@@ -66,7 +67,7 @@ export function packCardsFor(story?: StoryId): PackCard[] {
     ...packCards().filter((card) => {
       if (!story) return true;
       const credits = PACKS.find((pack) => pack.id === card.id)?.credits ?? 0;
-      return credits >= storyOf({ story }).credits;
+      return balance + credits >= storyOf({ story }).credits;
     }),
   ];
 }

@@ -51,7 +51,7 @@ export default function LedgerTable() {
             <tr key={entry.id}>
               <td>{dateTime(entry.createdAt)}</td>
               <td>{ledgerLabel(entry)}</td>
-              <td class={entry.delta > 0 ? "plus" : "minus"}>{ledgerAmount(entry.delta)}</td>
+              <td class={entry.delta > 0 ? "plus" : "minus"}>{ledgerAmount(entry.delta, entry)}</td>
             </tr>
           ))}
         </tbody>

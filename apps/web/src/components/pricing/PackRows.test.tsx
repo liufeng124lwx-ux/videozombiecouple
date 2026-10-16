@@ -19,6 +19,16 @@ describe("PackRows", () => {
     expect(screen.getByRole("button").textContent).toContain("$21.99");
   });
 
+  it("a balance lets the smaller pack back in; allPacks lists every pack after the story's", () => {
+    render(<PackRows returnPath="/story" story="christmas" balance={10} />);
+    expect((screen.getAllByRole("radio") as HTMLInputElement[]).map((r) => r.value)).toEqual([
+      "christmas1",
+      "pack1",
+      "pack3",
+      "pack5",
+    ]);
+  });
+
   it("a story's pack comes first and is picked", () => {
     const xmas = PACKS.find((p) => p.story === "christmas");
     render(<PackRows returnPath="/story?id=S1&render=1" story="christmas" />);
