@@ -3,6 +3,7 @@ import {
   VIDEO_PACKS as PACKS,
   SALE_PRODUCTS,
   type StoryId,
+  storyOf,
   TIERS,
   usd,
 } from "@vzc/catalog";
@@ -40,7 +41,10 @@ export function packCards(): PackCard[] {
   });
 }
 
-/** On a story's tool: that story's own pack first, then the video packs (any credits work). */
+/**
+ * On a story's tool: that story's own pack first, then only the video packs whose credits pay for one
+ * whole film of it (a 20-credit Christmas film hides the one-video pack).
+ */
 export function packCardsFor(story?: StoryId): PackCard[] {
   const own = ALL_PACKS.filter(
     (pack) =>
@@ -59,6 +63,10 @@ export function packCardsFor(story?: StoryId): PackCard[] {
       saving: null,
       ...(pack.story ? { story: pack.story } : {}),
     })),
-    ...packCards(),
+    ...packCards().filter((card) => {
+      if (!story) return true;
+      const credits = PACKS.find((pack) => pack.id === card.id)?.credits ?? 0;
+      return credits >= storyOf({ story }).credits;
+    }),
   ];
 }

@@ -1,5 +1,6 @@
+import { storyOf, VIDEO_PACKS } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
-import { packCards } from "./pricing-view.ts";
+import { packCards, packCardsFor } from "./pricing-view.ts";
 
 describe("pack rows (spec §7)", () => {
   it("lists the three video packs with price, videos and price per video", () => {
@@ -32,5 +33,19 @@ describe("pack rows (spec §7)", () => {
         saving: "12%",
       },
     ]);
+  });
+});
+
+describe("packCardsFor", () => {
+  it("a story film lists its own pack, then only video packs that pay for one film", () => {
+    const need = storyOf({ story: "christmas" }).credits;
+    const cards = packCardsFor("christmas");
+    expect(cards.map((c) => c.id)).toEqual(["christmas1", "pack3", "pack5"]);
+    for (const card of cards.slice(1))
+      expect(VIDEO_PACKS.find((p) => p.id === card.id)?.credits ?? 0).toBeGreaterThanOrEqual(need);
+  });
+
+  it("without a story the video packs are unchanged", () => {
+    expect(packCardsFor().map((c) => c.id)).toEqual(packCards().map((c) => c.id));
   });
 });

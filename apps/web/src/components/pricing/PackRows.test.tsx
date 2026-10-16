@@ -26,6 +26,8 @@ describe("PackRows", () => {
     expect(radios[0]?.value).toBe("christmas1");
     expect(radios[0]?.checked).toBe(true);
     expect(screen.getByRole("button").textContent).toContain(usd(xmas?.usd ?? 0));
+    // Only packs that pay for one whole film: pack1 (one video's credits) is not enough.
+    expect(radios.map((r) => r.value)).toEqual(["christmas1", "pack3", "pack5"]);
   });
 
   it("without a story, story packs stay off the list", () => {
