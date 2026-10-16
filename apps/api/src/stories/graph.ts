@@ -1,4 +1,5 @@
 import {
+  EMPTY_APPEARANCE,
   type FrameRef,
   type Kind,
   portraitPrompt,
@@ -91,9 +92,11 @@ export function videoSteps(story: Story, kind: Kind): StepRecord[] {
   };
   const refDeps = (refs: readonly FrameRef[]) =>
     refs.flatMap((r) => ("frame" in r ? [frameStep(story, r.frame)] : []));
+  const describe = story.describe ? [add(step("describe", "describe", "video", []))] : [];
+  const pre = describe.map((s) => s.id);
   const candidates = scored(story).flatMap((k) =>
     Array.from({ length: k.candidates }, (_, i) =>
-      add(step(`kf:${k.id}:${i + 1}`, "kie", "video", refDeps(k.refs), "keyframe")),
+      add(step(`kf:${k.id}:${i + 1}`, "kie", "video", [...pre, ...refDeps(k.refs)], "keyframe")),
     ),
   );
   const scoreId = scoreStepId(story);
@@ -111,7 +114,7 @@ export function videoSteps(story: Story, kind: Kind): StepRecord[] {
     : [];
   const singles = story.keyframes
     .filter((k) => k.candidates < 2)
-    .map((k) => add(step(`kf:${k.id}`, "kie", "video", refDeps(k.refs), "keyframe")));
+    .map((k) => add(step(`kf:${k.id}`, "kie", "video", [...pre, ...refDeps(k.refs)], "keyframe")));
   const shots = story
     .storyboard(kind)
     .filter((s) => !("clip" in s.first))
@@ -137,7 +140,7 @@ export function videoSteps(story: Story, kind: Kind): StepRecord[] {
       shots.map((s) => s.id),
     ),
   );
-  return [...candidates, ...score, ...singles, ...shots, compose];
+  return [...describe, ...candidates, ...score, ...singles, ...shots, compose];
 }
 
 const ended = (s: StepRecord) => s.state === "succeeded" || s.state === "failed";
@@ -239,7 +242,7 @@ export async function kieInputFor(
   if (step.id.startsWith("kf:")) {
     const k = keyframe(story, frameOf(step.id));
     return {
-      prompt: k.prompt(spec.scene, spec.kind),
+      prompt: k.prompt(spec.scene, spec.kind, state.appearance ?? EMPTY_APPEARANCE),
       images: await Promise.all(k.refs.map(resolve)),
     };
   }

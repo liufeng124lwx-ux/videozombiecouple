@@ -1,4 +1,4 @@
-import type { CapabilityId, Kind, StoryId } from "@vzc/catalog";
+import type { Appearance, CapabilityId, Kind, StoryId } from "@vzc/catalog";
 import type { ErrorCode, StoryStatus } from "@vzc/contracts";
 import type { FailKind, Route } from "@vzc/providers";
 import type { ChargeHold } from "../services/settle.ts";
@@ -23,7 +23,7 @@ export type StorySpec = {
   product?: "film" | "photo";
 };
 
-export type StepKind = "kie" | "score" | "compose" | "mark";
+export type StepKind = "kie" | "score" | "compose" | "mark" | "describe";
 export type Phase = "preview" | "video";
 
 /** waiting: deps not met or not started · queued/submitting/pending: a kie attempt is running. */
@@ -88,6 +88,8 @@ export type StoryState = {
   steps: Record<string, StepRecord>;
   /** Best keyframe per frame after scoring (R2 keys). */
   picks: Partial<Record<string, string>>;
+  /** The describe step's lines (christmas content spec §7): never synced to D1 or shown; cleared when the photos expire. */
+  appearance?: Appearance;
   previewCharge: ChargeHold | null;
   videoCharge: ChargeHold | null;
   previewSettled: boolean;

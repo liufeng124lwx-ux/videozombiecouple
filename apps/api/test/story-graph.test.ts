@@ -172,8 +172,11 @@ describe("graph: steps from the story's data", () => {
     expect(deps(videoSteps(ZOMBIE, "pet"))["shot:3"]).toEqual(["kf:B"]);
   });
 
-  it("builds the Christmas chain; clip shots make no step", () => {
+  it("builds the Christmas chain: describe first, four scored frames in round one", () => {
     const d = deps(videoSteps(CHRISTMAS, "human"));
+    expect(d.describe).toEqual([]);
+    for (const id of ["kf:wide:1", "kf:memory:2", "kf:forgetCold:1", "kf:rememberClose:2"])
+      expect(d[id], id).toEqual(["describe"]);
     expect(d[SCORE]).toEqual([
       "kf:wide:1",
       "kf:wide:2",
@@ -184,8 +187,10 @@ describe("graph: steps from the story's data", () => {
       "kf:rememberClose:1",
       "kf:rememberClose:2",
     ]);
+    expect(d["kf:tree"]).toEqual([SCORE]);
     expect(d["kf:forgetWarm"]).toEqual([SCORE]);
     expect(d["kf:embrace"]).toEqual(["kf:tree"]);
+    expect(d["shot:1"]).toEqual([SCORE]);
     expect(d["shot:6"]).toEqual(["kf:forgetWarm"]);
     expect(d["shot:4"]).toBeUndefined();
     expect(d["shot:9"]).toBeUndefined();
@@ -199,6 +204,10 @@ describe("graph: steps from the story's data", () => {
       "shot:8",
     ]);
   });
+});
+
+it("zombie films have no describe step", () => {
+  expect(videoSteps(ZOMBIE, "human").some((s) => s.kind === "describe")).toBe(false);
 });
 
 const SCORE = "score:widememoryforgetColdrememberClose";
@@ -230,7 +239,12 @@ function stateOf(story: typeof CHRISTMAS, done: string[], failed: string[] = [])
     },
     status: "rendering",
     steps,
-    picks: { wide: "kf/x/kf:wide:1.jpg", memory: "kf/x/kf:memory:2.jpg" },
+    picks: {
+      wide: "kf/x/kf:wide:1.jpg",
+      memory: "kf/x/kf:memory:2.jpg",
+      forgetCold: "kf/x/kf:forgetCold:1.jpg",
+      rememberClose: "kf/x/kf:rememberClose:1.jpg",
+    },
     previewCharge: null,
     videoCharge: null,
     previewSettled: false,
@@ -280,12 +294,23 @@ describe("graph: running a Christmas film", () => {
 
   it("starts a shot on its keyframe with the story's length", async () => {
     const s = stateOf(CHRISTMAS, [SCORE]);
-    s.picks.forgetCold = "kf/x/kf:forgetCold.jpg";
     const shot = await kieInputFor(s.steps["shot:1"] as never, s, async (k) => `signed:${k}`);
     expect(shot).toMatchObject({
-      first: "signed:kf/x/kf:forgetCold.jpg",
+      first: "signed:kf/x/kf:forgetCold:1.jpg",
       targetSec: 3,
       images: [],
     });
+  });
+
+  it("hands the appearance lines to the keyframe prompt", async () => {
+    const s = stateOf(CHRISTMAS, ["describe"]);
+    s.appearance = { survivor: "full beard", infected: "blue floral headscarf covering all hair" };
+    const url = async (k: string) => `signed:${k}`;
+    const wide = await kieInputFor(s.steps["kf:wide:1"] as never, s, url);
+    expect(wide.prompt).toContain("full beard");
+    expect(wide.prompt).toContain("headscarf");
+    s.appearance = undefined;
+    const plain = await kieInputFor(s.steps["kf:wide:1"] as never, s, url);
+    expect(plain.prompt).not.toContain("Appearance to keep");
   });
 });
