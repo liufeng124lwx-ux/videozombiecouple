@@ -1,6 +1,6 @@
 import type { Grade, Kind } from "../story.ts";
 
-export const STORY_IDS = ["zombie"] as const;
+export const STORY_IDS = ["zombie", "christmas"] as const;
 export type StoryId = (typeof STORY_IDS)[number];
 
 /** survivor = photo 1 (survivorKey), infected = photo 2 (infectedKey); names kept from the zombie story. */

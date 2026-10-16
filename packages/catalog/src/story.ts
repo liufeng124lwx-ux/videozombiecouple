@@ -48,8 +48,11 @@ export const SCENES: Record<SceneId, Scene> = {
 export type FrameId = "A" | "B" | "C";
 export type Face = "survivor" | "infected";
 export type ShotId = 1 | 2 | 3 | 4 | 5;
-/** Colour grade the composer applies: the standoff, the memory, the ending at first light. */
-export type Grade = "cold" | "warm" | "dawn";
+/**
+ * Colour grade the composer applies. Zombie: the standoff, the memory, the ending at first light.
+ * Christmas: amber lamplight, the golden memory, amber with dawn at the window.
+ */
+export type Grade = "cold" | "warm" | "dawn" | "amber" | "golden" | "amber-dawn";
 
 export const REQUIRED_FACES: Record<FrameId, Face[]> = {
   A: ["infected"],

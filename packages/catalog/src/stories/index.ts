@@ -1,10 +1,12 @@
+import { CHRISTMAS } from "./christmas.ts";
 import type { Story, StoryId } from "./types.ts";
 import { ZOMBIE } from "./zombie.ts";
 
+export { CHRISTMAS } from "./christmas.ts";
 export * from "./types.ts";
 export { CAPTION_LINE1, ZOMBIE } from "./zombie.ts";
 
-export const STORIES: Readonly<Record<StoryId, Story>> = { zombie: ZOMBIE };
+export const STORIES: Readonly<Record<StoryId, Story>> = { zombie: ZOMBIE, christmas: CHRISTMAS };
 
 /** The story of a film; records made before stories existed are zombie films. */
 export function storyOf(spec: { story?: StoryId }): Story {
