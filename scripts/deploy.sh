@@ -2,7 +2,7 @@
 # Deploy one environment from this machine (until CI has a Cloudflare token):
 #   scripts/deploy.sh staging
 #   scripts/deploy.sh production
-# Order: D1 migrations → model routes → scene music to R2 → API (+ composer container) → secrets →
+# Order: D1 migrations → model routes → scene music to R2 → story assets to R2 → API (+ composer container) → secrets →
 # site build → site deploy → smoke check. Secrets come from ~/.vzc-secrets and only travel through
 # pipes; nothing is printed. Uses the wrangler login on this machine.
 set -euo pipefail
@@ -51,7 +51,7 @@ done
 
 echo "== story assets → r2://$bucket/assets/stories/"
 if [ -d "$root/assets/stories" ]; then
-  find "$root/assets/stories" -type f ! -name '*.md' | while read -r f; do
+  find "$root/assets/stories" -type f ! -name '*.md' | while IFS= read -r f; do
     rel="${f#"$root/assets/"}"
     case "$f" in
       *.jpg) type=image/jpeg ;;
@@ -59,7 +59,7 @@ if [ -d "$root/assets/stories" ]; then
       *.m4a) type=audio/mp4 ;;
       *) echo "skip $rel (unknown type)"; continue ;;
     esac
-    api r2 object put "$bucket/assets/$rel" --file "$f" --content-type "$type" --remote >/dev/null
+    api r2 object put "$bucket/assets/$rel" --file "$f" --content-type "$type" --remote >/dev/null </dev/null
   done
 fi
 
