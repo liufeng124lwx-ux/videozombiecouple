@@ -6,5 +6,6 @@ export * from "./pages.ts";
 export * from "./plans.ts";
 export * from "./pricing.ts";
 export * from "./routes.ts";
+export * from "./stories/index.ts";
 export * from "./story.ts";
 export * from "./tiers.ts";
