@@ -1,4 +1,5 @@
 import type { RouteSeed } from "@vzc/catalog";
+import type { DescribeAdapter } from "./describe.ts";
 import { classifyKie } from "./kie.ts";
 import {
   type FailKind,
@@ -79,5 +80,25 @@ export class FakeAdapter implements ProviderAdapter {
 
   classify(fail: { code?: number | string; msg?: string }): FailKind {
     return classifyKie(fail);
+  }
+}
+
+const DEFAULT_DESCRIBE = "IMAGE 1: short dark hair\nIMAGE 2: long red hair";
+
+/** Scripted describe answers, consumed one per call; the last one repeats once the script runs out. */
+export class FakeDescriber implements DescribeAdapter {
+  readonly calls: { model: string; images: string[] }[] = [];
+  readonly #answers: (string | { error: FailKind })[];
+  #i = 0;
+
+  constructor(answers: (string | { error: FailKind })[] = [DEFAULT_DESCRIBE]) {
+    this.#answers = answers.length > 0 ? answers : [DEFAULT_DESCRIBE];
+  }
+
+  async describe(route: RouteSeed, _prompt: string, images: string[]) {
+    this.calls.push({ model: route.model, images });
+    const answer = this.#answers[Math.min(this.#i++, this.#answers.length - 1)] ?? DEFAULT_DESCRIBE;
+    if (typeof answer !== "string") throw new ProviderError(answer.error, "fake describe failure");
+    return { text: answer, costUsd: route.costUsd };
   }
 }

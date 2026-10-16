@@ -58,4 +58,24 @@ describe("route sync on deploy (spec 4.5)", () => {
     if (!route) throw new Error("no routes");
     expect(routeSyncSql([{ ...route, label: "it's" }])).toContain("'it''s'");
   });
+
+  it("syncs the two describe routes like any other row, with no aspects", async () => {
+    const h = await setup();
+    const describes = seedRoutes().filter((r) => r.capability === "describe");
+    expect(describes.map((r) => r.id).sort()).toEqual([
+      "describe:claude-haiku:1",
+      "describe:gemini-flash:2",
+    ]);
+    const db = h.env.DB as D1Database;
+    h.db.exec(routeSyncSql(seedRoutes()));
+    forgetRoutes(db);
+    const routes = await loadRoutes(db);
+    for (const seed of describes)
+      expect(routes.find((r) => r.id === seed.id)).toMatchObject({
+        model: seed.model,
+        aspects: [],
+        enabled: true,
+        timeoutMs: 30_000,
+      });
+  });
 });

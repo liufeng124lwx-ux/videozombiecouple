@@ -29,6 +29,7 @@ export const MARGIN_FACTOR = 2;
 
 const primary = (routes: readonly RouteSeed[], capability: RouteSeed["capability"]) => {
   const rs = routes.filter((r) => r.capability === capability && r.mode === null);
+  if (rs.length === 0) return 0;
   const rank = Math.min(...rs.map((r) => r.rank));
   return rs.filter((r) => r.rank === rank).reduce((sum, r) => sum + r.costUsd, 0);
 };
@@ -36,7 +37,10 @@ const primary = (routes: readonly RouteSeed[], capability: RouteSeed["capability
 /** A route's cost is for the seconds pickSeconds asks for: 3 s at least on the default video route. */
 const SHOT_BASE_SEC = 3;
 
-/** Model cost of one paid film on the primary routes: every keyframe image and every non-clip shot. */
+/**
+ * Model cost of one paid film on the primary routes: every keyframe image, every non-clip shot and,
+ * for stories that read the photos first (story.describe), one describe call.
+ */
 export function storyCostUsd(
   routes: readonly RouteSeed[] = ROUTES,
   story: Story = ZOMBIE,
@@ -48,7 +52,8 @@ export function storyCostUsd(
     .storyboard("human")
     .filter((s) => !("clip" in s.first))
     .reduce((t, s) => t + Math.max(s.sec, SHOT_BASE_SEC) / SHOT_BASE_SEC, 0);
-  return { video: keyframe * images + shot * shotSec };
+  const describe = story.describe ? primary(routes, "describe") : 0;
+  return { video: keyframe * images + shot * shotSec + describe };
 }
 
 /**

@@ -1,0 +1,20 @@
+{
+  "role": "assistant",
+  "usage": {
+    "output_tokens": 112,
+    "cache_creation_input_tokens": 3348,
+    "input_tokens": 2,
+    "cache_read_input_tokens": 3616
+  },
+  "stop_reason": "end_turn",
+  "model": "claude-haiku-5-5",
+  "id": "msg_aa0f14c4-ce1",
+  "credits_consumed": 0.06,
+  "type": "message",
+  "content": [
+    {
+      "text": "IMAGE 1: blue and cream patterned head covering wrapped around the head and neck, covering all hair, dark hair visible at the forehead edge, no facial hair, no glasses\nIMAGE 2: light blond hair, medium length, tousled style swept over the forehead, light stubble on the jaw, no head covering, no glasses",
+      "type": "text"
+    }
+  ]
+}

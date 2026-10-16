@@ -97,4 +97,15 @@ describe("pricing (spec §7, christmas spec §6)", () => {
     const stories = new Set(pricingGuard(pricey).map((v) => v.story));
     expect(stories).toEqual(new Set(["zombie", "christmas"]));
   });
+
+  it("a Christmas film also pays for one describe call; zombie films do not", () => {
+    const priced = ROUTES.map((r) => ({ ...r, costUsd: r.capability === "describe" ? 0.5 : 0 }));
+    expect(storyCostUsd(priced, CHRISTMAS).video).toBeCloseTo(0.5, 6);
+    expect(storyCostUsd(priced, ZOMBIE).video).toBeCloseTo(0, 6);
+  });
+
+  it("a capability without routes costs nothing rather than Infinity", () => {
+    const noDescribe = ROUTES.filter((r) => r.capability !== "describe");
+    expect(Number.isFinite(storyCostUsd(noDescribe, CHRISTMAS).video)).toBe(true);
+  });
 });

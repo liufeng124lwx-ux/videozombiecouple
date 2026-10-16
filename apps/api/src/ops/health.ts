@@ -1,4 +1,4 @@
-import { type CapabilityId, OPS } from "@vzc/catalog";
+import { type CapabilityId, isTaskCapability, OPS } from "@vzc/catalog";
 import { pickSeconds, planRoutes } from "@vzc/providers";
 import { providerKit } from "../services/provider-kit.ts";
 import { presign } from "../services/r2-presign.ts";
@@ -12,7 +12,10 @@ const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const HEALTH_PROMPT =
   "Cinematic film still of the same person in golden hour light, vertical 9:16. Keep the identity exact. No text.";
 
-/** Spec §8.3: one real call on the fixed sample through the capability's primary route. */
+/**
+ * Spec §8.3: one real call on the fixed sample through the capability's primary route. Task
+ * capabilities only: describe is a synchronous chat call and has no task to submit.
+ */
 export async function healthCheck(
   env: Bindings,
   capability: CapabilityId,
@@ -26,6 +29,7 @@ export async function healthCheck(
     await raise(env, { key, title, detail }, now, send);
     return false;
   };
+  if (!isTaskCapability(capability)) return fail(`${capability} is not a task capability`);
   if (!(await env.BUCKET.head(HEALTH_SAMPLE))) return fail(`${HEALTH_SAMPLE} is missing from R2`);
   try {
     const route = planRoutes(await loadRoutes(env.DB), capability, "human").primary[0];

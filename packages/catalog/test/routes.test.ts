@@ -14,7 +14,7 @@ describe("routes", () => {
     for (const r of ROUTES) {
       if (r.capability === "shot") expect(r.minSec).toBeGreaterThan(0);
       else expect(r.minSec).toBeUndefined();
-      expect(r.aspects).toContain("9:16");
+      if (r.capability !== "describe") expect(r.aspects).toContain("9:16");
     }
   });
 
@@ -32,5 +32,12 @@ describe("routes", () => {
     expect(
       ROUTES.some((r) => r.model === "bytedance/seedance-2-fast" || r.model.startsWith("wan/")),
     ).toBe(false);
+  });
+
+  it("has two describe routes, Claude Haiku first", () => {
+    const d = ROUTES.filter((r) => r.capability === "describe").sort((a, b) => a.rank - b.rank);
+    expect(d.map((r) => r.model)[0]).toBe("claude-haiku-5-5");
+    expect(d).toHaveLength(2);
+    expect(d.every((r) => r.aspects.length === 0 && r.costUsd <= 0.005)).toBe(true);
   });
 });

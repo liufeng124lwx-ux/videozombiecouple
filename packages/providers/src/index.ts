@@ -1,3 +1,4 @@
+export * from "./describe.ts";
 export * from "./fake.ts";
 export * from "./kie.ts";
 export * from "./select.ts";

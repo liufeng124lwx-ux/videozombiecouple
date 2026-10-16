@@ -2,7 +2,7 @@ import { OPS, ROUTES } from "@vzc/catalog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupExpired } from "../src/ops/cleanup.ts";
 import { checkCostSpike } from "../src/ops/costs.ts";
-import { healthCheck } from "../src/ops/health.ts";
+import { checkHealth, healthCheck } from "../src/ops/health.ts";
 import type { Bindings } from "../src/types.ts";
 import { jpeg, setup } from "./harness.ts";
 import { row } from "./rows.ts";
@@ -158,5 +158,34 @@ describe("health check (spec 8.2)", () => {
     expect(ok).toBe(false);
     expect(waits).toBe(Math.floor(OPS.healthTimeoutMs / OPS.healthPollMs) + 1);
     expect(sent[0]).toContain("no result");
+  });
+
+  it("never submits a describe route as a task (it is a synchronous chat call)", async () => {
+    const marker = Object.fromEntries(
+      ROUTES.map((r) => [
+        r.model,
+        r.capability === "describe"
+          ? [{ kind: "submit_error", code: 500, msg: "DESCRIBE-SUBMITTED" }]
+          : [{ kind: "success", pendingPolls: 0, outputUrl: "https://fake.test/out.png" }],
+      ]),
+    );
+    const h = await setup({ FAKE_SCRIPT: JSON.stringify(marker) });
+    await h.r2.BUCKET.put("samples/health.jpg", jpeg(1024, 768));
+    const sent: string[] = [];
+    const send = async (_e: Bindings, text: string) => void sent.push(text);
+    const ok = await healthCheck(
+      h.env as unknown as Bindings,
+      "describe" as never,
+      NOON,
+      send,
+      async () => {},
+    );
+    expect(ok).toBe(false);
+    expect(sent.join("\n")).not.toContain("DESCRIBE-SUBMITTED");
+    expect(sent.join("\n")).toContain("not a task");
+    // The 6-hourly round checks keyframes and shots only.
+    sent.length = 0;
+    await checkHealth(h.env as unknown as Bindings, Date.UTC(2026, 9, 9, 0), send);
+    expect(sent.join("\n")).not.toMatch(/describe/i);
   });
 });

@@ -3,9 +3,11 @@ import {
   ABUSE,
   CAPABILITIES,
   type CapabilityId,
+  isTaskCapability,
   REMAKES_PER_FILM,
   RETENTION,
   storyOf,
+  taskPool,
 } from "@vzc/catalog";
 import type { ErrorCode, StageView, StoryView } from "@vzc/contracts";
 import {
@@ -393,7 +395,7 @@ export class StoryRunner extends DurableObject<Bindings> {
   }
 
   #dispatcher(capability: CapabilityId) {
-    const pool = CAPABILITIES[capability].pool;
+    const pool = taskPool(capability);
     return this.env.DISPATCHER.get(this.env.DISPATCHER.idFromName(pool));
   }
 
@@ -445,6 +447,13 @@ export class StoryRunner extends DurableObject<Bindings> {
       return;
     }
     const capability = step.capability as CapabilityId;
+    if (!isTaskCapability(capability)) {
+      // describe is a synchronous chat call; it never runs as a kie task step.
+      step.state = "failed";
+      step.failKind = "invalid";
+      step.error = "not a task capability";
+      return;
+    }
     const usable = await this.#routes(capability);
     if (!usable.some((r) => r.capability === capability && r.enabled)) {
       step.state = "failed";

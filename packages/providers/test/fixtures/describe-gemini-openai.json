@@ -1,0 +1,24 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "IMAGE 1: blue patterned head covering covering all hair, no visible hair, no facial hair, no glasses\nIMAGE 2: no head covering, short blonde messy hair, light stubble, no glasses",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1792137528,
+  "credits_consumed": 0.11,
+  "id": "chatcmpl-4df361c237184900aa265e5a9c286591",
+  "object": "chat.completion",
+  "usage": {
+    "completion_tokens": 42,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2260,
+    "total_tokens": 3054
+  }
+}

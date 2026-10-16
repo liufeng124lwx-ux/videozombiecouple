@@ -25,8 +25,12 @@ describe("cost guardrails (cost-guardrails spec 3, 4, 8)", () => {
     expect(SPEND_CAPS.newPayerDays).toBeGreaterThan(0);
   });
 
-  it("keeps two dispatcher pools, images and videos", () => {
-    expect(CAPABILITY_IDS.map((id) => CAPABILITIES[id].pool)).toEqual(["kie-image", "kie-video"]);
+  it("keeps two dispatcher pools, images and videos; describe is a synchronous text call", () => {
+    expect(CAPABILITY_IDS.map((id) => CAPABILITIES[id].pool)).toEqual([
+      "kie-image",
+      "kie-video",
+      "kie-text",
+    ]);
   });
 
   it("warns before pausing", () => {
