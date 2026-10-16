@@ -63,6 +63,8 @@ export type Story = {
   title(v: { names: string | null; date: string | null; createdAt: number }): StoryTitle;
   /** Seconds the last frame is held after the last shot. */
   holdSec: number;
+  /** Seconds of dissolve between shots; 0 = hard cuts. The white-flash cut is always hard. */
+  dissolveSec: number;
   /** Second at which the end title starts fading in; null = the composer's default. */
   titleAt: number | null;
 };

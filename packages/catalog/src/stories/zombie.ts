@@ -74,5 +74,6 @@ export const ZOMBIE: Story = {
     line3: null,
   }),
   holdSec: CAPTION_SEC,
+  dissolveSec: 0,
   titleAt: null,
 };

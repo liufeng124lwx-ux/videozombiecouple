@@ -554,6 +554,7 @@ describe("StoryRunner: stories", () => {
       false,
     ]);
     expect(req?.holdSec).toBe(0);
+    expect(req?.dissolveSec).toBe(0.4);
     expect(req?.titleAt).toBe(30);
     expect(req?.overlays.map((o) => o.start)).toEqual([0, 10]);
     expect(req?.caption.line1).toMatch(/^Our first Christmas · \d{4}$/);
@@ -854,6 +855,7 @@ describe("StoryRunner: stories", () => {
     expect(view.story).toBe("zombie");
     expect(calls.composeRequests[0]?.caption.line1).toBe("Even at the end of the world.");
     expect(calls.composeRequests[0]?.holdSec).toBe(1);
+    expect(calls.composeRequests[0]?.dissolveSec).toBe(0);
     expect(calls.composeRequests[0]?.titleAt).toBeNull();
     expect(calls.composeRequests[0]?.overlays).toEqual([]);
     expect(h.wallet.calls.some((c) => c[0] === "commit" && c[2] === spec.id && c[3] === 10)).toBe(

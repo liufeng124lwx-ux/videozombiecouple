@@ -58,6 +58,7 @@ def build_compose_cmd(
     hold_sec: float = CAPTION_SEC,
     title_at: float | None = None,
     overlays: list[tuple[str, float, float]] | None = None,
+    dissolve_sec: float = 0,
 ) -> list[str]:
     total = total_seconds(parts, hold_sec)
     overlays = overlays or []
@@ -78,12 +79,31 @@ def build_compose_cmd(
         cmd += ["-loop", "1", "-t", fmt(total), "-i", png]
     frame = f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,crop={WIDTH}:{HEIGHT},fps={FPS},setsar=1"
     chains = []
+    # Dissolve into a shot unless it opens with the white flash (that cut stays hard).
+    dissolves = [dissolve_sec > 0 and i + 1 < len(parts) and not parts[i + 1].flash for i in range(len(parts))]
     for i, p in enumerate(parts):
         flash = f",fade=t=in:st=0:d={fmt(FLASH_SEC)}:color=white" if p.flash else ""
-        chains.append(f"[{i}:v]{frame},{GRADES[p.grade]}{flash},format=yuv420p[v{i}]")
-    labels = "".join(f"[v{i}]" for i in range(len(parts)))
+        # The outgoing shot's last frame is held under the dissolve, so every shot still starts on time.
+        held = f",tpad=stop_mode=clone:stop_duration={fmt(dissolve_sec)}" if dissolves[i] else ""
+        tb = f",settb=1/{FPS}" if dissolve_sec > 0 else ""
+        chains.append(f"[{i}:v]{frame},{GRADES[p.grade]}{flash}{held}{tb},format=yuv420p[v{i}]")
     hold = f",tpad=stop_mode=clone:stop_duration={fmt(hold_sec)}" if hold_sec > 0 else ""
-    chains.append(f"{labels}concat=n={len(parts)}:v=1:a=0{hold}[cat]")
+    if dissolve_sec <= 0:
+        labels = "".join(f"[v{i}]" for i in range(len(parts)))
+        chains.append(f"{labels}concat=n={len(parts)}:v=1:a=0{hold}[cat]")
+    else:
+        current, start = "v0", 0.0
+        for i in range(1, len(parts)):
+            start += parts[i - 1].seconds
+            if dissolves[i - 1]:
+                chains.append(
+                    f"[{current}][v{i}]xfade=transition=fade:duration={fmt(dissolve_sec)}:offset={fmt(round(start, 3))}[j{i}]"
+                )
+            else:
+                # concat outputs a microsecond timebase; xfade needs both inputs on the same one.
+                chains.append(f"[{current}][v{i}]concat=n=2:v=1:a=0,settb=1/{FPS}[j{i}]")
+            current = f"j{i}"
+        chains.append(f"[{current}]null{hold}[cat]")
     at = title_at if title_at is not None else total - TITLE_LEAD_SEC - TITLE_FADE_SEC
     chains.append(
         f"[{cap}:v]format=rgba,fade=t=in:st={fmt(round(at, 3))}:d={fmt(TITLE_FADE_SEC)}:alpha=1[title]"

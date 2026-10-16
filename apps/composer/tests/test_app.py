@@ -137,6 +137,7 @@ def test_compose_makes_a_32_second_christmas_film_with_overlays(files):
         "caption": {"line1": "Our first Christmas · 2026", "line2": "and every one after.", "line3": "Tom & Amy"},
         "holdSec": 0,
         "titleAt": 30,
+        "dissolveSec": 0.4,
         "overlays": [
             {"text": "Our 50th Christmas. Today, you asked me my name.", "start": 0, "end": 5},
             {"text": "So I brought back our first one.", "start": 10, "end": 13},
@@ -144,6 +145,7 @@ def test_compose_makes_a_32_second_christmas_film_with_overlays(files):
         "outUrl": "video.mp4",
         "posterUrl": "poster.jpg",
     }
+    assert composer.ComposeBody(**body).dissolveSec == 0.4
     r = TestClient(composer.app).post("/compose", json=body)
     assert r.status_code == 200, r.text
     info = probe(uploads / "video.mp4")

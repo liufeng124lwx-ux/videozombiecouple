@@ -6,6 +6,7 @@ import {
   storyOf,
   totalSeconds,
   validateStory,
+  ZOMBIE,
 } from "../src/index.ts";
 
 describe("50 Christmases", () => {
@@ -187,6 +188,9 @@ describe("50 Christmases", () => {
     ]);
     for (const o of CHRISTMAS.overlays) expect(o.text).not.toMatch(/\b(she|he|her|his|him)\b/i);
     expect(CHRISTMAS.holdSec).toBe(0);
+    // Hard cuts felt abrupt in the 即梦 preview (owner, 2026-10-16); the zombie film keeps hard cuts.
+    expect(CHRISTMAS.dissolveSec).toBe(0.4);
+    expect(ZOMBIE.dissolveSec).toBe(0);
     expect(CHRISTMAS.titleAt).toBe(30);
   });
 

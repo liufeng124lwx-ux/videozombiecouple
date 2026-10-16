@@ -281,5 +281,6 @@ export const CHRISTMAS: Story = {
     };
   },
   holdSec: 0,
+  dissolveSec: 0.4,
   titleAt: 30,
 };

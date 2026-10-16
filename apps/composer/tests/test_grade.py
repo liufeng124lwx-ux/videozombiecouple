@@ -137,3 +137,30 @@ def test_the_poster_of_a_christmas_film_is_the_golden_memory():
     cmd = build_poster_cmd("out.mp4", XMAS, "poster.jpg")
     # 3+3+4+3+4+3 seconds before the memory, then one second in.
     assert cmd[cmd.index("-ss") + 1] == "21"
+
+
+def _graph(cmd):
+    return cmd[cmd.index("-filter_complex") + 1]
+
+
+def test_a_christmas_film_dissolves_between_shots_at_the_storyboard_cut_times():
+    cmd = build_compose_cmd(XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30, dissolve_sec=0.4)
+    graph = _graph(cmd)
+    # Each shot still starts on its storyboard time: the outgoing shot's last frame is held under the dissolve.
+    for at in (3, 6, 10, 13, 17, 24, 28):
+        assert f"xfade=transition=fade:duration=0.4:offset={at}" in graph
+    assert graph.count("xfade=") == 7
+    assert graph.count("tpad=stop_mode=clone:stop_duration=0.4") == 7
+    assert graph.count("settb=1/24") == 10  # every shot and the hard cut share one timebase
+    # The white-flash cut into the memory (20 s) stays a hard cut.
+    assert "offset=20" not in graph
+    assert "concat=n=2:v=1:a=0" in graph
+    assert "concat=n=9" not in graph
+    assert " ".join(cmd).endswith("-t 32 out.mp4")
+
+
+def test_no_dissolve_by_default():
+    assert build_compose_cmd(XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30) == build_compose_cmd(
+        XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30, dissolve_sec=0
+    )
+    assert "xfade" not in _graph(build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4"))

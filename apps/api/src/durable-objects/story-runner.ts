@@ -964,6 +964,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       musicUrl: await this.#url(`assets/${scene.musicKey}`),
       caption: story.title(spec),
       holdSec: story.holdSec,
+      dissolveSec: story.dissolveSec,
       titleAt: story.titleAt,
       overlays: [...story.overlays],
       outUrl: await presign(this.env, outKey, "PUT", INPUT_URL_SEC),

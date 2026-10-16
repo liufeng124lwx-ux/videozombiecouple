@@ -23,6 +23,8 @@ export type ComposeRequest = {
   caption: { line1: string; line2: string | null; line3: string | null };
   /** Seconds the last frame is held under the title (zombie 1, christmas 0). */
   holdSec: number;
+  /** Dissolve between shots in seconds; 0 = hard cuts (zombie). */
+  dissolveSec: number;
   /** When the title starts fading in; null = just before the end (the composer's default). */
   titleAt: number | null;
   overlays: { text: string; start: number; end: number }[];

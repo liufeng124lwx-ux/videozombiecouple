@@ -96,6 +96,7 @@ class ComposeBody(BaseModel):
     posterUrl: str
     holdSec: float = CAPTION_SEC
     titleAt: float | None = None
+    dissolveSec: float = 0
     overlays: list[Overlay] = []
 
 
@@ -168,6 +169,7 @@ def _compose(body: ComposeBody):
             build_compose_cmd(
                 parts, str(music), cap, str(out), mark_png=mark,
                 hold_sec=body.holdSec, title_at=body.titleAt, overlays=overlays,
+                dissolve_sec=body.dissolveSec,
             ),
             check=True,
         )
