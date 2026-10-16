@@ -15,3 +15,9 @@ order reuses them: they cost nothing per film and never fail.
 Scenes: `snow-cabin`, `city-flat`, `farmhouse`. A scene goes `live: true` in
 `packages/catalog/src/stories/christmas.ts` only after its four files are here and its prompts
 passed the eval.
+
+## Provenance
+
+| File | Made with | Date | Prompt / source | Notes |
+|---|---|---|---|---|
+| `christmas/shared/ornament.jpg` | KIE `gpt-image-2-text-to-image`, 1K, 9:16, candidate 2 of 2 (eval run `xassets1`) | 2026-10-16 | "Product photo of one red glass heart-shaped Christmas ornament with a gold ribbon loop tied in a small bow at the top, glossy glass with soft reflections, a little worn with age, centred on a plain warm off-white background, soft studio light. A single object, no other ornaments, no text." | Prompt direction tested in 即梦 first; chosen by the owner (older, deeper red reads as a fifty-year-old keepsake). Converted PNG → JPEG q92. |
