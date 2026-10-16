@@ -1,3 +1,4 @@
+import { CHRISTMAS, ZOMBIE } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
 import {
   kieInputFor,
@@ -10,7 +11,9 @@ import {
 import type { StepState, StoryState } from "../src/stories/types.ts";
 
 function state(over: Partial<StoryState> = {}): StoryState {
-  const steps = Object.fromEntries([...previewSteps(), ...videoSteps()].map((s) => [s.id, s]));
+  const steps = Object.fromEntries(
+    [...previewSteps(), ...videoSteps(ZOMBIE, "human")].map((s) => [s.id, s]),
+  );
   return {
     spec: {
       id: "S",
@@ -144,5 +147,123 @@ describe("story graph", () => {
   it("names outputs by story and step", () => {
     expect(outputKeyFor("S", "kf:A:1", "jpg")).toBe("kf/S/kf-A-1.jpg");
     expect(outputKeyFor("S", "shot:3", "mp4")).toBe("shot/S/shot-3.mp4");
+  });
+});
+
+const deps = (steps: ReturnType<typeof videoSteps>) =>
+  Object.fromEntries(steps.map((s) => [s.id, s.deps]));
+
+describe("graph: steps from the story's data", () => {
+  it("builds exactly the zombie steps of before, for people and pets", () => {
+    expect(deps(videoSteps(ZOMBIE, "human"))).toEqual({
+      "kf:A:1": [],
+      "kf:A:2": [],
+      "kf:C:1": [],
+      "kf:C:2": [],
+      "score:AC": ["kf:A:1", "kf:A:2", "kf:C:1", "kf:C:2"],
+      "kf:B": ["score:AC"],
+      "shot:1": ["score:AC"],
+      "shot:2": ["score:AC"],
+      "shot:3": ["kf:B"],
+      "shot:4": ["score:AC"],
+      "shot:5": ["kf:B"],
+      compose: ["shot:1", "shot:2", "shot:3", "shot:4", "shot:5"],
+    });
+    expect(deps(videoSteps(ZOMBIE, "pet"))["shot:3"]).toEqual(["kf:B"]);
+  });
+
+  it("builds the Christmas chain; clip shots make no step", () => {
+    const d = deps(videoSteps(CHRISTMAS, "human"));
+    expect(d["score:widememory"]).toEqual(["kf:wide:1", "kf:wide:2", "kf:memory:1", "kf:memory:2"]);
+    expect(d["kf:forgetCold"]).toEqual(["score:widememory"]);
+    expect(d["kf:forgetWarm"]).toEqual(["kf:forgetCold"]);
+    expect(d["kf:embrace"]).toEqual(["kf:tree"]);
+    expect(d["shot:6"]).toEqual(["kf:forgetWarm"]);
+    expect(d["shot:4"]).toBeUndefined();
+    expect(d["shot:9"]).toBeUndefined();
+    expect(d.compose).toEqual([
+      "shot:1",
+      "shot:2",
+      "shot:3",
+      "shot:5",
+      "shot:6",
+      "shot:7",
+      "shot:8",
+    ]);
+  });
+});
+
+function stateOf(story: typeof CHRISTMAS, done: string[], failed: string[] = []): StoryState {
+  const steps = Object.fromEntries(
+    videoSteps(story, "human").map((s) => [
+      s.id,
+      {
+        ...s,
+        state: done.includes(s.id) ? "succeeded" : failed.includes(s.id) ? "failed" : "waiting",
+        outputKey: done.includes(s.id) ? `kf/x/${s.id}.jpg` : null,
+      },
+    ]),
+  ) as StoryState["steps"];
+  return {
+    spec: {
+      id: "x",
+      owner: "u:t",
+      userId: "t",
+      kind: "human",
+      story: story.id,
+      scene: "snow-cabin",
+      names: null,
+      date: null,
+      survivorKey: "keep/x/survivor.jpg",
+      infectedKey: "keep/x/infected.jpg",
+      createdAt: 0,
+    },
+    status: "rendering",
+    steps,
+    picks: { wide: "kf/x/kf:wide:1.jpg", memory: "kf/x/kf:memory:2.jpg" },
+    previewCharge: null,
+    videoCharge: null,
+    previewSettled: false,
+    videoSettled: false,
+    recomposeLeft: 1,
+    output: null,
+    errorCode: null,
+    finishedAt: null,
+    syncedSig: "",
+  };
+}
+
+describe("graph: running a Christmas film", () => {
+  it("scores once every candidate group has a winner, even if one candidate failed", () => {
+    const s = stateOf(CHRISTMAS, ["kf:wide:1", "kf:memory:1", "kf:memory:2"], ["kf:wide:2"]);
+    expect(readySteps(s).map((x) => x.id)).toContain("score:widememory");
+  });
+
+  it("fails when every candidate of one frame failed", () => {
+    const s = stateOf(CHRISTMAS, ["kf:wide:1"], ["kf:memory:1", "kf:memory:2"]);
+    expect(phaseOutcome(s, "video")).toBe("failed");
+  });
+
+  it("feeds each keyframe its refs in order: photo, picked frame, scene asset", async () => {
+    const s = stateOf(CHRISTMAS, ["kf:wide:1", "kf:wide:2", "score:widememory"]);
+    const url = async (key: string) => `signed:${key}`;
+    const tree = await kieInputFor(s.steps["kf:tree"] as never, s, url);
+    expect(tree.images).toEqual([
+      "signed:keep/x/survivor.jpg",
+      "signed:keep/x/infected.jpg",
+      "signed:kf/x/kf:wide:1.jpg",
+      "signed:assets/stories/christmas/snow-cabin/ornament.jpg",
+    ]);
+    expect(tree.prompt).toContain("raising the red glass heart ornament");
+  });
+
+  it("starts a shot on its keyframe with the story's length", async () => {
+    const s = stateOf(CHRISTMAS, ["kf:forgetCold"]);
+    const shot = await kieInputFor(s.steps["shot:1"] as never, s, async (k) => `signed:${k}`);
+    expect(shot).toMatchObject({
+      first: "signed:kf/x/kf:forgetCold.jpg",
+      targetSec: 3,
+      images: [],
+    });
   });
 });

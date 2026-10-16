@@ -10,6 +10,7 @@ import {
   SCENES,
   type SceneId,
   storyboard,
+  storyOf,
   TIERS,
 } from "@vzc/catalog";
 import type { ErrorCode, StageView, StoryView } from "@vzc/contracts";
@@ -163,9 +164,10 @@ export class StoryRunner extends DurableObject<Bindings> {
         spec,
         status: "previewing",
         steps: Object.fromEntries(
-          (spec.product === "photo" ? photoSteps() : [...previewSteps(), ...videoSteps()]).map(
-            (s) => [s.id, s],
-          ),
+          (spec.product === "photo"
+            ? photoSteps()
+            : [...previewSteps(), ...videoSteps(storyOf(spec), spec.kind)]
+          ).map((s) => [s.id, s]),
         ),
         picks: {},
         previewCharge,

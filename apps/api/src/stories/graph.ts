@@ -1,12 +1,10 @@
 import {
-  CANDIDATES_PER_FRAME,
-  type FrameId,
-  keyframePrompt,
+  type FrameRef,
+  type Kind,
   portraitPrompt,
-  type SceneId,
-  STORYBOARD,
-  shotPrompt,
-  storyboard,
+  type Story,
+  type StoryKeyframe,
+  storyOf,
 } from "@vzc/catalog";
 import type { Phase, StepRecord, StoryState } from "./types.ts";
 
@@ -52,50 +50,113 @@ export function photoSteps(): StepRecord[] {
 
 export const isPhoto = (state: StoryState) => state.spec.product === "photo";
 
+const scored = (story: Story) => story.keyframes.filter((k) => k.candidates >= 2);
+
+/** The one scoring step of a film: zombie "score:AC" (kept for films already running). */
+export function scoreStepId(story: Story): string | null {
+  const ids = scored(story).map((k) => k.id);
+  return ids.length ? `score:${ids.join("")}` : null;
+}
+
+function keyframe(story: Story, id: string): StoryKeyframe {
+  const k = story.keyframes.find((x) => x.id === id);
+  if (!k) throw new Error(`${story.id} has no keyframe ${id}`);
+  return k;
+}
+
+/** The step that makes a frame usable: the scoring step for scored frames, else the frame's own. */
+function frameStep(story: Story, id: string): string {
+  return keyframe(story, id).candidates >= 2 ? (scoreStepId(story) as string) : `kf:${id}`;
+}
+
+/** Drops deps another dep already waits for (shot 3 waits for B, and B for the scoring). */
+function reduce(ids: string[], all: Map<string, string[]>): string[] {
+  const unique = [...new Set(ids)];
+  const reaches = (from: string, to: string): boolean =>
+    (all.get(from) ?? []).some((d) => d === to || reaches(d, to));
+  return unique.filter((d) => !unique.some((o) => o !== d && reaches(o, d)));
+}
+
 /**
- * After payment (owner, 2026-10-15: nothing is generated for free): two candidates each for
- * keyframes A and C, one scoring call to pick the best of each, keyframe B from the picks, the
- * shots (A/C shots need the picks, shots that start or end on B need B), then compose.
+ * After payment (owner, 2026-10-15: nothing is generated for free): the candidates of the scored
+ * keyframes, one scoring call, the other keyframes in the order their refs allow, every shot that
+ * is not a scene clip, then compose.
  */
-export function videoSteps(): StepRecord[] {
-  const kf = (["A", "C"] as const).flatMap((frame) =>
-    Array.from({ length: CANDIDATES_PER_FRAME }, (_, i) =>
-      step(`kf:${frame}:${i + 1}`, "kie", "video", [], "keyframe"),
+export function videoSteps(story: Story, kind: Kind): StepRecord[] {
+  const graph = new Map<string, string[]>();
+  const add = (s: StepRecord) => {
+    s.deps = reduce(s.deps, graph);
+    graph.set(s.id, s.deps);
+    return s;
+  };
+  const refDeps = (refs: readonly FrameRef[]) =>
+    refs.flatMap((r) => ("frame" in r ? [frameStep(story, r.frame)] : []));
+  const candidates = scored(story).flatMap((k) =>
+    Array.from({ length: k.candidates }, (_, i) =>
+      add(step(`kf:${k.id}:${i + 1}`, "kie", "video", refDeps(k.refs), "keyframe")),
     ),
   );
-  const score = step(
-    "score:AC",
-    "score",
-    "video",
-    kf.map((s) => s.id),
-  );
-  const b = step("kf:B", "kie", "video", [score.id], "keyframe");
-  const shots = STORYBOARD.map((shot) =>
-    step(
-      `shot:${shot.id}`,
-      "kie",
-      "video",
-      shot.first === "B" || shot.last === "B" ? [b.id] : [score.id],
-      "shot",
-    ),
-  );
-  return [
-    ...kf,
-    score,
-    b,
-    ...shots,
+  const scoreId = scoreStepId(story);
+  const score = scoreId
+    ? [
+        add(
+          step(
+            scoreId,
+            "score",
+            "video",
+            candidates.map((s) => s.id),
+          ),
+        ),
+      ]
+    : [];
+  const singles = story.keyframes
+    .filter((k) => k.candidates < 2)
+    .map((k) => add(step(`kf:${k.id}`, "kie", "video", refDeps(k.refs), "keyframe")));
+  const shots = story
+    .storyboard(kind)
+    .filter((s) => !("clip" in s.first))
+    .map((s) =>
+      add(
+        step(
+          `shot:${s.id}`,
+          "kie",
+          "video",
+          [
+            ...("frame" in s.first ? [frameStep(story, s.first.frame)] : []),
+            ...(s.last ? [frameStep(story, s.last.frame)] : []),
+          ],
+          "shot",
+        ),
+      ),
+    );
+  const compose = add(
     step(
       "compose",
       "compose",
       "video",
       shots.map((s) => s.id),
     ),
-  ];
+  );
+  return [...candidates, ...score, ...singles, ...shots, compose];
 }
 
 const ended = (s: StepRecord) => s.state === "succeeded" || s.state === "failed";
-const candidates = (state: StoryState, frame: "A" | "C") =>
-  Object.values(state.steps).filter((s) => s.id.startsWith(`kf:${frame}:`));
+const isCandidate = (id: string) => /^kf:[^:]+:\d+$/.test(id);
+const frameOf = (id: string) => id.split(":")[1] as string;
+
+/** Candidate steps of this film, by frame. */
+function candidateGroups(state: StoryState): Map<string, StepRecord[]> {
+  const groups = new Map<string, StepRecord[]>();
+  for (const s of Object.values(state.steps))
+    if (s.phase === "video" && isCandidate(s.id))
+      groups.set(frameOf(s.id), [...(groups.get(frameOf(s.id)) ?? []), s]);
+  return groups;
+}
+
+/** The R2 key a frame resolves to: the picked candidate, else the frame's own output. */
+export function frameKey(state: StoryState, frame: string): string | null {
+  return state.picks[frame] ?? state.steps[`kf:${frame}`]?.outputKey ?? null;
+}
 
 export function activePhase(state: StoryState): Phase | null {
   if (state.status === "previewing") return "preview";
@@ -110,12 +171,10 @@ export function readySteps(state: StoryState): StepRecord[] {
   return Object.values(state.steps).filter((s) => {
     if (s.phase !== phase || s.state !== "waiting") return false;
     const deps = s.deps.map((id) => state.steps[id]).filter((d): d is StepRecord => !!d);
-    if (s.id === "score:AC")
+    if (s.kind === "score" && s.phase === "video")
       return (
         deps.every(ended) &&
-        (["A", "C"] as const).every((f) =>
-          candidates(state, f).some((d) => d.state === "succeeded"),
-        )
+        [...candidateGroups(state).values()].every((g) => g.some((d) => d.state === "succeeded"))
       );
     return deps.every((d) => d.state === "succeeded");
   });
@@ -133,11 +192,9 @@ export function phaseOutcome(state: StoryState, phase: Phase): "running" | "succ
     return check?.state === "succeeded" ? "succeeded" : "running";
   }
   // A failed candidate is fine while another of the same frame can still win.
-  for (const frame of ["A", "C"] as const)
-    if (candidates(state, frame).every((s) => s.state === "failed")) return "failed";
-  const steps = Object.values(state.steps).filter(
-    (s) => s.phase === "video" && !/^kf:[AC]:/.test(s.id),
-  );
+  for (const group of candidateGroups(state).values())
+    if (group.every((s) => s.state === "failed")) return "failed";
+  const steps = Object.values(state.steps).filter((s) => s.phase === "video" && !isCandidate(s.id));
   if (steps.some((s) => s.state === "failed")) return "failed";
   return state.steps.compose?.state === "succeeded" ? "succeeded" : "running";
 }
@@ -155,37 +212,45 @@ export type KieStepInput = {
   targetSec?: number;
 };
 
-/** The prompt and signed input URLs for one kie step (spec §4.2, §5). */
+/** The prompt and signed input URLs for one kie step (spec §4.2, §5; christmas spec §3). */
 export async function kieInputFor(
   step: StepRecord,
   state: StoryState,
   url: (key: string) => Promise<string>,
 ): Promise<KieStepInput> {
-  const { spec, picks } = state;
+  const { spec } = state;
   if (step.id === "kf:Z")
     return { prompt: portraitPrompt(), images: [await url(spec.survivorKey)] };
-  const photos = [await url(spec.survivorKey), await url(spec.infectedKey)];
-  if (step.id.startsWith("kf:")) {
-    const frame = step.id.split(":")[1] as FrameId;
-    const prompt = keyframePrompt(spec.scene as SceneId, frame, spec.kind);
-    if (frame !== "B") return { prompt, images: photos };
-    const a = picks.A;
-    const c = picks.C;
-    if (!a || !c) throw new Error("keyframe B needs the picked A and C");
-    return { prompt, images: [...photos, await url(a), await url(c)] };
-  }
-  const shot = storyboard(spec.kind).find((s) => `shot:${s.id}` === step.id);
-  if (!shot) throw new Error(`no kie input for step ${step.id}`);
-  const frameKey = (frame: FrameId) => {
-    const key = frame === "B" ? state.steps["kf:B"]?.outputKey : picks[frame];
-    if (!key) throw new Error(`shot ${shot.id} needs keyframe ${frame}`);
+  const story = storyOf(spec);
+  const scene = story.scenes[spec.scene];
+  if (!scene) throw new Error(`${story.id} has no scene ${spec.scene}`);
+  const need = (frame: string) => {
+    const key = frameKey(state, frame);
+    if (!key) throw new Error(`${step.id} needs keyframe ${frame}`);
     return url(key);
   };
+  const resolve = (ref: FrameRef) => {
+    if ("photo" in ref) return url(ref.photo === "survivor" ? spec.survivorKey : spec.infectedKey);
+    if ("frame" in ref) return need(ref.frame);
+    const key = scene.assets[ref.asset];
+    if (!key) throw new Error(`scene ${scene.id} has no asset ${ref.asset}`);
+    return url(`assets/${key}`);
+  };
+  if (step.id.startsWith("kf:")) {
+    const k = keyframe(story, frameOf(step.id));
+    return {
+      prompt: k.prompt(spec.scene, spec.kind),
+      images: await Promise.all(k.refs.map(resolve)),
+    };
+  }
+  const shot = story.storyboard(spec.kind).find((s) => `shot:${s.id}` === step.id);
+  if (!shot || "clip" in shot.first || !shot.prompt)
+    throw new Error(`no kie input for step ${step.id}`);
   return {
-    prompt: shotPrompt(spec.scene as SceneId, shot.id, spec.kind),
+    prompt: shot.prompt(spec.scene, spec.kind),
     images: [],
-    first: await frameKey(shot.first),
-    ...(shot.last ? { last: await frameKey(shot.last) } : {}),
-    targetSec: shot.targetSec,
+    first: await need(shot.first.frame),
+    ...(shot.last ? { last: await need(shot.last.frame) } : {}),
+    targetSec: shot.sec,
   };
 }
