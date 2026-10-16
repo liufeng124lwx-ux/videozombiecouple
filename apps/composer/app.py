@@ -16,8 +16,8 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from caption import render_caption, render_mark
-from grade import Part, build_compose_cmd, build_poster_cmd
+from caption import render_caption, render_mark, render_overlay
+from grade import CAPTION_SEC, GRADES, Part, build_compose_cmd, build_poster_cmd
 
 app = FastAPI()
 TIMEOUT = httpx.Timeout(60.0)
@@ -73,11 +73,19 @@ class Shot(BaseModel):
     seconds: float
     grade: str
     anchor: str = "start"
+    flash: bool = False
 
 
 class Caption(BaseModel):
     line1: str
     line2: str | None = None
+    line3: str | None = None
+
+
+class Overlay(BaseModel):
+    text: str
+    start: float
+    end: float
 
 
 class ComposeBody(BaseModel):
@@ -86,6 +94,9 @@ class ComposeBody(BaseModel):
     caption: Caption
     outUrl: str
     posterUrl: str
+    holdSec: float = CAPTION_SEC
+    titleAt: float | None = None
+    overlays: list[Overlay] = []
 
 
 # A standard-1 instance runs two jobs at once; more would only time out. The Worker retries a 503
@@ -134,7 +145,7 @@ def compose_route(body: ComposeBody):
 
 
 def _compose(body: ComposeBody):
-    if not body.shots or any(s.grade not in ("cold", "warm", "dawn") or s.anchor not in ("start", "end") for s in body.shots):
+    if not body.shots or any(s.grade not in GRADES or s.anchor not in ("start", "end") for s in body.shots):
         raise HTTPException(400, "bad shots")
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp)
@@ -142,14 +153,24 @@ def _compose(body: ComposeBody):
         for i, s in enumerate(body.shots):
             p = d / f"shot{i + 1}.mp4"
             fetch_to(s.url, p)
-            parts.append(Part(str(p), s.seconds, s.grade, s.anchor))
+            parts.append(Part(str(p), s.seconds, s.grade, s.anchor, s.flash))
         music = d / "music.m4a"
         fetch_to(body.musicUrl, music)
-        cap = render_caption(body.caption.line1, body.caption.line2, str(d / "caption.png"))
+        cap = render_caption(body.caption.line1, body.caption.line2, str(d / "caption.png"), body.caption.line3)
+        overlays = [
+            (render_overlay(o.text, str(d / f"overlay{j}.png")), o.start, o.end)
+            for j, o in enumerate(body.overlays)
+        ]
         mark = render_mark(str(d / "mark.png"))
         out = d / "video.mp4"
         poster = d / "poster.jpg"
-        subprocess.run(build_compose_cmd(parts, str(music), cap, str(out), mark_png=mark), check=True)
+        subprocess.run(
+            build_compose_cmd(
+                parts, str(music), cap, str(out), mark_png=mark,
+                hold_sec=body.holdSec, title_at=body.titleAt, overlays=overlays,
+            ),
+            check=True,
+        )
         subprocess.run(build_poster_cmd(str(out), parts, str(poster)), check=True)
         put_file(body.outUrl, out, "video/mp4")
         put_file(body.posterUrl, poster, "image/jpeg")

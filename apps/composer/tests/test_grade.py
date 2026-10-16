@@ -75,3 +75,65 @@ def test_the_corner_mark_says_ai(tmp_path):
     assert MARK_TEXT.startswith("AI")
     out = render_mark(str(tmp_path / "mark.png"))
     assert Image.open(out).size[0] > 200
+
+
+XMAS = [
+    Part("s1.mp4", 3, "cold"),
+    Part("s2.mp4", 3, "cold"),
+    Part("s3.mp4", 4, "cold"),
+    Part("s4.mp4", 3, "cold"),
+    Part("s5.mp4", 4, "cold"),
+    Part("s6.mp4", 3, "amber"),
+    Part("s7.mp4", 4, "golden", flash=True),
+    Part("s8.mp4", 4, "amber-dawn"),
+    Part("s9.mp4", 4, "amber-dawn"),
+]
+
+
+def test_the_zombie_command_is_unchanged_by_the_new_options():
+    old = build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4", mark_png="mark.png")
+    new = build_compose_cmd(PARTS, "m.m4a", "cap.png", "out.mp4", mark_png="mark.png", hold_sec=1, title_at=None, overlays=[])
+    assert old == new
+
+
+def test_a_christmas_film_is_32_seconds_with_no_held_frame_and_the_title_at_30():
+    joined = " ".join(build_compose_cmd(XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30))
+    assert total_seconds(XMAS, hold_sec=0) == 32
+    assert "tpad" not in joined
+    assert "fade=t=in:st=30:d=0.8:alpha=1" in joined
+    assert "afade=t=out:st=30:d=2" in joined
+    assert joined.endswith("-t 32 out.mp4")
+
+
+def test_the_new_grades_are_applied():
+    joined = " ".join(build_compose_cmd(XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30))
+    from grade import GRADES
+
+    for g in ("amber", "golden", "amber-dawn"):
+        assert GRADES[g] in joined
+
+
+def test_the_memory_cut_flashes_white_for_four_frames():
+    cmd = build_compose_cmd(XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30)
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    v6 = next(c for c in graph.split(";") if c.startswith("[6:v]"))
+    assert "fade=t=in:st=0:d=0.17:color=white" in v6
+    assert graph.count("color=white") == 1
+
+
+def test_overlays_show_only_in_their_time_window():
+    cmd = build_compose_cmd(
+        XMAS, "m.m4a", "cap.png", "out.mp4", hold_sec=0, title_at=30,
+        overlays=[("o1.png", 0, 5), ("o2.png", 10, 13)],
+    )
+    joined = " ".join(cmd)
+    assert "-loop 1 -t 32 -i o1.png" in joined and "-loop 1 -t 32 -i o2.png" in joined
+    graph = cmd[cmd.index("-filter_complex") + 1]
+    assert "fade=t=in:st=0:d=0.4:alpha=1,fade=t=out:st=4.6:d=0.4:alpha=1" in graph
+    assert "enable='between(t,10,13)'" in graph
+
+
+def test_the_poster_of_a_christmas_film_is_the_golden_memory():
+    cmd = build_poster_cmd("out.mp4", XMAS, "poster.jpg")
+    # 3+3+4+3+4+3 seconds before the memory, then one second in.
+    assert cmd[cmd.index("-ss") + 1] == "21"

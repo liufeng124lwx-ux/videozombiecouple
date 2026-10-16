@@ -24,7 +24,7 @@ def _fit(draw: ImageDraw.ImageDraw, text: str, font_path: Path, size: int, max_w
     return ImageFont.truetype(str(font_path), size)
 
 
-def render_caption(line1: str, line2: str | None, out: str) -> str:
+def render_caption(line1: str, line2: str | None, out: str, line3: str | None = None) -> str:
     img = Image.new("RGBA", (WIDTH, HEIGHT), (*VEIL, VEIL_EDGE))
     veil = ImageDraw.Draw(img)
     band = HEIGHT // 3
@@ -40,6 +40,35 @@ def render_caption(line1: str, line2: str | None, out: str) -> str:
     if line2:
         f2 = _fit(draw, line2, serif, 40, WIDTH - 120)
         draw.text((WIDTH / 2, y + 78), line2, font=f2, fill=DIM, anchor="mm")
+    if line3:
+        f3 = _fit(draw, line3, serif, 34, WIDTH - 140)
+        draw.text((WIDTH / 2, y + 140), line3, font=f3, fill=DIM, anchor="mm")
+    img.save(out, "PNG")
+    return out
+
+
+def render_overlay(text: str, out: str) -> str:
+    """A line of the film's own words (christmas spec §2.2): serif, upper third, on a soft dark band."""
+    img = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    serif = FONTS / "CormorantGaramond-Italic.ttf"
+    font = ImageFont.truetype(str(serif), 46)
+    words, lines, line = text.split(), [], ""
+    for w in words:
+        trial = f"{line} {w}".strip()
+        if draw.textlength(trial, font=font) <= WIDTH - 120:
+            line = trial
+        else:
+            lines.append(line)
+            line = w
+    lines.append(line)
+    top = HEIGHT // 6
+    band_h = 60 * len(lines) + 60
+    for i in range(band_h):
+        a = int(150 * (1 - abs(i - band_h / 2) / (band_h / 2)))
+        draw.line([(0, top - 30 + i), (WIDTH, top - 30 + i)], fill=(*VEIL, a))
+    for n, ln in enumerate(lines):
+        draw.text((WIDTH / 2, top + 30 + n * 60), ln, font=font, fill=WARM, anchor="mm")
     img.save(out, "PNG")
     return out
 

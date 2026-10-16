@@ -121,3 +121,55 @@ def test_watermark_marks_the_photo_as_ai_and_uploads_a_jpeg(files):
     assert np.abs(corner.astype(int) - np.array([40, 60, 80])).max() > 40
     # EU AI Act art. 50: machine-readable "AI-generated" in the file itself.
     assert "AI-generated" in out.info.get("comment", b"").decode() or "AI-generated" in str(out.getexif())
+
+
+def test_compose_makes_a_32_second_christmas_film_with_overlays(files):
+    tmp, uploads = files
+    secs = [3, 3, 4, 3, 4, 3, 4, 4, 4]
+    grades = ["cold"] * 5 + ["amber", "golden", "amber-dawn", "amber-dawn"]
+    shots = [
+        {"url": clip(tmp / f"s{i}.mp4", 5, "gray"), "seconds": s, "grade": g, "flash": i == 6}
+        for i, (s, g) in enumerate(zip(secs, grades))
+    ]
+    body = {
+        "shots": shots,
+        "musicUrl": tone(tmp / "m.m4a", 40),
+        "caption": {"line1": "Our first Christmas · 2026", "line2": "and every one after.", "line3": "Tom & Amy"},
+        "holdSec": 0,
+        "titleAt": 30,
+        "overlays": [
+            {"text": "Our 50th Christmas. Today, you asked me my name.", "start": 0, "end": 5},
+            {"text": "So I brought back our first one.", "start": 10, "end": 13},
+        ],
+        "outUrl": "video.mp4",
+        "posterUrl": "poster.jpg",
+    }
+    r = TestClient(composer.app).post("/compose", json=body)
+    assert r.status_code == 200, r.text
+    info = probe(uploads / "video.mp4")
+    assert (info["width"], info["height"]) == (720, 1280)
+    assert abs(info["duration"] - 32) < 0.2
+
+
+def test_compose_refuses_an_unknown_grade(files):
+    tmp, _ = files
+    body = {
+        "shots": [{"url": clip(tmp / "a.mp4", 4, "navy"), "seconds": 3, "grade": "sepia"}],
+        "musicUrl": tone(tmp / "m.m4a", 5),
+        "caption": {"line1": "x"},
+        "outUrl": "video.mp4",
+        "posterUrl": "poster.jpg",
+    }
+    assert TestClient(composer.app).post("/compose", json=body).status_code == 400
+
+
+def test_a_long_overlay_wraps_inside_the_frame(tmp_path):
+    from PIL import Image
+
+    from caption import render_overlay
+
+    out = render_overlay("Our 50th Christmas. Today, you asked me my name.", str(tmp_path / "o.png"))
+    img = Image.open(out)
+    assert img.size == (720, 1280)
+    # Text sits in the upper third; the lower two thirds stay transparent.
+    assert img.getchannel("A").crop((0, 900, 720, 1280)).getextrema() == (0, 0)
