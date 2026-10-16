@@ -95,6 +95,11 @@ api secret bulk "$tmp/secrets.json" -c "$api_config" >/dev/null
 rm -f "$tmp/secrets.json"
 
 echo "== site"
+# IndexNow (Bing, which ChatGPT search reads, and Yandex): the live sitemap before this deploy, so
+# only pages it didn't list are pushed afterwards. Production only.
+if [ "$env" = production ]; then
+  (cd apps/web && pnpm --silent exec tsx scripts/indexnow.ts snapshot "$site_origin" "$tmp/before.xml") || true
+fi
 site_key="$(value TURNSTILE_SITE_KEY "$secrets/turnstile.env")"
 # Public IDs: Sentry (web project) everywhere; GA4 and Clarity only count production visitors.
 sentry_web="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["web"])' "$secrets/sentry.json" 2>/dev/null || true)"
@@ -104,6 +109,10 @@ ga4=""; clarity=""
   PUBLIC_TURNSTILE_SITE_KEY="$site_key" PUBLIC_SENTRY_DSN="$sentry_web" \
   PUBLIC_GA4_ID="$ga4" PUBLIC_CLARITY_ID="$clarity" pnpm --silent "$build" >/dev/null)
 web deploy -c "$web_config"
+if [ "$env" = production ]; then
+  echo "== IndexNow"
+  (cd apps/web && pnpm --silent exec tsx scripts/indexnow.ts submit "$tmp/before.xml" dist) || echo "   (IndexNow failed; the sitemap still lists every page)"
+fi
 
 echo "== smoke"
 curl -fsS "$api_origin/health" && echo
