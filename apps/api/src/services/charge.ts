@@ -38,19 +38,19 @@ export async function paidBlock(
 }
 
 /**
- * Spec §7: the video holds TIERS.video.credits from the wallet until it is delivered (commit) or
+ * Spec §7: the video holds its story's credits (TIERS.video.credits for zombie) from the wallet until it is delivered (commit) or
  * fails (release). Paused accounts and the per-account daily line still apply.
  */
 export async function holdVideo(
   c: Context<AppEnv>,
   storyId: string,
   reservationId: string = storyId,
+  credits: number = TIERS.video.credits,
 ): Promise<Hold> {
   const userId = c.get("userId");
   if (!userId) return { ok: false, code: "LOGIN_REQUIRED" };
   const blocked = await paidBlock(c, userId);
   if (blocked) return { ok: false, code: blocked };
-  const credits = TIERS.video.credits;
   const cap = await dailyCreditCap(c.env, userId, Date.now());
   if (!(await reserveSpend(c.env, userId, reservationId, credits, cap)))
     return { ok: false, code: "DAILY_LIMIT" };

@@ -56,6 +56,7 @@ async function creditHold(
   h: Awaited<ReturnType<typeof setup>>,
   storyId: string,
   credits = 10,
+  reserve = TIERS.video.credits,
 ): Promise<ChargeHold> {
   const wallet = h.wallets.instance("test");
   await wallet.grant("test", {
@@ -65,9 +66,9 @@ async function creditHold(
     sourceRef: `order-${storyId}`,
     reason: "test",
   });
-  const reserved = await wallet.reserve("test", storyId, TIERS.video.credits, storyId);
+  const reserved = await wallet.reserve("test", storyId, reserve, storyId);
   expect(reserved.ok).toBe(true);
-  return { kind: "credits", userId: "test", reservationId: storyId, reserved: TIERS.video.credits };
+  return { kind: "credits", userId: "test", reservationId: storyId, reserved: reserve };
 }
 
 const stepAttempts = (h: Awaited<ReturnType<typeof setup>>, id: string) =>
@@ -502,5 +503,99 @@ describe("StoryRunner", () => {
       reason: "already",
       activeReservation: spec.id,
     });
+  });
+});
+
+describe("StoryRunner: stories", () => {
+  async function christmas(h: Awaited<ReturnType<typeof setup>>) {
+    const { spec, runner } = await h.story({ story: "christmas", scene: "snow-cabin" });
+    for (const name of ["ornament.jpg", "hands.mp4", "window.mp4", "music.m4a"])
+      await h.r2.BUCKET.put(`assets/stories/christmas/snow-cabin/${name}`, new Uint8Array([1]));
+    await runner.start(spec);
+    await untilStatus(h, runner, "preview_ready");
+    return { spec, runner };
+  }
+
+  it("renders a Christmas film: nine keyframes, seven shots, clips from the scene, 20 credits", async () => {
+    const h = await setup();
+    const calls = scripted(h);
+    const { spec, runner } = await christmas(h);
+    expect(await runner.render(await creditHold(h, spec.id, 20, 20))).toEqual({ ok: true });
+    const view = await untilStatus(h, runner, "done");
+    expect(view.story).toBe("christmas");
+    const req = calls.composeRequests[0];
+    expect(req?.shots.map((s) => s.grade)).toEqual([
+      "cold",
+      "cold",
+      "cold",
+      "cold",
+      "cold",
+      "amber",
+      "golden",
+      "amber-dawn",
+      "amber-dawn",
+    ]);
+    expect(req?.shots[3]?.url).toContain("assets/stories/christmas/snow-cabin/hands.mp4");
+    expect(req?.shots[8]?.url).toContain("assets/stories/christmas/snow-cabin/window.mp4");
+    expect(req?.shots.map((s) => s.flash)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+    ]);
+    expect(req?.holdSec).toBe(0);
+    expect(req?.titleAt).toBe(30);
+    expect(req?.overlays.map((o) => o.start)).toEqual([0, 10]);
+    expect(req?.caption.line1).toMatch(/^Our first Christmas · \d{4}$/);
+    expect(req?.musicUrl).toContain("assets/stories/christmas/snow-cabin/music.m4a");
+    const kie = stepAttempts(h, spec.id)
+      .filter((s) => s.attempts.length > 0)
+      .map((s) => s.id);
+    expect(kie.filter((id) => id.startsWith("kf:"))).toHaveLength(9);
+    expect(kie.filter((id) => id.startsWith("shot:"))).toHaveLength(7);
+    expect(h.wallet.calls.some((c) => c[0] === "commit" && c[2] === spec.id && c[3] === 20)).toBe(
+      true,
+    );
+  });
+
+  it("a failed Christmas film gives all 20 credits back", async () => {
+    const h = await setup({
+      FAKE_SCRIPT: JSON.stringify(
+        Object.fromEntries(
+          ROUTES.filter((r) => r.capability === "shot").map((r) => [
+            r.model,
+            Array(40).fill({ kind: "fail", failMsg: "content policy violation" }),
+          ]),
+        ),
+      ),
+    });
+    scripted(h);
+    const { spec, runner } = await christmas(h);
+    await runner.render(await creditHold(h, spec.id, 20, 20));
+    await untilStatus(h, runner, "failed");
+    expect(h.wallet.calls).toContainEqual(["release", "test", spec.id, spec.id]);
+    expect(h.wallet.calls.some((c) => c[0] === "commit")).toBe(false);
+  });
+
+  it("a zombie film already running when stories shipped (no story field) still finishes", async () => {
+    const h = await setup();
+    const calls = scripted(h);
+    const { spec, runner } = await readyStory(h);
+    expect(spec.story).toBeUndefined();
+    await runner.render(await creditHold(h, spec.id));
+    const view = await untilStatus(h, runner, "done");
+    expect(view.story).toBe("zombie");
+    expect(calls.composeRequests[0]?.caption.line1).toBe("Even at the end of the world.");
+    expect(calls.composeRequests[0]?.holdSec).toBe(1);
+    expect(calls.composeRequests[0]?.titleAt).toBeNull();
+    expect(calls.composeRequests[0]?.overlays).toEqual([]);
+    expect(h.wallet.calls.some((c) => c[0] === "commit" && c[2] === spec.id && c[3] === 10)).toBe(
+      true,
+    );
   });
 });

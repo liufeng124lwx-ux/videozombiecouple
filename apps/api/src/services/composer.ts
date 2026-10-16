@@ -1,11 +1,11 @@
-import type { Face, FrameId, Grade } from "@vzc/catalog";
+import type { Face, Grade } from "@vzc/catalog";
 import type { Bindings } from "../types.ts";
 
 /** POST /score (spec §4.2 S0b, S2): identity similarity of each candidate, faces and age of the sources. */
 export type ScoreRequest = {
   sources: { survivor: string; infected: string | null };
-  candidates: { id: string; url: string; frame: FrameId }[];
-  requiredFaces: Record<FrameId, Face[]>;
+  candidates: { id: string; url: string; frame: string }[];
+  requiredFaces: Record<string, Face[]>;
   checkAge: boolean;
 };
 
@@ -17,10 +17,15 @@ export type ScoreResponse = {
 
 /** POST /compose (spec §4.2 S5): the container reads and writes R2 through these signed URLs only. */
 export type ComposeRequest = {
-  /** anchor "end": the clip ends on a keyframe (the embrace), so keep its last `seconds`. */
-  shots: { url: string; seconds: number; grade: Grade; anchor: "start" | "end" }[];
+  /** anchor "end": the clip ends on a keyframe, so keep its last `seconds`. flash: white frames at the cut in. */
+  shots: { url: string; seconds: number; grade: Grade; anchor: "start" | "end"; flash: boolean }[];
   musicUrl: string;
-  caption: { line1: string; line2: string | null };
+  caption: { line1: string; line2: string | null; line3: string | null };
+  /** Seconds the last frame is held under the title (zombie 1, christmas 0). */
+  holdSec: number;
+  /** When the title starts fading in; null = just before the end (the composer's default). */
+  titleAt: number | null;
+  overlays: { text: string; start: number; end: number }[];
   outUrl: string;
   posterUrl: string;
   /** Not used by the container; lets the in-process fake write R2 directly. */
@@ -44,7 +49,7 @@ export interface ComposerApi {
 export function fakeComposer(env: Bindings): ComposerApi {
   return {
     async score(request) {
-      const seen = new Set<FrameId>();
+      const seen = new Set<string>();
       const scores: Record<string, number | null> = {};
       for (const c of request.candidates) {
         scores[c.id] = seen.has(c.frame) ? 0.5 : 0.6;

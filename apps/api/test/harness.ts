@@ -450,7 +450,7 @@ export async function setup(extra: Record<string, unknown> = {}) {
     await bucket.BUCKET.put(spec.survivorKey, jpeg(1024, 1024));
     await bucket.BUCKET.put(spec.infectedKey, jpeg(1024, 1024));
     db.prepare(
-      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO stories(id,owner,user_id,visitor_hash,fp_hash,ip_hash,kind,story,scene,prompt_version,names,date,survivor_key,infected_key,status,idempotency_key,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       spec.id,
       spec.owner,
@@ -459,6 +459,7 @@ export async function setup(extra: Record<string, unknown> = {}) {
       null,
       "ip-hash",
       spec.kind,
+      spec.story ?? "zombie",
       spec.scene,
       MODES[spec.kind].promptVersion,
       spec.names,

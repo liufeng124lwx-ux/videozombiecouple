@@ -1,4 +1,4 @@
-import { MODES, RATE_LIMITS, RETENTION, STORIES } from "@vzc/catalog";
+import { MODES, RATE_LIMITS, RETENTION, STORIES, storyOf } from "@vzc/catalog";
 import {
   CreateStorySchema,
   RecomposeSchema,
@@ -262,7 +262,7 @@ export async function renderStory(c: Context<AppEnv>) {
   if (current.videoAttempts >= MAX_PAID_ATTEMPTS) return fail(c, "RETRY_NOT_ALLOWED");
   // Each paid attempt holds credits under its own reservation id (a released one must not be reused).
   const reservationId = current.videoAttempts === 0 ? id : `${id}:v${current.videoAttempts + 1}`;
-  const hold = await holdVideo(c, id, reservationId);
+  const hold = await holdVideo(c, id, reservationId, storyOf({ story: current.story }).credits);
   if (!hold.ok) return fail(c, hold.code);
   const outcome = await runnerFor(c, id).render(hold.charge);
   if (!outcome.ok) {

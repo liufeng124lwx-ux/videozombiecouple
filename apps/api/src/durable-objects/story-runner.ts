@@ -2,16 +2,10 @@ import { DurableObject } from "cloudflare:workers";
 import {
   ABUSE,
   CAPABILITIES,
-  CAPTION_SEC,
   type CapabilityId,
   REMAKES_PER_FILM,
-  REQUIRED_FACES,
   RETENTION,
-  SCENES,
-  type SceneId,
-  storyboard,
   storyOf,
-  TIERS,
 } from "@vzc/catalog";
 import type { ErrorCode, StageView, StoryView } from "@vzc/contracts";
 import {
@@ -36,6 +30,7 @@ import { report } from "../services/sentry.ts";
 import { type ChargeHold, settle } from "../services/settle.ts";
 import {
   activePhase,
+  frameKey,
   isPhoto,
   kieInputFor,
   outputKeyFor,
@@ -88,7 +83,6 @@ const SETTLE_RETRY_MAX_MS = 15 * 60_000;
 const BREAKER_KINDS: readonly FailKind[] = ["provider_error", "timeout"];
 /** Composer step p50s for the progress estimate. */
 const COMPOSE_P50_MS = 40_000;
-const CAPTION_LINE1 = "Even at the end of the world.";
 
 const FAIL_CODE: Record<FailKind, ErrorCode> = {
   content_rejected: "CONTENT_REJECTED",
@@ -602,8 +596,11 @@ export class StoryRunner extends DurableObject<Bindings> {
 
   #fakeSource(state: StoryState, step: StepRecord): string {
     if (step.capability !== "shot") return state.spec.survivorKey;
-    const shot = storyboard(state.spec.kind).find((s) => `shot:${s.id}` === step.id);
-    return (shot && state.picks[shot.first === "B" ? "A" : shot.first]) ?? state.spec.survivorKey;
+    const shot = storyOf(state.spec)
+      .storyboard(state.spec.kind)
+      .find((s) => `shot:${s.id}` === step.id);
+    if (!shot || "clip" in shot.first) return state.spec.survivorKey;
+    return frameKey(state, shot.first.frame) ?? state.spec.survivorKey;
   }
 
   async #endAttempt(
@@ -686,7 +683,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       this.#composer().score({
         sources,
         candidates: [],
-        requiredFaces: { A: [], B: [], C: [] },
+        requiredFaces: {},
         checkAge: true,
       }),
       this.#moderate(state, step, sources),
@@ -758,17 +755,20 @@ export class StoryRunner extends DurableObject<Bindings> {
       succeeded.map(async (s) => ({
         id: s.id,
         url: await this.#url(s.outputKey as string),
-        frame: s.id.split(":")[1] as "A" | "C",
+        frame: s.id.split(":")[1] as string,
       })),
     );
     const pet = spec.kind === "pet";
+    const story = storyOf(spec);
     const result = await this.#composer().score({
       sources: {
         survivor: await this.#url(spec.survivorKey),
         infected: pet ? null : await this.#url(spec.infectedKey),
       },
       candidates,
-      requiredFaces: pet ? { A: [], B: ["survivor"], C: ["survivor"] } : REQUIRED_FACES,
+      requiredFaces: Object.fromEntries(
+        story.keyframes.map((k) => [k.id, [...(pet ? k.petFaces : k.faces)]]),
+      ),
       checkAge: true,
     });
     step.nextRunAt = null;
@@ -782,7 +782,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       step.error = "UNDERAGE";
       return;
     }
-    for (const frame of ["A", "C"] as const) {
+    for (const frame of new Set(candidates.map((c) => c.frame))) {
       const options = candidates.filter((c) => c.frame === frame);
       const best = options.reduce<{ id: string; score: number } | null>((top, c) => {
         const score = result.scores[c.id] ?? null;
@@ -813,20 +813,26 @@ export class StoryRunner extends DurableObject<Bindings> {
 
   async #compose(state: StoryState, step: StepRecord): Promise<void> {
     const { spec } = state;
-    const shots = storyboard(spec.kind).map((shot) => {
-      const key = state.steps[`shot:${shot.id}`]?.outputKey;
+    const story = storyOf(spec);
+    const scene = story.scenes[spec.scene];
+    if (!scene) throw new Error(`${story.id} has no scene ${spec.scene}`);
+    const shots = story.storyboard(spec.kind).map((shot) => {
+      const asset = "clip" in shot.first ? scene.assets[shot.first.clip] : undefined;
+      const key =
+        "clip" in shot.first
+          ? asset && `assets/${asset}`
+          : state.steps[`shot:${shot.id}`]?.outputKey;
       if (!key) throw new Error(`shot ${shot.id} has no output`);
       return {
         key,
-        seconds: shot.targetSec,
+        seconds: shot.sec,
         grade: shot.grade,
         anchor: shot.last ? "end" : "start",
+        flash: shot.flash ?? false,
       } as const;
     });
     const outKey = `out/${spec.id}/video.mp4`;
     const posterKey = `out/${spec.id}/poster.jpg`;
-    const line2 =
-      spec.names && spec.date ? `${spec.names} · ${spec.date}` : (spec.names ?? spec.date);
     await this.#composer().compose({
       shots: await Promise.all(
         shots.map(async (s) => ({
@@ -834,10 +840,14 @@ export class StoryRunner extends DurableObject<Bindings> {
           seconds: s.seconds,
           grade: s.grade,
           anchor: s.anchor,
+          flash: s.flash,
         })),
       ),
-      musicUrl: await this.#url(`assets/${SCENES[spec.scene as SceneId].musicKey}`),
-      caption: { line1: CAPTION_LINE1, line2: line2 ?? null },
+      musicUrl: await this.#url(`assets/${scene.musicKey}`),
+      caption: story.title(spec),
+      holdSec: story.holdSec,
+      titleAt: story.titleAt,
+      overlays: [...story.overlays],
       outUrl: await presign(this.env, outKey, "PUT", INPUT_URL_SEC),
       posterUrl: await presign(this.env, posterKey, "PUT", INPUT_URL_SEC),
       keys: { shots: shots.map((s) => s.key), out: outKey, poster: posterKey },
@@ -899,6 +909,7 @@ export class StoryRunner extends DurableObject<Bindings> {
           (user.email_verified_at !== null ? RETENTION.memberFilmDays : RETENTION.guestFilmDays) *
             86_400_000,
         reminder: false,
+        story: storyOf(state.spec).id,
       });
       await sendMail(this.env, mail);
     } catch (error) {
@@ -935,7 +946,12 @@ export class StoryRunner extends DurableObject<Bindings> {
         (state.status === "done" || state.status === "failed")
       ) {
         const ok = deliver && state.status === "done";
-        await settle(this.env, state.spec.id, state.videoCharge, ok ? TIERS.video.credits : null);
+        await settle(
+          this.env,
+          state.spec.id,
+          state.videoCharge,
+          ok ? storyOf(state.spec).credits : null,
+        );
         state.videoSettled = true;
       }
       state.settleFailures = 0;
@@ -1086,7 +1102,7 @@ export class StoryRunner extends DurableObject<Bindings> {
       id: snap.spec.id,
       status: snap.status,
       kind: snap.spec.kind,
-      story: snap.spec.story ?? "zombie",
+      story: storyOf(snap.spec).id,
       scene: snap.spec.scene,
       names: snap.spec.names,
       date: snap.spec.date,
@@ -1095,11 +1111,14 @@ export class StoryRunner extends DurableObject<Bindings> {
       frames:
         snap.status === "rendering"
           ? await Promise.all(
-              [
-                snap.picks.A,
-                snap.picks.C,
-                snap.steps["kf:B"]?.state === "succeeded" ? snap.steps["kf:B"].outputKey : null,
-              ]
+              storyOf(snap.spec)
+                .keyframes.map(
+                  (k) =>
+                    snap.picks[k.id] ??
+                    (snap.steps[`kf:${k.id}`]?.state === "succeeded"
+                      ? snap.steps[`kf:${k.id}`]?.outputKey
+                      : null),
+                )
                 .filter((key): key is string => !!key)
                 .map(sign),
             )

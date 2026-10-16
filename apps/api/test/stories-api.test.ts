@@ -1,4 +1,4 @@
-import { RATE_LIMITS, RETENTION, TIERS } from "@vzc/catalog";
+import { CHRISTMAS, RATE_LIMITS, RETENTION, TIERS } from "@vzc/catalog";
 import { UPLOAD_CONSENT_VERSION, WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ipSegment } from "../src/middleware/identity.ts";
@@ -33,6 +33,42 @@ async function create(h: H, session: string, body?: Record<string, unknown>) {
 const kfFiles = (h: H) => [...h.r2.objects.keys()].filter((k) => k.startsWith("kf/"));
 
 describe("story API", () => {
+  it("a Christmas render with credits for one zombie video is refused and charges nothing", async () => {
+    const scene = CHRISTMAS.scenes["snow-cabin"] as { live: boolean };
+    scene.live = true;
+    try {
+      const h = await setup({ FAKE_COMPOSER: "1" });
+      const { userId, session } = await signedIn(h);
+      await h.wallets.instance(userId).grant(userId, {
+        kind: "pack",
+        credits: 10,
+        expiresAt: null,
+        sourceRef: "order-one-zombie-video",
+        reason: "test",
+      });
+      const a = await h.upload();
+      const b = await h.upload();
+      const made = await create(
+        h,
+        session,
+        storyBody(a, b, { story: "christmas", scene: "snow-cabin" }),
+      );
+      expect(made.status).toBe(201);
+      const id = made.body.storyId as string;
+      await h.untilStory(id, "preview_ready");
+      const res = await h.call(`/v1/stories/${id}/render`, {
+        method: "POST",
+        session,
+        body: { idempotencyKey: "render-xmas-1" },
+      });
+      expect(res.body.error?.code).toBe("CREDITS_LOW");
+      expect((await h.wallets.instance(userId).balance(userId)).total).toBe(10);
+      expect((await h.call(`/v1/stories/${id}`, { session })).body.status).toBe("preview_ready");
+    } finally {
+      scene.live = false;
+    }
+  });
+
   it("records the story; a film without one is a zombie film", async () => {
     const h = await setup({ FAKE_COMPOSER: "1" });
     const { session } = await signedIn(h);
