@@ -242,6 +242,29 @@ export const en = {
   "story.pay.slow":
     "Your payment is taking longer than usual. Refresh this page in a minute — you won't be charged twice.",
   "story.sample": "Example frames show AI-generated people.",
+  "story.christmas.slot.survivor": "You",
+  "story.christmas.slot.infected": "Your partner",
+  "story.christmas.swap": "Swap who forgets",
+  "story.christmas.scene.line.snow-cabin":
+    "A snowy cabin on Christmas Eve, then your first little flat.",
+  "story.christmas.scene.line.city-flat":
+    "An old city flat on Christmas Eve, then a Christmas market at golden hour.",
+  "story.christmas.scene.line.farmhouse":
+    "A farmhouse in the snow, then the day you cut your first tree.",
+  "story.christmas.title.datePlaceholder": "the year we married",
+  "story.christmas.rendering.frames": "Fifty years on",
+  "story.christmas.rendering.shot1": "A stranger's smile",
+  "story.christmas.rendering.shot2": "The doorway",
+  "story.christmas.rendering.shot3": "Two old mugs",
+  "story.christmas.rendering.shot5": "The tree lights up",
+  "story.christmas.rendering.shot6": "Remembering",
+  "story.christmas.rendering.shot7": "Our first Christmas",
+  "story.christmas.rendering.shot8": "Every one after",
+  "story.christmas.rendering.compose": "Cutting the film",
+  "story.christmas.ready.balance": "You have enough for {n} Christmas films",
+  "story.christmas.ready.oneLeft": "You have enough for one Christmas film",
+  "story.christmas.done.caption": "Our {years}th Christmas.",
+  "story.christmas.pack": "One Christmas film",
   "cookie.label": "Cookie choices",
   // Keep it short: a longer text than the hero lede becomes the LCP element (scripts/lighthouse.ts).
   "cookie.text": "Analytics cookies help us improve. Essential ones stay on.",

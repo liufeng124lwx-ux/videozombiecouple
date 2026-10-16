@@ -57,6 +57,8 @@ function build(): Record<string, string> {
   // Wait times measured on staging (R2: 11-14 min per Christmas film; a zombie film takes about 5).
   out["story.christmas.minutes"] = count(15);
   out["story.zombie.minutes"] = count(5);
+  // The Christmas film is "50 Christmases": the opening line and the done caption count them.
+  out["story.christmas.years"] = count(50);
   return out;
 }
 

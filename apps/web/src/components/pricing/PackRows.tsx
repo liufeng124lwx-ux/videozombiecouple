@@ -1,14 +1,26 @@
-import { t } from "@vzc/i18n";
+import type { StoryId } from "@vzc/catalog";
+import { type MessageKey, t } from "@vzc/i18n";
 import { useState } from "preact/hooks";
-import { packCards } from "../../lib/pricing-view.ts";
+import { type PackCard, packCardsFor } from "../../lib/pricing-view.ts";
 import BuyButton from "./BuyButton.tsx";
 
-type Props = { returnPath: string; preselect?: string };
+type Props = { returnPath: string; preselect?: string; story?: StoryId };
+
+/** "One Christmas film" for a story's pack, otherwise "N videos". */
+const what = (p: PackCard) =>
+  p.story
+    ? t(`story.${p.story}.pack` as MessageKey)
+    : t(p.videos === 1 ? "pricing.oneVideo" : "pricing.nVideos", { n: p.videos });
 
 /** Spec §7: video packs as ticket-stub rows (design lock), one buy button for the picked row. */
-export default function PackRows({ returnPath, preselect }: Props) {
-  const packs = packCards();
-  const initial = preselect ?? packs.find((p) => p.popular)?.id ?? packs[0]?.id ?? "";
+export default function PackRows({ returnPath, preselect, story }: Props) {
+  const packs = packCardsFor(story);
+  const initial =
+    preselect ??
+    packs.find((p) => p.story)?.id ??
+    packs.find((p) => p.popular)?.id ??
+    packs[0]?.id ??
+    "";
   const [picked, setPicked] = useState(initial);
   const pack = packs.find((p) => p.id === picked) ?? packs[0];
   return (
@@ -24,10 +36,10 @@ export default function PackRows({ returnPath, preselect }: Props) {
               checked={p.id === picked}
               onChange={() => setPicked(p.id)}
             />
-            <span class="pack-videos">
-              {t(p.videos === 1 ? "pricing.oneVideo" : "pricing.nVideos", { n: p.videos })}
-            </span>
-            <span class="pack-each">{t("pricing.perVideo", { price: p.perVideo })}</span>
+            <span class="pack-videos">{what(p)}</span>
+            {!p.story && (
+              <span class="pack-each">{t("pricing.perVideo", { price: p.perVideo })}</span>
+            )}
             {p.popular && <span class="badge">{t("pricing.mostPicked")}</span>}
             {p.saving && !p.popular && (
               <span class="pack-save">{t("pricing.save", { pct: p.saving })}</span>
@@ -42,10 +54,7 @@ export default function PackRows({ returnPath, preselect }: Props) {
           productKey={pack.productKey}
           primary
           returnPath={returnPath}
-          label={t("pricing.buyPack", {
-            what: t(pack.videos === 1 ? "pricing.oneVideo" : "pricing.nVideos", { n: pack.videos }),
-            price: pack.price,
-          })}
+          label={t("pricing.buyPack", { what: what(pack), price: pack.price })}
         />
       )}
       <p class="fine">{t("pricing.oneTime")}</p>

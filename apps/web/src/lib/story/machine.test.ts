@@ -125,4 +125,24 @@ describe("story tool machine", () => {
     expect(s).toMatchObject({ phase: "setup", error: "NETWORK" });
     expect(s.photos.survivor).not.toBeNull();
   });
+
+  it("resumes a christmas story with its own scene", () => {
+    const s = run([
+      { type: "resume", storyId: "S1" },
+      { type: "view", view: view("rendering", { story: "christmas", scene: "city-flat" }) },
+    ]);
+    expect(s).toMatchObject({ tale: "christmas", scene: "city-flat" });
+    // Starting over keeps the story and its scene.
+    expect(run([{ type: "reset" }], s)).toMatchObject({ tale: "christmas", scene: "city-flat" });
+  });
+
+  it("a christmas preset keeps its scene, or opens on the story's first live scene", () => {
+    expect(initialState({ story: "christmas", scene: "city-flat" })).toMatchObject({
+      tale: "christmas",
+      scene: "city-flat",
+      kind: "human",
+    });
+    expect(initialState({ story: "christmas" }).scene).toBe("snow-cabin");
+    expect(initialState()).toMatchObject({ tale: "zombie", scene: "cabin-wheat" });
+  });
 });

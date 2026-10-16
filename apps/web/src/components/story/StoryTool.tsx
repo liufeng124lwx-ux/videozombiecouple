@@ -1,4 +1,4 @@
-import { fact, type Kind, type SceneId, TIERS } from "@vzc/catalog";
+import { fact, type StoryId, storyOf } from "@vzc/catalog";
 import { type SharedFilm, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useReducer, useRef, useState } from "preact/hooks";
@@ -18,12 +18,19 @@ import {
   render,
   uploadPhoto,
 } from "../../lib/story/client.ts";
-import { canSubmit, initialState, reduce, type Slot } from "../../lib/story/machine.ts";
+import {
+  canSubmit,
+  initialState,
+  type Preset,
+  reduce,
+  type Slot,
+} from "../../lib/story/machine.ts";
 import { preparePhoto } from "../../lib/story/prepare.ts";
 import { forgetStory, rememberedStory, rememberStory, renderKey } from "../../lib/story/resume.ts";
 import { getToken } from "../../lib/turnstile.ts";
 import PackRows from "../pricing/PackRows.tsx";
 import {
+  filmSeconds,
   PhotoSlot,
   RenderMonitor,
   ScenePicker,
@@ -32,8 +39,9 @@ import {
 } from "./parts.tsx";
 
 export type StoryToolProps = {
-  preset?: { kind?: Kind; scene?: SceneId };
-  posters: Partial<Record<SceneId, ScenePoster>>;
+  /** Which story the tool makes (absent: the zombie film), and its opening kind and scene. */
+  preset?: Preset;
+  posters: Partial<Record<string, ScenePoster>>;
   /** "home": a fresh tool (resumes a remembered story) · "story": /story?id=… */
   mode?: "home" | "story";
   pollMs?: number;
@@ -44,6 +52,12 @@ const POLL_MS = 3_000;
 const CHECKOUT_FRESH_MS = 30 * 60_000;
 /** How long to wait for a payment's credits before asking the buyer to refresh. */
 const CONFIRM_WAIT_MS = 60_000;
+
+/** What the downloaded file is called, per story. */
+const DOWNLOAD_NAME: Record<StoryId, string> = {
+  zombie: "zombie-love-story.mp4",
+  christmas: "our-christmas-film.mp4",
+};
 
 const deleteDate = (ms: number) =>
   new Date(ms).toLocaleDateString("en-US", { month: "long", day: "numeric" });
@@ -216,6 +230,7 @@ export default function StoryTool({
           survivorKey,
           infectedKey,
           kind: s.kind,
+          story: s.tale,
           scene: s.scene,
           ...(s.title.names ? { names: s.title.names } : {}),
           ...(s.title.date ? { date: s.title.date } : {}),
@@ -291,7 +306,14 @@ export default function StoryTool({
 
   const busy = s.phase !== "setup";
   const story = s.story;
-  const videos = credits === null ? null : Math.floor(credits / TIERS.video.credits);
+  const tale = s.tale;
+  const christmas = tale === "christmas";
+  const kinds = storyOf({ story: tale }).kinds;
+  // How many films of this story the balance pays for (a zombie film: one video).
+  const videos = credits === null ? null : Math.floor(credits / storyOf({ story: tale }).credits);
+  const caption = christmas
+    ? t("story.christmas.done.caption", { years: fact("story.christmas.years") })
+    : t("story.done.caption");
 
   if (shared)
     return (
@@ -336,25 +358,28 @@ export default function StoryTool({
             <p class="step-title">
               {t(s.kind === "pet" ? "story.step.castPet" : "story.step.cast", { n: 1 })}
             </p>
-            <div class="kind-toggle" role="radiogroup" aria-label={t("story.kind.label")}>
-              {(["human", "pet"] as const).map((k) => (
-                <button
-                  type="button"
-                  key={k}
-                  role="radio"
-                  aria-checked={s.kind === k}
-                  class="chip"
-                  disabled={busy}
-                  onClick={() => dispatch({ type: "kind", kind: k })}
-                >
-                  {t(`story.kind.${k}`)}
-                </button>
-              ))}
-            </div>
+            {kinds.length > 1 && (
+              <div class="kind-toggle" role="radiogroup" aria-label={t("story.kind.label")}>
+                {kinds.map((k) => (
+                  <button
+                    type="button"
+                    key={k}
+                    role="radio"
+                    aria-checked={s.kind === k}
+                    class="chip"
+                    disabled={busy}
+                    onClick={() => dispatch({ type: "kind", kind: k })}
+                  >
+                    {t(`story.kind.${k}`)}
+                  </button>
+                ))}
+              </div>
+            )}
             <div class="slots">
               <PhotoSlot
                 slot="survivor"
                 kind={s.kind}
+                story={tale}
                 photo={s.photos.survivor}
                 checking={s.checking.survivor}
                 disabled={busy}
@@ -363,8 +388,8 @@ export default function StoryTool({
               <button
                 type="button"
                 class="swap"
-                aria-label={t("story.swap")}
-                title={t("story.swap")}
+                aria-label={t(christmas ? "story.christmas.swap" : "story.swap")}
+                title={t(christmas ? "story.christmas.swap" : "story.swap")}
                 disabled={busy || s.kind === "pet" || !(s.photos.survivor || s.photos.infected)}
                 onClick={() => dispatch({ type: "swap" })}
               >
@@ -373,6 +398,7 @@ export default function StoryTool({
               <PhotoSlot
                 slot="infected"
                 kind={s.kind}
+                story={tale}
                 photo={s.photos.infected}
                 checking={s.checking.infected}
                 disabled={busy}
@@ -389,12 +415,14 @@ export default function StoryTool({
           <div class="tool-step set">
             <p class="step-title">{t("story.step.scene", { n: 2 })}</p>
             <ScenePicker
+              story={tale}
               scene={s.scene}
               posters={posters}
               disabled={busy}
               onPick={(scene) => dispatch({ type: "scene", scene })}
             />
             <TitleCardFields
+              story={tale}
               names={s.title.names}
               date={s.title.date}
               disabled={busy}
@@ -466,7 +494,7 @@ export default function StoryTool({
             <h3>{t("story.ready.title")}</h3>
             <p class="small muted">
               {t("story.ready.text", {
-                seconds: fact("video.seconds"),
+                seconds: filmSeconds(tale),
                 remakes: fact("remakes.perFilm"),
               })}
             </p>
@@ -485,8 +513,10 @@ export default function StoryTool({
                 </button>
                 <p class="fine">
                   {videos === 1
-                    ? t("story.ready.oneLeft")
-                    : t("story.ready.balance", { n: videos })}
+                    ? t(christmas ? "story.christmas.ready.oneLeft" : "story.ready.oneLeft")
+                    : t(christmas ? "story.christmas.ready.balance" : "story.ready.balance", {
+                        n: videos,
+                      })}
                 </p>
               </div>
             ) : !signedIn ? (
@@ -528,7 +558,10 @@ export default function StoryTool({
             ) : (
               <div class="pay">
                 <p class="scene">{t("story.pay.title")}</p>
-                <PackRows returnPath={`/story?id=${s.storyId}&render=1`} />
+                <PackRows
+                  returnPath={`/story?id=${s.storyId}&render=1`}
+                  {...(tale === "zombie" ? {} : { story: tale })}
+                />
               </div>
             )}
             {s.error && (
@@ -553,6 +586,7 @@ export default function StoryTool({
             total={story?.progress.total ?? 0}
             etaMs={story?.progress.etaMs ?? null}
             scene={story?.scene ?? s.scene}
+            story={tale}
           />
         </div>
       )}
@@ -576,7 +610,7 @@ export default function StoryTool({
             <a
               class="btn btn-primary btn-lg btn-block"
               href={story.video.url}
-              download="zombie-love-story.mp4"
+              download={DOWNLOAD_NAME[tale]}
             >
               {t("story.done.download")}
             </a>
@@ -589,9 +623,7 @@ export default function StoryTool({
                     ? `${location.origin}/story?id=${story.id}&t=${story.shareToken}`
                     : `${location.origin}/story?id=${story.id}`;
                   if (navigator.share)
-                    await navigator
-                      .share({ url, text: t("story.done.caption") })
-                      .catch(() => undefined);
+                    await navigator.share({ url, text: caption }).catch(() => undefined);
                   else {
                     await navigator.clipboard?.writeText(url);
                     setCopied(true);
@@ -603,7 +635,7 @@ export default function StoryTool({
               <button
                 type="button"
                 class="btn btn-sm"
-                onClick={() => void navigator.clipboard?.writeText(t("story.done.caption"))}
+                onClick={() => void navigator.clipboard?.writeText(caption)}
               >
                 {t("story.done.copyCaption")}
               </button>
@@ -612,6 +644,7 @@ export default function StoryTool({
               (title.open ? (
                 <div class="retitle">
                   <TitleCardFields
+                    story={tale}
                     names={title.names}
                     date={title.date}
                     onChange={(names, date) => setTitle({ names, date, open: true })}

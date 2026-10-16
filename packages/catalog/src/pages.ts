@@ -1,4 +1,5 @@
-import type { Kind, SceneId } from "./story.ts";
+import type { StoryId } from "./stories/types.ts";
+import type { Kind } from "./story.ts";
 
 /** Spec §1.3: English only; the i18n structure stays for later. */
 export const LOCALE_IDS = ["en"] as const;
@@ -20,8 +21,8 @@ export type PageLocale = { slug: string; status: "live" | "draft"; h1: string; l
 export type PageConfig = {
   id: string;
   kind: PageKind;
-  /** Landing pages open the tool with these presets. */
-  preset?: { kind?: Kind; scene?: SceneId };
+  /** Landing pages open the tool with these presets (story absent: the zombie film). */
+  preset?: { story?: StoryId; kind?: Kind; scene?: string };
   noindex?: boolean;
   locales: Partial<Record<LocaleId, PageLocale>> & { en: PageLocale };
   related: readonly string[];

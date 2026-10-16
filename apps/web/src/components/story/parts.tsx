@@ -1,6 +1,14 @@
-import { fact, type Kind, SCENE_IDS, SCENES, type SceneId, sceneLabel } from "@vzc/catalog";
+import {
+  fact,
+  type Kind,
+  SCENE_IDS,
+  SCENES,
+  type StoryId,
+  sceneLabel,
+  storyOf,
+} from "@vzc/catalog";
 import type { StageView } from "@vzc/contracts";
-import { t } from "@vzc/i18n";
+import { type MessageKey, t } from "@vzc/i18n";
 import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Photo, Slot } from "../../lib/story/machine.ts";
@@ -40,6 +48,7 @@ function SceneClip({ poster, on }: { poster: ScenePoster; on: boolean }) {
 export function PhotoSlot(props: {
   slot: Slot;
   kind: Kind;
+  story?: StoryId;
   photo: Photo | null;
   checking: boolean;
   disabled: boolean;
@@ -47,11 +56,13 @@ export function PhotoSlot(props: {
 }) {
   const { slot, kind, photo, checking } = props;
   const label =
-    slot === "survivor"
-      ? t("story.slot.survivor")
-      : kind === "pet"
-        ? t("story.slot.pet")
-        : t("story.slot.infected");
+    props.story === "christmas"
+      ? t(slot === "survivor" ? "story.christmas.slot.survivor" : "story.christmas.slot.infected")
+      : slot === "survivor"
+        ? t("story.slot.survivor")
+        : kind === "pet"
+          ? t("story.slot.pet")
+          : t("story.slot.infected");
   const id = `photo-${slot}`;
   const face = photo?.face;
   const warn = face === "none" || face === "many" || face === "small";
@@ -109,17 +120,25 @@ export function PhotoSlot(props: {
 
 /** The scenes as cinema tickets (design lock "One-Sheet"); the picked one plays its clip. */
 export function ScenePicker(props: {
-  scene: SceneId;
-  posters: Partial<Record<SceneId, ScenePoster>>;
+  story?: StoryId;
+  scene: string;
+  posters: Partial<Record<string, ScenePoster>>;
   disabled: boolean;
-  onPick: (scene: SceneId) => void;
+  onPick: (scene: string) => void;
 }) {
+  const tale = props.story ?? "zombie";
+  const zombie = tale === "zombie";
+  const scenes = zombie
+    ? SCENE_IDS.map((id) => SCENES[id])
+    : Object.values(storyOf({ story: tale }).scenes);
+  const line = (id: string) =>
+    (zombie ? `story.scene.line.${id}` : `story.${tale}.scene.line.${id}`) as MessageKey;
   return (
     <fieldset class="scenes">
       <legend class="visually-hidden">{t("story.scene.label")}</legend>
       <div class="scene-tiles" role="radiogroup">
-        {SCENE_IDS.map((id) => {
-          const scene = SCENES[id];
+        {scenes.map((scene) => {
+          const id = scene.id;
           const poster = props.posters[id];
           const on = props.scene === id;
           return (
@@ -140,9 +159,7 @@ export function ScenePicker(props: {
                   <span class="scene-blank" aria-hidden="true" />
                 )}
               </span>
-              <span class="ticket-line">
-                {t(`story.scene.line.${id}` as "story.scene.line.cabin-wheat")}
-              </span>
+              <span class="ticket-line">{t(line(id))}</span>
               <span class="ticket-stub" aria-hidden="true">
                 {scene.live
                   ? on
@@ -164,7 +181,20 @@ export function TitleCardFields(props: {
   date: string;
   onChange: (names: string, date: string) => void;
   disabled?: boolean;
+  story?: StoryId;
 }) {
+  const christmas = props.story === "christmas";
+  const datePlaceholder = t(
+    christmas ? "story.christmas.title.datePlaceholder" : "story.title.datePlaceholder",
+  );
+  // The Christmas end card is the story's own (its year comes from the date line).
+  const card = christmas
+    ? storyOf({ story: "christmas" }).title({
+        names: props.names || null,
+        date: props.date || null,
+        createdAt: Date.now(),
+      })
+    : null;
   return (
     <details class="titlecard" open={!!(props.names || props.date)}>
       <summary>{t("story.title.add")}</summary>
@@ -187,19 +217,29 @@ export function TitleCardFields(props: {
               type="text"
               maxLength={20}
               value={props.date}
-              placeholder={t("story.title.datePlaceholder")}
+              placeholder={datePlaceholder}
               disabled={props.disabled}
               onInput={(e) => props.onChange(props.names, e.currentTarget.value)}
             />
           </label>
         </div>
         <div class="titlecard-preview" aria-hidden="true">
-          <p class="tc-line">{t("story.title.line")}</p>
-          <p class="tc-names">
-            {[props.names || t("story.title.namesPlaceholder"), props.date]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          {card ? (
+            <>
+              <p class="tc-line">{card.line1}</p>
+              {card.line2 && <p class="tc-line">{card.line2}</p>}
+              <p class="tc-names">{props.names || t("story.title.namesPlaceholder")}</p>
+            </>
+          ) : (
+            <>
+              <p class="tc-line">{t("story.title.line")}</p>
+              <p class="tc-names">
+                {[props.names || t("story.title.namesPlaceholder"), props.date]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </details>
@@ -216,12 +256,29 @@ const STAGE_LABEL = {
   "shot:5": "story.rendering.shot5",
   compose: "story.rendering.compose",
 } as const;
+/** Christmas makes shots 1–3 and 5–8; 4 and 9 are the scene's own clips (catalog storyboard). */
+const CHRISTMAS_STAGE_LABEL = {
+  frames: "story.christmas.rendering.frames",
+  "shot:1": "story.christmas.rendering.shot1",
+  "shot:2": "story.christmas.rendering.shot2",
+  "shot:3": "story.christmas.rendering.shot3",
+  "shot:5": "story.christmas.rendering.shot5",
+  "shot:6": "story.christmas.rendering.shot6",
+  "shot:7": "story.christmas.rendering.shot7",
+  "shot:8": "story.christmas.rendering.shot8",
+  compose: "story.christmas.rendering.compose",
+} as const;
+const STAGE_LABELS: Record<StoryId, Readonly<Record<string, MessageKey>>> = {
+  zombie: STAGE_LABEL,
+  christmas: CHRISTMAS_STAGE_LABEL,
+};
 /** Shown until the server reports its stages (an older story, or the first poll). */
-const DEFAULT_STAGES: StageView[] = Object.keys(STAGE_LABEL).map((id) => ({
-  id,
-  state: "waiting",
-}));
-const FILM_SECONDS = Number.parseInt(fact("video.seconds"), 10) || 15;
+const defaultStages = (story: StoryId): StageView[] =>
+  Object.keys(STAGE_LABELS[story]).map((id) => ({ id, state: "waiting" }));
+/** The film's length: the zombie film keeps its own fact, other stories theirs. */
+export function filmSeconds(story: StoryId = "zombie"): string {
+  return story === "zombie" ? fact("video.seconds") : fact(`story.${story}.seconds`);
+}
 const STILL_MS = 3_500;
 
 const timecode = (seconds: number) =>
@@ -238,8 +295,12 @@ export function RenderMonitor(props: {
   total: number;
   etaMs: number | null;
   scene: string;
+  story?: StoryId;
 }) {
-  const stages = props.stages?.length ? props.stages : DEFAULT_STAGES;
+  const story = props.story ?? "zombie";
+  const labels = STAGE_LABELS[story];
+  const FILM_SECONDS = Number.parseInt(filmSeconds(story), 10) || 0;
+  const stages = props.stages?.length ? props.stages : defaultStages(story);
   const frames = props.frames ?? [];
   const share = props.total > 0 ? props.done / props.total : 0;
   const [shown, setShown] = useState(0);
@@ -282,7 +343,7 @@ export function RenderMonitor(props: {
             <li key={stage.id} data-state={stage.state}>
               <span class="dot" aria-hidden="true" />
               <span class="name">
-                {t(STAGE_LABEL[stage.id as keyof typeof STAGE_LABEL] ?? STAGE_LABEL.compose)}
+                {t(labels[stage.id] ?? labels.compose ?? STAGE_LABEL.compose)}
               </span>
               <span class="state">{t(`story.rendering.${stage.state}`)}</span>
             </li>

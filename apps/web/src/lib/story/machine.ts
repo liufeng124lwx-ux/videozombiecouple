@@ -1,4 +1,4 @@
-import { type Kind, SCENES, type SceneId } from "@vzc/catalog";
+import { type Kind, type StoryId, storyOf } from "@vzc/catalog";
 import type { StoryView } from "@vzc/contracts";
 import type { FaceVerdict } from "./faces.ts";
 
@@ -18,10 +18,13 @@ export type Phase =
   | "failed";
 
 export type ToolState = {
+  /** Which story the film tells (the record's own id is `storyId`). */
+  tale: StoryId;
   kind: Kind;
   photos: Record<Slot, Photo | null>;
   checking: Record<Slot, boolean>;
-  scene: SceneId;
+  /** A scene id of `tale`. */
+  scene: string;
   title: { names: string; date: string };
   /** The uploader confirmed both people are adults who agreed (and the face analysis). */
   consent: boolean;
@@ -38,7 +41,7 @@ export type ToolEvent =
   | { type: "photo"; slot: Slot; photo: Photo }
   | { type: "photoError"; slot: Slot; code: string }
   | { type: "swap" }
-  | { type: "scene"; scene: SceneId }
+  | { type: "scene"; scene: string }
   | { type: "title"; names: string; date: string }
   | { type: "consent"; value: boolean }
   | { type: "submit" }
@@ -51,12 +54,24 @@ export type ToolEvent =
   | { type: "error"; code: string }
   | { type: "reset" };
 
-export function initialState(over: Partial<Pick<ToolState, "kind" | "scene">> = {}): ToolState {
+export type Preset = { story?: StoryId; kind?: Kind; scene?: string };
+
+/** The story's first live scene (zombie: cabin-wheat). */
+function firstScene(story: StoryId): string {
+  const scenes = Object.values(storyOf({ story }).scenes);
+  return (scenes.find((s) => s.live) ?? scenes[0])?.id ?? "";
+}
+
+export function initialState(over: Preset = {}): ToolState {
+  const tale = over.story ?? "zombie";
+  const { scenes, kinds } = storyOf({ story: tale });
+  const kind = over.kind && kinds.includes(over.kind) ? over.kind : (kinds[0] ?? "human");
   return {
-    kind: over.kind ?? "human",
+    tale,
+    kind,
     photos: { survivor: null, infected: null },
     checking: { survivor: false, infected: false },
-    scene: over.scene ?? "cabin-wheat",
+    scene: over.scene && over.scene in scenes ? over.scene : firstScene(tale),
     title: { names: "", date: "" },
     consent: false,
     phase: "setup",
@@ -98,6 +113,7 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
   switch (e.type) {
     case "kind": {
       if (s.phase !== "setup" || e.kind === s.kind) return s;
+      if (!storyOf({ story: s.tale }).kinds.includes(e.kind)) return s;
       // The second photo is a person in one version and a pet in the other.
       return { ...s, kind: e.kind, photos: { ...s.photos, infected: null }, error: null };
     }
@@ -120,7 +136,7 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
       if (s.kind === "pet" || s.phase !== "setup") return s;
       return { ...s, photos: { survivor: s.photos.infected, infected: s.photos.survivor } };
     case "scene":
-      return { ...s, scene: e.scene };
+      return e.scene in storyOf({ story: s.tale }).scenes ? { ...s, scene: e.scene } : s;
     case "title":
       return { ...s, title: { names: e.names, date: e.date } };
     case "consent":
@@ -136,12 +152,15 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
       const next = PHASE_OF[e.view.status];
       // While the person picks a pack, polls that still say "preview_ready" keep the picker open.
       const phase = s.phase === "paying" && next === "preview_ready" ? "paying" : next;
+      const tale = e.view.story ?? "zombie";
+      const scenes = storyOf({ story: tale }).scenes;
       return {
         ...s,
         story: e.view,
         phase,
+        tale,
         kind: e.view.kind,
-        scene: e.view.scene in SCENES ? (e.view.scene as SceneId) : s.scene,
+        scene: e.view.scene in scenes ? e.view.scene : tale === s.tale ? s.scene : firstScene(tale),
         error: e.view.errorCode,
       };
     }
@@ -155,6 +174,6 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
       // Before a story exists, go back to the setup with the photos kept.
       return s.storyId ? { ...s, error: e.code } : { ...s, phase: "setup", error: e.code };
     case "reset":
-      return initialState({ kind: s.kind, scene: s.scene });
+      return initialState({ story: s.tale, kind: s.kind, scene: s.scene });
   }
 }

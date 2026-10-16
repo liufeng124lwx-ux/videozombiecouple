@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fact, facts, interpolate } from "../src/index.ts";
+import { CHRISTMAS, fact, facts, interpolate } from "../src/index.ts";
 
 describe("page facts", () => {
   it("formats prices and per-video prices from the packs", () => {
@@ -19,6 +19,7 @@ describe("page facts", () => {
     expect(fact("story.christmas.credits")).toBe("20");
     expect(fact("story.christmas.minutes")).toBe("15");
     expect(fact("story.zombie.minutes")).toBe("5");
+    expect(fact("story.christmas.years")).toBe("50");
     expect(() => fact("pack.christmas1.videos")).toThrow();
     expect(fact("video.width")).toBe("720");
     expect(fact("video.height")).toBe("1280");
@@ -38,5 +39,13 @@ describe("page facts", () => {
   it("never yields NaN or undefined", () => {
     for (const [key, value] of Object.entries(facts()))
       expect(value, key).not.toMatch(/NaN|undefined/);
+  });
+});
+
+describe("christmas years", () => {
+  it("the film's opening line counts the same Christmases as the fact", () => {
+    expect(CHRISTMAS.overlays[0]?.text).toMatch(
+      new RegExp(`^Our ${fact("story.christmas.years")}th Christmas\\.`),
+    );
   });
 });
