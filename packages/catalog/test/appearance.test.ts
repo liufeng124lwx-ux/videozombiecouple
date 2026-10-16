@@ -56,11 +56,87 @@ describe("appearance lines", () => {
       });
   });
 
+  it("drops items that carry anything beyond head and face words", () => {
+    for (const bad of [
+      "grey hair typical of old age",
+      "gray hair suggesting senior",
+      "dreadlocks common in Jamaican culture",
+      "Rastafarian dreadlocks",
+      "hair of a Pakistani woman",
+      "hair of a Nigerian",
+      "hair typical of Black people",
+      "hair that looks Middle Eastern",
+      "beard in the Amish style",
+      "beard like a rabbi",
+      "payot sideburns",
+      "Hasidic hat",
+      "hair covering worn by nuns",
+      "cap with a cross",
+      "bald from chemotherapy",
+      "bald due to cancer",
+      "hair thinning with age",
+      "hair looks 60",
+      "hair in his sixties",
+      "hair of a boy",
+      "hair of a woman in her thirties",
+      "cap saying Make America Great Again",
+      "scarf reading ALLAH",
+      "turban-style head wrap",
+      "printed hair",
+    ])
+      expect(parseAppearance(`IMAGE 1: ${bad}`).survivor, bad).toBe("");
+    expect(parseAppearance("IMAGE 1: glasses for poor eyesight, hair").survivor).toBe("hair");
+  });
+
+  it("passes plain descriptions built from the vocabulary", () => {
+    for (const ok of [
+      "blue floral headscarf covering all hair",
+      "long wavy red hair",
+      "short blond hair",
+      "bald head",
+      "clean-shaven",
+      "full beard",
+      "no head covering",
+      "no glasses",
+      "light stubble",
+      "hair tied back",
+      "short brown pixie cut",
+      "shoulder-length grey hair",
+      "hair in a bun",
+    ])
+      expect(parseAppearance(`IMAGE 1: ${ok}`).survivor, ok).toBe(ok);
+  });
+
+  it("normalises Unicode look-alikes before checking", () => {
+    expect(parseAppearance("IMAGE 1: \uFF2Duslim hair").survivor).toBe("");
+    expect(parseAppearance("IMAGE 1: Musl\u200Bim hair").survivor).toBe("");
+    expect(parseAppearance("IMAGE 1: short\u00A0hair").survivor).toBe("short hair");
+  });
+
+  it("collapses repeated words after renaming and adds more garment names", () => {
+    expect(parseAppearance("IMAGE 1: kufi cap").survivor).toBe("small cap");
+    expect(parseAppearance("IMAGE 1: keffiyeh, dupatta covering hair").survivor).toBe(
+      "headscarf, headscarf covering hair",
+    );
+  });
+
+  it("collapses a run of repeated words and refuses over-long items (more than 8 words)", () => {
+    expect(parseAppearance(`IMAGE 1: ${"very ".repeat(60)}long hair`).survivor).toBe(
+      "very long hair",
+    );
+    expect(
+      parseAppearance("IMAGE 1: long long long short short short long long hair hair").survivor,
+    ).toBe("long short long hair");
+    expect(
+      parseAppearance("IMAGE 1: long hair with a bun and a hat and a cap and a scarf").survivor,
+    ).toBe("");
+  });
+
   it("caps at an item boundary", () => {
-    const items = Array.from({ length: 20 }, (_, i) => `hair ${i}`).join(", ");
+    const items = Array.from({ length: 20 }, () => "short hair").join(", ");
     const out = parseAppearance(`IMAGE 1: ${items}`).survivor;
     expect(out.length).toBeLessThanOrEqual(APPEARANCE_MAX_CHARS);
-    expect(out).toMatch(/hair \d+$/);
+    expect(out).toMatch(/hair$/);
   });
 
   it("keeps hair colours like white and black hair (they are not ethnicity)", () => {

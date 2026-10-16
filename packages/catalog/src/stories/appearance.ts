@@ -20,7 +20,10 @@ export const DESCRIBE_PROMPT = [
 ].join("\n");
 
 const RENAME: readonly [RegExp, string][] = [
-  [/\b(hijab|niqab|khimar|chador|burqa|al-amira)\b/gi, "headscarf"],
+  [
+    /\b(hijab|niqab|khimar|chador|burqa|al-amira|keffiyeh|tichel|dupatta|shemagh|ghutra)\b/gi,
+    "headscarf",
+  ],
   [/\b(turban|dastar|pagri|keski)\b/gi, "head wrap"],
   [/\b(kippah|kippa|yarmulke|kufi|taqiyah)\b/gi, "small cap"],
 ];
@@ -29,79 +32,55 @@ const RENAME: readonly [RegExp, string][] = [
 const BANNED =
   /\b(muslim|islam\w*|christian\w*|catholic|jewish|jew|sikh\w*|hindu\w*|buddhis\w*|religio\w*|arab\w*|asian|african|caucasian|latin[oa]|latinx|hispanic|indian|ethnic\w*|race|racial|nationality|american|european|chinese|japanese|korean|mexican|disab\w*|wheelchair|ill(ness)?|disease|sick|pregnan\w*|years?\s+old|\d+\s*(years?|yrs?)|elderly|teen\w*|child)\b/i;
 
-/** An item survives only if it names something on the head or face (allow-list; BANNED is a second gate). */
-const ALLOWED = new RegExp(
-  `\\b(${[
-    "hair",
-    "hairline",
-    "bald",
-    "shaved",
-    "buzz cut",
-    "crew cut",
-    "bob",
-    "pixie",
-    "fringe",
-    "bangs",
-    "curls",
-    "curly",
-    "wavy",
-    "straight",
-    "braid",
-    "braids",
-    "braided",
-    "plait",
-    "ponytail",
-    "bun",
-    "top knot",
-    "afro",
-    "dreadlocks",
-    "locs",
-    "cornrows",
-    "mohawk",
-    "undercut",
-    "headscarf",
-    "head wrap",
-    "scarf",
-    "hood",
-    "hat",
-    "cap",
-    "beanie",
-    "headband",
-    "bandana",
-    "small cap",
-    "beard",
-    "stubble",
-    "moustache",
-    "mustache",
-    "goatee",
-    "sideburns",
-    "clean-shaven",
-    "glasses",
-    "sunglasses",
-    "spectacles",
-    "no glasses",
-    "no head covering",
-  ].join("|")})\\b`,
-  "i",
+const words = (list: string) => list.split(/\s+/).filter(Boolean);
+
+const COLOURS = words(
+  "black brown dark light blond blonde red ginger auburn grey gray white silver golden sandy chestnut salt-and-pepper blue navy green pink purple yellow orange beige cream maroon burgundy patterned floral striped plain",
 );
+const SHAPES = words(
+  "short long medium medium-length shoulder-length chin-length cropped very full thick thin thinning receding wavy curly coily straight messy tousled neat slicked slicked-back back tied loose side parted swept layered natural spiky",
+);
+const NOUNS = words(
+  "hair hairline bald head shaved buzz crew cut bob pixie fringe bangs curls braid braids braided plait plaits ponytail bun top knot afro dreadlocks locs cornrows mohawk undercut headscarf wrap scarf hood hat cap beanie headband bandana beard stubble moustache mustache goatee sideburns clean-shaven glasses sunglasses spectacles frames rimmed round rectangular thin-rimmed thick-rimmed small",
+);
+const CONNECTIVES = words("a an the and with no covering covers all most in up pulled");
+
+/** An item survives only if every word is on the head/face vocabulary (BANNED is a second gate). */
+const VOCABULARY = new Set([...COLOURS, ...SHAPES, ...NOUNS, ...CONNECTIVES]);
+const NOUN_SET = new Set(NOUNS);
+const MAX_ITEM_WORDS = 8;
+
+function allowedItem(item: string): boolean {
+  if (!/^[a-z-]+( [a-z-]+)*$/.test(item) || item.includes("-style")) return false;
+  const tokens = item.split(" ");
+  return (
+    tokens.length <= MAX_ITEM_WORDS &&
+    tokens.every((t) => VOCABULARY.has(t)) &&
+    tokens.some((t) => NOUN_SET.has(t))
+  );
+}
 
 function clean(line: string): string {
   let out = line
-    .replace(/[\u0000-\u001f\u007f]/g, "")
-    .replace(/\s+/g, " ")
+    .normalize("NFKC")
+    .replace(/[\p{Cf}\p{Cc}]/gu, "")
+    .replace(/[\p{Z}\s]+/gu, " ")
     .trim();
   for (const [pattern, word] of RENAME) out = out.replace(pattern, word);
   const items = out
     .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item && ALLOWED.test(item) && !BANNED.test(item));
+    .map((item) =>
+      item
+        .toLowerCase()
+        .trim()
+        .split(" ")
+        .filter((w, i, all) => w !== all[i - 1])
+        .join(" "),
+    )
+    .filter((item) => allowedItem(item) && !BANNED.test(item));
   while (items.length > 1 && items.join(", ").length > APPEARANCE_MAX_CHARS) items.pop();
   out = items.join(", ");
-  if (out.length > APPEARANCE_MAX_CHARS) {
-    const cut = out.slice(0, APPEARANCE_MAX_CHARS);
-    out = cut.slice(0, cut.lastIndexOf(" ")).trim();
-  }
-  return out;
+  return out.length > APPEARANCE_MAX_CHARS ? "" : out;
 }
 
 /** The model's answer → one safe line per photo; anything unusable becomes "". */
