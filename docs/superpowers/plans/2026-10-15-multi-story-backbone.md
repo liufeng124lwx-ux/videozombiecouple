@@ -2510,4 +2510,5 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ## 交接给后续计划
 
 - **第二份（内容）**：即梦调 `CHRISTMAS` 的关键帧与镜头提示词（先 `wide`、`forgetCold`）；生成三个场景的 `ornament.jpg`、`hands.mp4`、`window.mp4`、`music.m4a`；`eval/` 跑一轮（≤ $10），结论写进 `docs/model-eval.md`；通过的场景改 `live: true`。
-- **第三份（上线）**：`/ai-christmas-video` 页面（H1 先用哥飞工具核实）、`StoryTool` 接 `story` 参数与「谁会忘记」文案、定价页圣诞一行、首页入口卡片、`node scripts/stripe-setup.ts test --yes` / `live --yes`、2 条样片、端到端测试卡下单、上线清单。
+- **第三份（上线）**：`/ai-christmas-video` 页面（H1 先用哥飞工具核实）、`StoryTool` 接 `story` 参数与「谁会忘记」文案、定价页圣诞一行、首页入口卡片、`node scripts/stripe-setup.ts test --yes` / `live --yes`、2 条样片、端到端测试卡下单、上线清单；上线前补上 `SharedFilm.story`、`apps/web/src/lib/ledger.ts` 对 christmas1 的文案（不是 "2 videos"）、`parts.tsx` 圣诞镜头 6–8 的阶段标签、`routes/stories.ts` 记录的 promptVersion 按故事区分；并补一条测试：圣诞场景上线时 `pet` 被拒、显式 `story` 被写入。
+- **上线开关**：圣诞场景的 `live: true` 只在第三份计划里切换，而且必须先跑 `node scripts/stripe-setup.ts test --yes` 和 `live --yes`、把 `christmas1` 的价格写进两份 wrangler 配置之后再切——这个开关同时控制生产环境能否下圣诞单（可用已有积分支付）、`christmas1` 是否在售、以及 `apps/api/test/configs.test.ts` 对每个在售商品都要有 Stripe 价格的检查；第二份计划调提示词和做素材期间保持 `live: false`，测试站验证用单测里临时打开或直接用运行器跑。

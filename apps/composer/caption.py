@@ -68,7 +68,7 @@ def render_overlay(text: str, out: str) -> str:
         a = int(150 * (1 - abs(i - band_h / 2) / (band_h / 2)))
         draw.line([(0, top - 30 + i), (WIDTH, top - 30 + i)], fill=(*VEIL, a))
     for n, ln in enumerate(lines):
-        draw.text((WIDTH / 2, top + 30 + n * 60), ln, font=font, fill=WARM, anchor="mm")
+        draw.text((WIDTH / 2, top + 30 + n * 60), ln, font=font, fill=(255, 255, 255), anchor="mm")
     img.save(out, "PNG")
     return out
 

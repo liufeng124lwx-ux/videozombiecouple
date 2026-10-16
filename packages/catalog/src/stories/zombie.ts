@@ -9,6 +9,7 @@ import {
   shotPrompt,
   storyboard,
 } from "../story.ts";
+import { TIERS } from "../tiers.ts";
 import type { FrameRef, Story } from "./types.ts";
 
 /** The end title's first line (spec §5.1). */
@@ -22,7 +23,7 @@ const frame = (id: FrameId) => (s: string, kind: Parameters<typeof keyframePromp
 /** story.ts wrapped as data: same prompts, storyboard, scenes and title. */
 export const ZOMBIE: Story = {
   id: "zombie",
-  credits: 10,
+  credits: TIERS.video.credits,
   kinds: ["human", "pet"],
   scenes: Object.fromEntries(
     Object.values(SCENES).map((s) => [

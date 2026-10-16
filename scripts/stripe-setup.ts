@@ -71,7 +71,10 @@ const items = SALE_PRODUCTS.flatMap((product) => {
     {
       key: product.key,
       name,
-      description: `${videos} AI zombie love story film${videos === 1 ? "" : "s"} made from your photos. Credits never expire.`,
+      description:
+        product.kind === "pack" && product.label
+          ? `${product.label}: an AI Christmas film made from your photos. Credits never expire.`
+          : `${videos} AI zombie love story film${videos === 1 ? "" : "s"} made from your photos. Credits never expire.`,
       cents: Math.round(product.usd * 100),
       usd: product.usd,
     },

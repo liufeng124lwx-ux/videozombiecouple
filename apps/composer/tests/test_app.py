@@ -173,3 +173,13 @@ def test_a_long_overlay_wraps_inside_the_frame(tmp_path):
     assert img.size == (720, 1280)
     # Text sits in the upper third; the lower two thirds stay transparent.
     assert img.getchannel("A").crop((0, 900, 720, 1280)).getextrema() == (0, 0)
+
+
+def test_overlay_text_is_white(tmp_path):
+    from PIL import Image
+
+    from caption import render_overlay
+
+    img = Image.open(render_overlay("Hello", str(tmp_path / "o.png")))
+    best = max((p for p in img.getdata() if p[3] > 200), key=lambda p: p[0] + p[1] + p[2])
+    assert min(best[:3]) >= 245
