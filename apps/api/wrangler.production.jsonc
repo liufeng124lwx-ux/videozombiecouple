@@ -64,7 +64,7 @@
     "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
     "GOOGLE_CLIENT_ID": "876510837060-62rgai18m99a6ofgs4rvricmd19pc42u.apps.googleusercontent.com",
     // From scripts/stripe-setup.ts live (account acct_1UQlpkK1NmwsUaE9, Managed Payments).
-    "STRIPE_PRICES": "{\"pack1\":\"price_1UQnnqK1NmwsUaE9mUjtXQMA\",\"pack3\":\"price_1UQnnrK1NmwsUaE9WRdwtlrv\",\"pack5\":\"price_1UQnnsK1NmwsUaE9DIU0cssX\"}",
+    "STRIPE_PRICES": "{\"pack1\":\"price_1UQnnqK1NmwsUaE9mUjtXQMA\",\"pack3\":\"price_1UQnnrK1NmwsUaE9WRdwtlrv\",\"pack5\":\"price_1UQnnsK1NmwsUaE9DIU0cssX\",\"christmas1\":\"price_1URKoKK1NmwsUaE98dvf7Ymg\"}",
     "GA4_MEASUREMENT_ID": "G-PHDSR4556T"
   }
 }

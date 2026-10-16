@@ -68,7 +68,7 @@
     "R2_BUCKET_NAME": "vzc-staging",
     "EMAIL_FROM": "VideoZombieCouple <no-reply@videozombiecouple.com>",
     "GOOGLE_CLIENT_ID": "876510837060-62rgai18m99a6ofgs4rvricmd19pc42u.apps.googleusercontent.com",
-    "STRIPE_PRICES": "{\"pack1\":\"price_1UQlzzGZhLcYFqqhY9Z0iFUw\",\"pack3\":\"price_1UQlzzGZhLcYFqqhDovYNhtI\",\"pack5\":\"price_1UQm00GZhLcYFqqhKZKBSZwK\"}",
+    "STRIPE_PRICES": "{\"pack1\":\"price_1UQlzzGZhLcYFqqhY9Z0iFUw\",\"pack3\":\"price_1UQlzzGZhLcYFqqhDovYNhtI\",\"pack5\":\"price_1UQm00GZhLcYFqqhKZKBSZwK\",\"christmas1\":\"price_1URKnDGZhLcYFqqh7ntmuhxC\"}",
     "GA4_MEASUREMENT_ID": ""
   }
 }
