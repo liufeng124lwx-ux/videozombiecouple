@@ -24,6 +24,7 @@ const frame = (id: FrameId) => (s: string, kind: Parameters<typeof keyframePromp
 export const ZOMBIE: Story = {
   id: "zombie",
   credits: TIERS.video.credits,
+  describe: false,
   kinds: ["human", "pet"],
   scenes: Object.fromEntries(
     Object.values(SCENES).map((s) => [

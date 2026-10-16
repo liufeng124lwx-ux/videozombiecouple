@@ -41,16 +41,67 @@ describe("50 Christmases", () => {
     expect(shots.filter((s) => s.flash).map((s) => s.id)).toEqual([7]);
   });
 
-  it("scores the wide shot and the memory; everything else builds on the wide shot", () => {
+  it("scores the wide shot, the memory and both close-ups; close-ups use only their own photo", () => {
     const byId = Object.fromEntries(CHRISTMAS.keyframes.map((k) => [k.id, k]));
-    expect(byId.wide?.candidates).toBe(2);
-    expect(byId.memory?.candidates).toBe(2);
-    expect(byId.forgetCold?.refs).toEqual([{ photo: "infected" }, { frame: "wide" }]);
-    expect(byId.rememberClose?.refs).toEqual([{ photo: "survivor" }, { frame: "wide" }]);
+    for (const id of ["wide", "memory", "forgetCold", "rememberClose"])
+      expect(byId[id]?.candidates, id).toBe(2);
+    expect(byId.forgetCold?.refs).toEqual([{ photo: "infected" }]);
+    expect(byId.rememberClose?.refs).toEqual([{ photo: "survivor" }]);
     expect(byId.forgetWarm?.refs).toEqual([{ photo: "infected" }, { frame: "forgetCold" }]);
-    expect(byId.tree?.refs).toContainEqual({ asset: "ornament" });
-    expect(byId.memory?.refs).toContainEqual({ asset: "ornament" });
-    expect(CHRISTMAS.keyframes.reduce((n, k) => n + k.candidates, 0)).toBe(9);
+    expect(byId.tree?.refs).toEqual([
+      { photo: "survivor" },
+      { photo: "infected" },
+      { frame: "wide" },
+      { asset: "ornament" },
+    ]);
+    expect(byId.embrace?.refs).toEqual([
+      { photo: "survivor" },
+      { photo: "infected" },
+      { frame: "tree" },
+    ]);
+    expect(CHRISTMAS.keyframes.reduce((n, k) => n + k.candidates, 0)).toBe(11);
+    expect(CHRISTMAS.describe).toBe(true);
+  });
+
+  it("shares the ornament and the hands clip across scenes; each scene has its own window and music", () => {
+    const scenes = Object.values(CHRISTMAS.scenes);
+    expect(new Set(scenes.map((s) => s.assets.ornament))).toEqual(
+      new Set(["stories/christmas/shared/ornament.jpg"]),
+    );
+    expect(new Set(scenes.map((s) => s.assets.hands))).toEqual(
+      new Set(["stories/christmas/shared/hands.mp4"]),
+    );
+    expect(new Set(scenes.map((s) => s.assets.window)).size).toBe(3);
+    expect(new Set(scenes.map((s) => s.musicKey)).size).toBe(3);
+  });
+
+  it("puts each person's appearance line into the frames that redraw them, and nothing when it is empty", () => {
+    const look = { survivor: "full beard", infected: "blue floral headscarf covering all hair" };
+    const byId = Object.fromEntries(CHRISTMAS.keyframes.map((k) => [k.id, k]));
+    const wide = byId.wide?.prompt("snow-cabin", "human", look) ?? "";
+    expect(wide).toContain("full beard");
+    expect(wide).toContain("blue floral headscarf covering all hair");
+    expect(byId.forgetCold?.prompt("snow-cabin", "human", look)).toContain("headscarf");
+    expect(byId.forgetCold?.prompt("snow-cabin", "human", look)).not.toContain("full beard");
+    expect(byId.rememberClose?.prompt("snow-cabin", "human", look)).toContain("full beard");
+    for (const k of CHRISTMAS.keyframes) {
+      const plain = k.prompt("snow-cabin", "human");
+      expect(plain, k.id).not.toMatch(/Appearance to keep/);
+      // The generic hair / head-covering clauses failed in 即梦 (research notes §9–10).
+      expect(plain, k.id).not.toMatch(/silver-white hair|head covering|beard if they have one/);
+    }
+  });
+
+  it("follows the 即梦 rules: who to look at, gender, one ornament", () => {
+    const byId = Object.fromEntries(CHRISTMAS.keyframes.map((k) => [k.id, k]));
+    expect(byId.wide?.prompt("snow-cabin", "human")).toContain("not at the other person");
+    expect(byId.wide?.prompt("snow-cabin", "human")).toContain("unmistakably elderly");
+    for (const id of ["forgetCold", "rememberClose", "forgetWarm"])
+      expect(byId[id]?.prompt("snow-cabin", "human"), id).toContain("the same gender as IMAGE 1");
+    for (const id of ["tree", "embrace"])
+      expect(byId[id]?.prompt("snow-cabin", "human"), id).toContain(
+        "only this one heart ornament on the tree",
+      );
   });
 
   it("says the hook and the turn on screen, without guessing anyone's gender", () => {
@@ -87,8 +138,9 @@ describe("50 Christmases", () => {
         expect(p, k.id).toContain(
           "No text, no glasses, no exaggerated crying, no distorted hands.",
         );
-        if (k.id !== "memory") expect(p, k.id).toMatch(/aged to about 78/);
-        else expect(p).not.toMatch(/aged/);
+        if (["wide", "forgetCold", "rememberClose"].includes(k.id))
+          expect(p, k.id).toMatch(/late seventies/);
+        else if (k.id !== "memory") expect(p, k.id).toMatch(/grown old/);
       }
       for (const s of CHRISTMAS.storyboard("human"))
         if (s.prompt)

@@ -4,6 +4,7 @@ import {
   CAPTION_SEC,
   KINDS,
   keyframePrompt,
+  promptVersionOf,
   SCENE_IDS,
   SCENES,
   STORIES,
@@ -18,6 +19,20 @@ import {
 } from "../src/index.ts";
 
 describe("the zombie story as data", () => {
+  it("the zombie story never describes photos and ignores an appearance", () => {
+    expect(ZOMBIE.describe).toBe(false);
+    for (const k of ZOMBIE.keyframes)
+      expect(k.prompt("cabin-wheat", "human", { survivor: "x", infected: "y" })).toBe(
+        k.prompt("cabin-wheat", "human"),
+      );
+  });
+
+  it("records the prompt version per story", () => {
+    expect(promptVersionOf("zombie", "human")).toBe("h1");
+    expect(promptVersionOf("zombie", "pet")).toBe("p1");
+    expect(promptVersionOf("christmas", "human")).toBe("c1");
+  });
+
   it("keeps every keyframe prompt of story.ts, in the order A, C, B", () => {
     expect(ZOMBIE.keyframes.map((k) => k.id)).toEqual(["A", "C", "B"]);
     for (const scene of SCENE_IDS)

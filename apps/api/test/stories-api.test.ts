@@ -54,6 +54,10 @@ describe("story API", () => {
         storyBody(a, b, { story: "christmas", scene: "snow-cabin" }),
       );
       expect(made.status).toBe(201);
+      const version = h.db
+        .prepare("SELECT prompt_version FROM stories WHERE id=?")
+        .get(made.body.storyId as string);
+      expect(version).toEqual({ prompt_version: "c1" });
       const id = made.body.storyId as string;
       await h.untilStory(id, "preview_ready");
       const res = await h.call(`/v1/stories/${id}/render`, {

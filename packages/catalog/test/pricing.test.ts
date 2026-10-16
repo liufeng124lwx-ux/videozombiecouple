@@ -18,7 +18,10 @@ import {
   ZOMBIE,
 } from "../src/index.ts";
 
-const synthetic = ROUTES.map((r) => ({ ...r, costUsd: r.capability === "keyframe" ? 0.1 : 1 }));
+const synthetic = ROUTES.map((r) => ({
+  ...r,
+  costUsd: r.capability === "keyframe" ? 0.1 : r.capability === "shot" ? 1 : 0,
+}));
 
 describe("pricing (spec §7, christmas spec §6)", () => {
   it("finds the cheapest credit in the 5-video pack", () => {
@@ -55,9 +58,9 @@ describe("pricing (spec §7, christmas spec §6)", () => {
     expect(storyCostUsd(synthetic, ZOMBIE).video).toBeCloseTo(5.5);
   });
 
-  it("a Christmas film is nine keyframes and 25 seconds of shots; clips cost nothing", () => {
-    // 9 × 0.1 + (3+3+4+4+3+4+4)/3 × 1
-    expect(storyCostUsd(synthetic, CHRISTMAS).video).toBeCloseTo(0.9 + 25 / 3, 6);
+  it("a Christmas film is eleven keyframes and 25 seconds of shots; clips cost nothing", () => {
+    // 11 × 0.1 + (3+3+4+4+3+4+4)/3 × 1
+    expect(storyCostUsd(synthetic, CHRISTMAS).video).toBeCloseTo(1.1 + 25 / 3, 6);
   });
 
   it("nets each pack after Stripe's fees (worst case 7.9% + $0.30)", () => {

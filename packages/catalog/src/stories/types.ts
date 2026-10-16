@@ -1,4 +1,5 @@
 import type { Grade, Kind } from "../story.ts";
+import type { Appearance } from "./appearance.ts";
 
 export const STORY_IDS = ["zombie", "christmas"] as const;
 export type StoryId = (typeof STORY_IDS)[number];
@@ -18,7 +19,7 @@ export type StoryKeyframe = {
   /** Faces compared when scoring, for people and for the pet version. */
   faces: readonly Role[];
   petFaces: readonly Role[];
-  prompt(scene: string, kind: Kind): string;
+  prompt(scene: string, kind: Kind, look?: Appearance): string;
 };
 
 export type StoryShot = {
@@ -51,6 +52,8 @@ export type Story = {
   id: StoryId;
   /** Credits one finished film costs. */
   credits: number;
+  /** Read each photo's head covering, hair, facial hair and glasses before the keyframes (christmas content spec §2). */
+  describe: boolean;
   kinds: readonly Kind[];
   scenes: Readonly<Record<string, StoryScene>>;
   keyframes: readonly StoryKeyframe[];

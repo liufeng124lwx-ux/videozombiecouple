@@ -516,7 +516,7 @@ describe("StoryRunner: stories", () => {
     return { spec, runner };
   }
 
-  it("renders a Christmas film: nine keyframes, seven shots, clips from the scene, 20 credits", async () => {
+  it("renders a Christmas film: eleven keyframes, seven shots, clips from the scene, 20 credits", async () => {
     const h = await setup();
     const calls = scripted(h);
     const { spec, runner } = await christmas(h);
@@ -535,7 +535,7 @@ describe("StoryRunner: stories", () => {
       "amber-dawn",
       "amber-dawn",
     ]);
-    expect(req?.shots[3]?.url).toContain("assets/stories/christmas/snow-cabin/hands.mp4");
+    expect(req?.shots[3]?.url).toContain("assets/stories/christmas/shared/hands.mp4");
     expect(req?.shots[8]?.url).toContain("assets/stories/christmas/snow-cabin/window.mp4");
     expect(req?.shots.map((s) => s.flash)).toEqual([
       false,
@@ -556,7 +556,7 @@ describe("StoryRunner: stories", () => {
     const kie = stepAttempts(h, spec.id)
       .filter((s) => s.attempts.length > 0)
       .map((s) => s.id);
-    expect(kie.filter((id) => id.startsWith("kf:"))).toHaveLength(9);
+    expect(kie.filter((id) => id.startsWith("kf:"))).toHaveLength(11);
     expect(kie.filter((id) => id.startsWith("shot:"))).toHaveLength(7);
     expect(h.wallet.calls.some((c) => c[0] === "commit" && c[2] === spec.id && c[3] === 20)).toBe(
       true,

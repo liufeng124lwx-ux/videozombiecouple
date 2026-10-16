@@ -1,4 +1,4 @@
-import { MODES, RATE_LIMITS, RETENTION, STORIES, storyOf } from "@vzc/catalog";
+import { promptVersionOf, RATE_LIMITS, RETENTION, STORIES, storyOf } from "@vzc/catalog";
 import {
   CreateStorySchema,
   RecomposeSchema,
@@ -132,7 +132,7 @@ export async function createStory(c: Context<AppEnv>) {
         spec.kind,
         request.story,
         spec.scene,
-        MODES[spec.kind].promptVersion,
+        promptVersionOf(request.story, spec.kind),
         spec.names,
         spec.date,
         spec.survivorKey,

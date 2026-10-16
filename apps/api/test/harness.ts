@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { MODES } from "@vzc/catalog";
+import { promptVersionOf } from "@vzc/catalog";
 import { UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { vi } from "vitest";
 import { Dispatcher } from "../src/durable-objects/dispatcher.ts";
@@ -461,7 +461,7 @@ export async function setup(extra: Record<string, unknown> = {}) {
       spec.kind,
       spec.story ?? "zombie",
       spec.scene,
-      MODES[spec.kind].promptVersion,
+      promptVersionOf(spec.story ?? "zombie", spec.kind),
       spec.names,
       spec.date,
       spec.survivorKey,

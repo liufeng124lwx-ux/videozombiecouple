@@ -174,9 +174,17 @@ describe("graph: steps from the story's data", () => {
 
   it("builds the Christmas chain; clip shots make no step", () => {
     const d = deps(videoSteps(CHRISTMAS, "human"));
-    expect(d["score:widememory"]).toEqual(["kf:wide:1", "kf:wide:2", "kf:memory:1", "kf:memory:2"]);
-    expect(d["kf:forgetCold"]).toEqual(["score:widememory"]);
-    expect(d["kf:forgetWarm"]).toEqual(["kf:forgetCold"]);
+    expect(d[SCORE]).toEqual([
+      "kf:wide:1",
+      "kf:wide:2",
+      "kf:memory:1",
+      "kf:memory:2",
+      "kf:forgetCold:1",
+      "kf:forgetCold:2",
+      "kf:rememberClose:1",
+      "kf:rememberClose:2",
+    ]);
+    expect(d["kf:forgetWarm"]).toEqual([SCORE]);
     expect(d["kf:embrace"]).toEqual(["kf:tree"]);
     expect(d["shot:6"]).toEqual(["kf:forgetWarm"]);
     expect(d["shot:4"]).toBeUndefined();
@@ -192,6 +200,8 @@ describe("graph: steps from the story's data", () => {
     ]);
   });
 });
+
+const SCORE = "score:widememoryforgetColdrememberClose";
 
 function stateOf(story: typeof CHRISTMAS, done: string[], failed: string[] = []): StoryState {
   const steps = Object.fromEntries(
@@ -235,8 +245,19 @@ function stateOf(story: typeof CHRISTMAS, done: string[], failed: string[] = [])
 
 describe("graph: running a Christmas film", () => {
   it("scores once every candidate group has a winner, even if one candidate failed", () => {
-    const s = stateOf(CHRISTMAS, ["kf:wide:1", "kf:memory:1", "kf:memory:2"], ["kf:wide:2"]);
-    expect(readySteps(s).map((x) => x.id)).toContain("score:widememory");
+    const s = stateOf(
+      CHRISTMAS,
+      [
+        "kf:wide:1",
+        "kf:memory:1",
+        "kf:memory:2",
+        "kf:forgetCold:1",
+        "kf:forgetCold:2",
+        "kf:rememberClose:1",
+      ],
+      ["kf:wide:2", "kf:rememberClose:2"],
+    );
+    expect(readySteps(s).map((x) => x.id)).toContain(SCORE);
   });
 
   it("fails when every candidate of one frame failed", () => {
@@ -245,20 +266,21 @@ describe("graph: running a Christmas film", () => {
   });
 
   it("feeds each keyframe its refs in order: photo, picked frame, scene asset", async () => {
-    const s = stateOf(CHRISTMAS, ["kf:wide:1", "kf:wide:2", "score:widememory"]);
+    const s = stateOf(CHRISTMAS, ["kf:wide:1", "kf:wide:2", SCORE]);
     const url = async (key: string) => `signed:${key}`;
     const tree = await kieInputFor(s.steps["kf:tree"] as never, s, url);
     expect(tree.images).toEqual([
       "signed:keep/x/survivor.jpg",
       "signed:keep/x/infected.jpg",
       "signed:kf/x/kf:wide:1.jpg",
-      "signed:assets/stories/christmas/snow-cabin/ornament.jpg",
+      "signed:assets/stories/christmas/shared/ornament.jpg",
     ]);
     expect(tree.prompt).toContain("raising the red glass heart ornament");
   });
 
   it("starts a shot on its keyframe with the story's length", async () => {
-    const s = stateOf(CHRISTMAS, ["kf:forgetCold"]);
+    const s = stateOf(CHRISTMAS, [SCORE]);
+    s.picks.forgetCold = "kf/x/kf:forgetCold.jpg";
     const shot = await kieInputFor(s.steps["shot:1"] as never, s, async (k) => `signed:${k}`);
     expect(shot).toMatchObject({
       first: "signed:kf/x/kf:forgetCold.jpg",
