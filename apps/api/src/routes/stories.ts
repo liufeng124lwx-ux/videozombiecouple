@@ -15,6 +15,7 @@ import { hmacHex, safeEqual } from "../services/crypto.ts";
 import { requireHuman } from "../services/human-pass.ts";
 import { ulid } from "../services/ids.ts";
 import { hitRate } from "../services/limits.ts";
+import { isOrderable } from "../services/orderable.ts";
 import { settle } from "../services/settle.ts";
 import { noteRejections } from "../services/suspicion.ts";
 import { checkUpload } from "../services/upload-check.ts";
@@ -69,8 +70,8 @@ export async function createStory(c: Context<AppEnv>) {
   if (!parsed.success) return fail(c, "BAD_REQUEST");
   const request = parsed.data;
   const story = STORIES[request.story];
-  const scene = story.scenes[request.scene];
-  if (!scene?.live || !story.kinds.includes(request.kind)) return fail(c, "BAD_REQUEST");
+  if (!isOrderable(c.env, story, request.scene) || !story.kinds.includes(request.kind))
+    return fail(c, "BAD_REQUEST");
   if (request.consent !== UPLOAD_CONSENT_VERSION) return fail(c, "CONSENT_REQUIRED");
   // Illinois (BIPA): the second person's face is analysed without their own written release, so
   // only the pet version (the uploader's own face) is offered there.

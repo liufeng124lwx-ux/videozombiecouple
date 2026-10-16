@@ -32,6 +32,8 @@ export interface Bindings {
   ALLOWED_ORIGIN: string;
   /** Which deployment this is; account-wide checks (the kie balance reconcile) run only in production. */
   ENVIRONMENT?: "staging" | "production";
+  /** Staging only: "story/scene,…" orderable before going live. */
+  PREVIEW_SCENES?: string;
   /** This Worker's own origin, used in kie callback URLs. */
   API_ORIGIN: string;
   /** .videozombiecouple.com, so the visitor cookie is shared with the site. */

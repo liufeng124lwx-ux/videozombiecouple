@@ -33,6 +33,44 @@ async function create(h: H, session: string, body?: Record<string, unknown>) {
 const kfFiles = (h: H) => [...h.r2.objects.keys()].filter((k) => k.startsWith("kf/"));
 
 describe("story API", () => {
+  it("staging can preview a scene that is not live; production never can", async () => {
+    for (const [env, status] of [
+      [{ ENVIRONMENT: "staging", PREVIEW_SCENES: "christmas/snow-cabin" }, 201],
+      [{ ENVIRONMENT: "staging", PREVIEW_SCENES: "a/b, christmas/snow-cabin" }, 201],
+      [{ ENVIRONMENT: "production", PREVIEW_SCENES: "christmas/snow-cabin" }, 400],
+      [{ ENVIRONMENT: "staging", PREVIEW_SCENES: "christmas/city-flat" }, 400],
+      [{ ENVIRONMENT: "staging", PREVIEW_SCENES: "christmas/snow" }, 400],
+    ] as const) {
+      const h = await setup({ FAKE_COMPOSER: "1", ...env });
+      const { session } = await signedIn(h);
+      const a = await h.upload();
+      const b = await h.upload();
+      const res = await create(
+        h,
+        session,
+        storyBody(a, b, { story: "christmas", scene: "snow-cabin" }),
+      );
+      expect(res.status, JSON.stringify(env)).toBe(status);
+    }
+  });
+
+  it("preview never allows a kind the story does not support", async () => {
+    const h = await setup({
+      FAKE_COMPOSER: "1",
+      ENVIRONMENT: "staging",
+      PREVIEW_SCENES: "christmas/snow-cabin",
+    });
+    const { session } = await signedIn(h);
+    const a = await h.upload();
+    const b = await h.upload();
+    const res = await create(
+      h,
+      session,
+      storyBody(a, b, { story: "christmas", scene: "snow-cabin", kind: "pet" }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("a Christmas render with credits for one zombie video is refused and charges nothing", async () => {
     const scene = CHRISTMAS.scenes["snow-cabin"] as { live: boolean };
     scene.live = true;

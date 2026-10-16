@@ -58,6 +58,8 @@
     // A photo the moderation provider could not check is refused (retried first), not let through.
     "MODERATION_FAIL": "closed",
     "ENVIRONMENT": "staging",
+    // Staging only: Christmas scenes orderable before they go live. Must never appear in the production config.
+    "PREVIEW_SCENES": "christmas/snow-cabin,christmas/city-flat,christmas/farmhouse",
     "ALLOWED_ORIGIN": "https://staging.videozombiecouple.com",
     "API_ORIGIN": "https://api-staging.videozombiecouple.com",
     "COOKIE_DOMAIN": ".videozombiecouple.com",

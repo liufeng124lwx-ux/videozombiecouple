@@ -16,6 +16,13 @@ describe("deployable configs (spec 1.4)", () => {
   const staging = read("../wrangler.jsonc");
   const production = read("../wrangler.production.jsonc");
 
+  it("only staging can name scenes to preview, and only Christmas ones", () => {
+    expect("PREVIEW_SCENES" in production.vars).toBe(false);
+    const listed = String(staging.vars.PREVIEW_SCENES).split(",");
+    expect(listed.length).toBeGreaterThan(0);
+    for (const entry of listed) expect(entry.trim().startsWith("christmas/")).toBe(true);
+  });
+
   it("refuses photos that moderation could not check, in both environments", () => {
     expect(staging.vars.MODERATION_FAIL).toBe("closed");
     expect(production.vars.MODERATION_FAIL).toBe("closed");
@@ -32,7 +39,9 @@ describe("deployable configs (spec 1.4)", () => {
       email: c.send_email,
       analytics: c.analytics_engine_datasets.map((a: Config) => a.binding),
       crons: c.triggers.crons,
-      vars: Object.keys(c.vars).sort(),
+      vars: Object.keys(c.vars)
+        .filter((k) => k !== "PREVIEW_SCENES")
+        .sort(),
     });
     expect(shape(production)).toEqual(shape(staging));
     expect(production.name).toBe("vzc-api");
