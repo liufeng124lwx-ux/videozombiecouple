@@ -37,3 +37,12 @@ export async function runKieTask(o: {
   }
   return { costUsd, outputs, meta: { taskId, costTimeSec: r.costTimeSec } };
 }
+
+/** Upload local refs; an upload failure fails the job, as fatal when KIE says so (401/402/433). */
+export async function uploadRefs(uploads: { urlFor(path: string): Promise<string> }, paths: string[]): Promise<string[]> {
+  try {
+    return await Promise.all(paths.map((p) => uploads.urlFor(p)));
+  } catch (e) {
+    throw new JobFailed(String((e as Error).message), 0, e instanceof KieError && e.fatal);
+  }
+}

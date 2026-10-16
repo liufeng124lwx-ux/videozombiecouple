@@ -40,12 +40,15 @@ uv run eval/scripts/report.py eval/results/r1                         # 打开 r
 | R1 关键帧 | 选好的挂饰复制到 `assets/stories/christmas/shared/ornament.jpg`（或 `--ornament`），`node eval/src/run-xmas-keyframes.ts --run xr1 --yes`：描述 → 第 1 轮 8 张候选 → `xmas_face.py` 挑选 → tree、forgetWarm → embrace | ≈ $2.5 |
 | R2 成片 | `node eval/src/run-staging-films.ts --run r2 --scene snow-cabin --pairs p01,p03,p06 --yes`，再 `--scene city-flat --pairs <一组>` | ≈ $8 |
 | R3 成片 | `--run r3 --scene farmhouse --pairs <两组>`，再 `--scene city-flat --pairs <两组>` | ≈ $8 |
+| 成片费用 | `node eval/src/staging-costs.ts <run>`：用操作者自己的 wrangler 登录查测试站 D1 的 `stories.cost_usd`（story-runner 按 KIE `creditsConsumed` 累计，含描述）→ `costs.csv`，并写回各 `story.json` 的 `costUsd` | 免费 |
 | 打分 | `uv run eval/scripts/xmas_face.py eval/results/<run>` → `faces.csv`、`faces-summary.json`、`xmas-picks.json` | 免费 |
 
 - 素材脚本不会覆盖 `assets/stories/`：人挑选、复制，并在 `assets/stories/README.md` 记模型、日期、提示词（`prompts.json`）。
-- 成片脚本只认测试站，读 `~/.vzc-secrets/smoke-session-staging`（`--session-file` 可换）与 `smoke-staging`，不打印；先查测试账号积分 ≥ 单数 × 20；**一单接一单**，一单失败就停。中断后 `--resume` 会继续轮询已下的单，不重复下单；要重下某组，删掉它的目录。
+- 成片脚本只认测试站，读 `~/.vzc-secrets/smoke-session-staging`（`--session-file` 可换）与 `smoke-staging`，不打印；先查测试账号积分 ≥ 单数 × 20；**一单接一单**，一单失败就停。中断后 `--resume` 会继续轮询已下的单，不重复下单；要重下某组，删掉它的目录。测试站用它自己的 KIE 密钥，所以成片脚本不查 eval 密钥的余额；它把 storyId 写进 `story.json`，结束时打印 `staging-costs.ts` 命令和可直接粘贴的 `wrangler d1 execute vzc-staging --remote` 命令。
 - `eval/results/r1` 里是早先丧尸评测的产物；圣诞脚本只写自己的文件（`kf/<scene>/`、`kf/xmas-results.jsonl`、`xmas-picks.json`、`faces.csv`），不动它的 `picks.json`，但新开 `--run`（如 `xr1`）更清楚。
 
-**验收（每个场景，spec §5）**：选中帧性别画反 0 次（`faces-summary.json` 的 `gender_flips_selected`）；头巾/胡子/光头保留 100% 且不凭空添加（看 `describe.csv` 与关键帧）；年轻回忆（`memory`）人脸相似度中位数 ≥ 0.6；老年帧相似度只记录，用户盲看 5 组中 ≥ 4 组认得出；tree/embrace 只有一颗挂饰；镜头 1、2、6 不变形、镜头 5 树灯亮起、镜头 7 白闪自然；每单实测模型费 ≤ $2.3；p90 耗时 ≤ 10 分钟（`story.json` 的 `minutes`）；用户看 3 条完整样片通过。
+- `xmas_face.py` 两人帧取最大的两张脸、两种对应都试、取相似度之和更高的一种；少一个人记为 `missing`（`missing_face_selected`），不算性别画反。测试：`uv run --with insightface==0.7.3 --with onnxruntime==1.20.1 --with opencv-python-headless==4.10.0.84 --with "numpy<2.1" --with pytest pytest eval/scripts/test_xmas_face.py`。
+
+**验收（每个场景，spec §5）**：选中帧性别画反 0 次（`faces-summary.json` 的 `gender_flips_selected`），少人的帧另看（`missing_face_selected`）；头巾/胡子/光头保留 100% 且不凭空添加（看 `describe.csv` 与关键帧）；年轻回忆（`memory`）人脸相似度中位数 ≥ 0.6；老年帧相似度只记录，用户盲看 5 组中 ≥ 4 组认得出；tree/embrace 只有一颗挂饰；镜头 1、2、6 不变形、镜头 5 树灯亮起、镜头 7 白闪自然；每单实测模型费 ≤ $2.3（`costs.csv`）；p90 耗时 ≤ 10 分钟（`story.json` 的 `minutes`）；用户看 3 条完整样片通过。
 
 结论写进 `docs/model-eval.md` 的圣诞章节。

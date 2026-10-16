@@ -1,19 +1,18 @@
 // R0 (christmas content spec §5): each describe model reads each pair's two photos once.
 //   node eval/src/run-describe.ts --run r0 [--models claude-haiku-5-5,gemini-3-6-flash-openai] [--pairs p01,p02] [--resume] [--yes]
 // Without --yes: prints the plan and the estimate only. Outputs go to eval/results/<run>/:
-// describe.csv (pair, model, ok, survivor, infected, dropped) and the raw answers in raw/*.txt.
-// The request mirrors packages/providers KieDescriber (Node's strip-only TypeScript cannot load
-// its parameter properties); the answer is read with probe-describe's answerText and parsed by
-// the catalog's parseAppearance, exactly as the API does. The key is never printed.
+// describe.csv (pair, model, ok, survivor, infected, dropped, cost_usd) and the raw answers in raw/*.txt.
+// The call is packages/providers KieDescriber and the answer goes through the catalog's
+// parseAppearance, exactly as the API does. The key is never printed.
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { DESCRIBE_PROMPT, parseAppearance, ROUTES, type Appearance, type RouteSeed } from "../../packages/catalog/src/index.ts";
 import { loadKey } from "./env.ts";
-import { KieClient, KieError, UploadCache } from "./kie.ts";
-import { loadPairs, type Pair } from "./personas.ts";
-import { answerText } from "./probe-describe.ts";
+import { KieDescriber } from "../../packages/providers/src/describe.ts";
+import { KieClient, UploadCache } from "./kie.ts";
+import { humanPairs, loadPairs, type Pair } from "./personas.ts";
 import { DESCRIBE_USD, isQuotaError, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
 
 const EVAL = resolve(import.meta.dirname, "..");
@@ -43,27 +42,9 @@ export function droppedCount(raw: string, kept: Appearance): number {
   return Math.max(0, items(1) - keptCount(kept.survivor)) + Math.max(0, items(2) - keptCount(kept.infected));
 }
 
-/** One synchronous describe call; throws KieError with the body code on failure. Returns the raw text. */
-export async function describeOnce(key: string, route: RouteSeed, images: string[], fetchImpl: typeof fetch = fetch): Promise<string> {
-  const claude = route.model.startsWith("claude-");
-  const url = claude ? "https://api.kie.ai/claude/v1/messages" : `https://api.kie.ai/${route.model}/v1/chat/completions`;
-  const content = claude
-    ? [...images.map((u) => ({ type: "image", source: { type: "url", url: u } })), { type: "text", text: DESCRIBE_PROMPT }]
-    : [...images.map((u) => ({ type: "image_url", image_url: { url: u } })), { type: "text", text: DESCRIBE_PROMPT }];
-  const body = claude ? { model: route.model, max_tokens: 200, messages: [{ role: "user", content }] } : { messages: [{ role: "user", content }], stream: false };
-  const res = await fetchImpl(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(route.timeoutMs),
-  });
-  const parsed: unknown = await res.json().catch(() => null);
-  const text = answerText(res.status, parsed, claude ? "claude" : "openai");
-  if (text === null) {
-    const code = parsed && typeof parsed === "object" && typeof (parsed as { code?: unknown }).code === "number" ? (parsed as { code: number }).code : res.status;
-    throw new KieError(`describe ${route.model} failed: code=${code}`, code);
-  }
-  return text;
+/** One describe call through the production adapter; the cost is KIE's credits_consumed when reported. */
+export async function describeOnce(key: string, route: RouteSeed, images: string[]): Promise<{ text: string; costUsd: number | null }> {
+  return new KieDescriber(key).describe(route, DESCRIBE_PROMPT, images);
 }
 
 const csvCell = (v: unknown) => {
@@ -83,7 +64,7 @@ async function main() {
   });
   const runDir = join(EVAL, "results", args.run!);
   const wanted = args.pairs ? args.pairs.split(",") : R0_PAIRS;
-  const pairs: Pair[] = (await loadPairs(EVAL)).filter((p) => p.kind === "human" && wanted.includes(p.id));
+  const pairs: Pair[] = humanPairs(await loadPairs(EVAL), wanted);
   const routes = describeRoutes(args.models?.split(","));
   const calls = pairs.length * routes.length;
   console.log(`R0 describe: ${pairs.length} pairs (${pairs.map((p) => p.id).join(",")}) × ${routes.length} models (${routes.map((r) => r.model).join(", ")}) = ${calls} calls`);
@@ -97,28 +78,29 @@ async function main() {
   await mkdir(join(runDir, "raw"), { recursive: true });
   const m = await meter(key);
   const uploads = new UploadCache(new KieClient(key), join(runDir, "uploads-cache.json"));
-  const rows: string[] = ["pair,model,ok,survivor,infected,dropped"];
+  const rows: string[] = ["pair,model,ok,survivor,infected,dropped,cost_usd"];
   let stopped = false;
   try {
     for (const pair of pairs) {
       for (const route of routes) {
         const rawFile = join(runDir, "raw", `${pair.id}-${route.model}.txt`);
         let raw: string | null = existsSync(rawFile) ? await readFile(rawFile, "utf8") : null;
+        let cost: number | null = null;
         if (raw === null) {
           try {
             const images = [await uploads.urlFor(join(EVAL, "data", pair.survivor)), await uploads.urlFor(join(EVAL, "data", pair.infected))];
-            raw = await describeOnce(key, route, images);
+            ({ text: raw, costUsd: cost } = await describeOnce(key, route, images));
             await writeFile(rawFile, raw);
           } catch (e) {
             if (isQuotaError(e)) throw e;
             console.log(`✗ ${pair.id} ${route.model}: ${(e as Error).message}`);
-            rows.push([pair.id, route.model, "false", "", "", ""].map(csvCell).join(","));
+            rows.push([pair.id, route.model, "false", "", "", "", ""].map(csvCell).join(","));
             continue;
           }
         }
         const look = parseAppearance(raw);
         const ok = !!(look.survivor || look.infected);
-        rows.push([pair.id, route.model, ok, look.survivor, look.infected, droppedCount(raw, look)].map(csvCell).join(","));
+        rows.push([pair.id, route.model, ok, look.survivor, look.infected, droppedCount(raw, look), cost ?? ""].map(csvCell).join(","));
         console.log(`${ok ? "✓" : "✗"} ${pair.id} ${route.model}`);
       }
     }

@@ -13,7 +13,7 @@ import { parseArgs } from "node:util";
 import { CHRISTMAS } from "../../packages/catalog/src/index.ts";
 import { IMAGE_CANDIDATES, VIDEO_CANDIDATES } from "./candidates.ts";
 import { loadKey } from "./env.ts";
-import { runKieTask } from "./kie-job.ts";
+import { runKieTask, uploadRefs } from "./kie-job.ts";
 import { KieClient, UploadCache } from "./kie.ts";
 import { runJobs, type Job } from "./runner.ts";
 import { IMAGE_USD, isQuotaError, KLING_USD_PER_SEC, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
@@ -112,7 +112,7 @@ async function main() {
         estUsd: j.estUsd,
         meta: { stage: j.stage, asset: j.key },
         run: async () => {
-          const refs = await Promise.all(j.refs.map((r) => uploads.urlFor(join(runDir, picks[r]!))));
+          const refs = await uploadRefs(uploads, j.refs.map((r) => join(runDir, picks[r]!)));
           if (j.kind === "clip")
             return runKieTask({ kie, model: kling.model, input: kling.input({ prompt: j.prompt, first: refs[0]!, sec: CLIP_SEC }), estUsd: j.estUsd, timeoutMs: 15 * 60_000, save: save(j.out) });
           if (j.kind === "i2i") return runKieTask({ kie, model: i2i.model, input: i2i.input({ prompt: j.prompt, refs }), estUsd: j.estUsd, timeoutMs: 5 * 60_000, save: save(j.out) });

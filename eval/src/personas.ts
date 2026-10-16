@@ -29,3 +29,13 @@ export function portraitPrompt(desc: string, isAnimal: boolean): string {
 export async function loadPairs(evalDir: string): Promise<Pair[]> {
   return JSON.parse(await readFile(join(evalDir, "data", "pairs.json"), "utf8"));
 }
+
+/** The human pairs among `ids`, in pairs.json order; ids that are unknown or not human are reported. */
+export function humanPairs(all: Pair[], ids: string[], warn: (s: string) => void = console.warn): Pair[] {
+  const problems = ids.flatMap((id) => {
+    const p = all.find((x) => x.id === id);
+    return !p ? [`${id} (unknown)`] : p.kind !== "human" ? [`${id} (not human)`] : [];
+  });
+  if (problems.length) warn(`warning: skipping requested pairs ${problems.join(", ")}`);
+  return all.filter((p) => p.kind === "human" && ids.includes(p.id));
+}

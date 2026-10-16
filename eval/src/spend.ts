@@ -1,6 +1,6 @@
 // Shared money helpers for the Christmas eval scripts (christmas content spec §5).
 // Estimates come before any call; real spend is the KIE credit balance before minus after.
-import { KieError, USD_PER_CREDIT } from "./kie.ts";
+import { USD_PER_CREDIT } from "./kie.ts";
 
 /** GPT Image 2 image-to-image / text-to-image, 1K (docs/model-eval.md). */
 export const IMAGE_USD = 0.015;
@@ -20,10 +20,13 @@ export const estimate = { keyframes: estimateKeyframes, films: estimateFilms, im
 
 export const QUOTA_MESSAGE = "额度已到，等一小时后用 `--resume` 继续";
 
-/** KIE 433: the key's hourly quota. Also matches a runner JobFailed that wrapped it ("code=433"). */
+/**
+ * KIE 433: the key's hourly quota. Any error carrying code 433 (KieError, providers' ProviderError),
+ * or a message that wrapped it ("code=433", "describe failed (433)").
+ */
 export function isQuotaError(e: unknown): boolean {
-  if (e instanceof KieError) return e.code === 433;
-  return /\bcode=433\b/.test(String((e as Error)?.message ?? e));
+  if (e && typeof e === "object" && "code" in e && (e as { code: unknown }).code === 433) return true;
+  return /\bcode=433\b|\(433\)/.test(String((e as Error)?.message ?? e));
 }
 
 export function creditFrom(body: unknown): number | null {

@@ -7,6 +7,8 @@
 // renders, the chosen keyframes ("frames") are saved; then the film and its poster.
 // Each film holds CHRISTMAS.credits of the test account. Never two at once.
 // The session and the smoke key are read from ~/.vzc-secrets/ and never printed or written.
+// Film cost is not measured here (staging bills its own KIE key): story ids go to story.json,
+// and `node eval/src/staging-costs.ts <run>` reads stories.cost_usd from staging D1.
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -14,12 +16,19 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { CHRISTMAS } from "../../packages/catalog/src/index.ts";
 import { UPLOAD_CONSENT_VERSION } from "../../packages/contracts/src/stories.ts";
-import { loadKey } from "./env.ts";
-import { loadPairs, type Pair } from "./personas.ts";
-import { estimateFilms, FILM_USD, measured, credit, QUOTA_MESSAGE, usd } from "./spend.ts";
+import { humanPairs, loadPairs, type Pair } from "./personas.ts";
+import { estimateFilms, FILM_USD, QUOTA_MESSAGE, usd } from "./spend.ts";
+import { costsCommand } from "./staging-costs.ts";
 
 const EVAL = resolve(import.meta.dirname, "..");
 const SECRETS = join(homedir(), ".vzc-secrets");
+export const STAGING_API = "https://api-staging.videozombiecouple.com";
+
+/** The session and smoke key go to this one origin only; anything else is refused before any read. */
+export function checkApi(api: string): string {
+  if (api !== STAGING_API) throw new Error(`staging only: --api must be exactly ${STAGING_API}`);
+  return api;
+}
 
 /** The keyframe a signed frame link points at: …/kf-<frame>[-<n>].jpg; null when it cannot tell. */
 export function frameIdOf(url: string): string | null {
@@ -42,7 +51,7 @@ async function main() {
       run: { type: "string", default: "r2" },
       scene: { type: "string", default: "snow-cabin" },
       pairs: { type: "string", default: "p01,p03,p06" },
-      api: { type: "string", default: "https://api-staging.videozombiecouple.com" },
+      api: { type: "string", default: STAGING_API },
       site: { type: "string", default: "https://staging.videozombiecouple.com" },
       "session-file": { type: "string", default: "smoke-session-staging" },
       names: { type: "string", default: "Mara & Eli" },
@@ -50,12 +59,11 @@ async function main() {
       yes: { type: "boolean", default: false },
     },
   });
-  const api = args.api!;
-  if (!api.includes("staging")) throw new Error("staging only: Christmas scenes are orderable only where PREVIEW_SCENES applies");
+  const api = checkApi(args.api!);
   const scene = args.scene!;
   if (!CHRISTMAS.scenes[scene]) throw new Error(`unknown Christmas scene ${scene}`);
   const wanted = args.pairs!.split(",");
-  const pairs: Pair[] = (await loadPairs(EVAL)).filter((p) => p.kind === "human" && wanted.includes(p.id));
+  const pairs: Pair[] = humanPairs(await loadPairs(EVAL), wanted);
   const runDir = join(EVAL, "results", args.run!, "films", scene);
   const done = (p: Pair) => existsSync(join(runDir, p.id, "film.mp4"));
   const todo = pairs.filter((p) => !(args.resume && done(p)));
@@ -91,9 +99,6 @@ async function main() {
   if (typeof me.credits !== "number") throw new Error("not signed in on staging (session expired?): nothing was ordered");
   if (me.credits < need) throw new Error(`test account holds ${me.credits} credits, ${need} needed: nothing was ordered`);
 
-  const kieKey = await loadKey();
-  const runBefore = await credit(kieKey);
-  console.log(runBefore === null ? "KIE credit balance unavailable at start" : `KIE credits at start: ${runBefore}`);
   const save = async (url: string, file: string) => {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`download ${file.split("/").pop()} failed: HTTP ${res.status}`);
@@ -116,7 +121,6 @@ async function main() {
       const logFile = join(dir, "story.json");
       const log: Record<string, unknown> = existsSync(logFile) ? JSON.parse(await readFile(logFile, "utf8")) : { pair: pair.id, scene };
       const writeLog = () => writeFile(logFile, JSON.stringify(log, null, 2));
-      const before = await credit(kieKey);
       const t0 = Date.now();
       if (!log.storyId) {
         // A story already ordered (an interrupted run) is polled again, never ordered twice.
@@ -139,7 +143,9 @@ async function main() {
       const end = Date.now() + 45 * 60_000;
       let view: View | null = null;
       while (Date.now() < end) {
-        view = (await (await call(`/v1/stories/${id}`)).json()) as View;
+        const res = await call(`/v1/stories/${id}`);
+        if (!res.ok) throw new Error(`${pair.id}: GET /v1/stories/${id} answered HTTP ${res.status} (session expired, or the story is gone); stopping`);
+        view = (await res.json()) as View;
         const line = `${view.status} ${view.progress.done}/${view.progress.total}`;
         if (line !== last) console.log(`${pair.id}:   ${line}`);
         last = line;
@@ -167,15 +173,24 @@ async function main() {
       }
       await save(view.video.url, join(dir, "film.mp4"));
       await save(view.video.poster, join(dir, "poster.jpg"));
-      // Only meaningful when staging bills the same KIE account as eval.env.
-      log.kieUsd = measured(before, await credit(kieKey));
       log.doneAt = new Date().toISOString();
       await writeLog();
-      console.log(`${pair.id}: done in ${log.minutes} min${log.kieUsd != null ? `, KIE ≈ $${(log.kieUsd as number).toFixed(2)}` : ""}`);
+      console.log(`${pair.id}: done in ${log.minutes} min`);
     }
   } finally {
-    const spent = measured(runBefore, await credit(kieKey));
-    console.log(spent === null ? "KIE credit balance unavailable; spend not measured" : `KIE spent $${spent.toFixed(4)} during this run (if staging uses this KIE account)`);
+    const ids: string[] = [];
+    for (const p of pairs) {
+      const f = join(runDir, p.id, "story.json");
+      if (existsSync(f)) {
+        const id = (JSON.parse(await readFile(f, "utf8")) as { storyId?: string }).storyId;
+        if (id) ids.push(id);
+      }
+    }
+    if (ids.length) {
+      console.log(`story ids: ${ids.join(", ")}`);
+      console.log(`film cost (stories.cost_usd in staging D1): node eval/src/staging-costs.ts ${args.run}`);
+      console.log(`  or by hand: ${costsCommand(ids)}`);
+    }
   }
 }
 

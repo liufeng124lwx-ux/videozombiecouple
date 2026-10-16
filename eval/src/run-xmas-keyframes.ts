@@ -12,9 +12,9 @@ import { parseArgs } from "node:util";
 import { CHRISTMAS, EMPTY_APPEARANCE, parseAppearance, type Appearance, type FrameRef } from "../../packages/catalog/src/index.ts";
 import { IMAGE_CANDIDATES } from "./candidates.ts";
 import { loadKey } from "./env.ts";
-import { runKieTask } from "./kie-job.ts";
+import { runKieTask, uploadRefs } from "./kie-job.ts";
 import { KieClient, UploadCache } from "./kie.ts";
-import { loadPairs } from "./personas.ts";
+import { humanPairs, loadPairs } from "./personas.ts";
 import { describeOnce, describeRoutes } from "./run-describe.ts";
 import { runJobs, type Job } from "./runner.ts";
 import { DESCRIBE_USD, estimateFilms, estimateKeyframes, IMAGE_USD, isQuotaError, meter, QUOTA_MESSAGE, usd } from "./spend.ts";
@@ -96,7 +96,7 @@ async function main() {
   const unknownScene = scenes.filter((s) => !CHRISTMAS.scenes[s]);
   if (unknownScene.length) throw new Error(`unknown scene(s): ${unknownScene.join(", ")}`);
   const wanted = args.pairs ? args.pairs.split(",") : R1_PAIRS;
-  const pairs = (await loadPairs(EVAL)).filter((p) => p.kind === "human" && wanted.includes(p.id));
+  const pairs = humanPairs(await loadPairs(EVAL), wanted);
   const model = IMAGE_CANDIDATES.find((c) => c.key === args.model);
   if (!model) throw new Error(`unknown --model ${args.model}`);
   const jobs = planXmasJobs({ pairs: pairs.map((p) => p.id), scenes, runDir });
@@ -130,21 +130,31 @@ async function main() {
     process.exitCode = 2;
   };
   try {
-    // Describe once per pair: the primary route, then the fallback, as the API does.
+    // Describe once per pair: the primary route, then the fallback, as the API does. Every call
+    // counts against the budget (its reported cost, else the route's budgeted cost).
+    let spent = 0;
     const looks = new Map<string, Appearance>();
     for (const pair of pairs) {
       const file = join(runDir, "appearance", `${pair.id}.txt`);
       if (!existsSync(file)) {
-        let raw = "";
+        let raw: string | null = null;
         for (const route of describeRoutes()) {
           try {
             const images = [await uploads.urlFor(join(EVAL, "data", pair.survivor)), await uploads.urlFor(join(EVAL, "data", pair.infected))];
-            raw = await describeOnce(key, route, images);
+            const answer = await describeOnce(key, route, images);
+            spent += answer.costUsd ?? route.costUsd;
+            raw = answer.text;
             break;
           } catch (e) {
             if (isQuotaError(e)) return quota();
+            spent += route.costUsd; // a failed call may still be billed
             console.log(`describe ${pair.id} ${route.model}: ${(e as Error).message}`);
           }
+        }
+        if (raw === null) {
+          // No file: --resume asks again. No keyframes for this pair until it has its lines.
+          console.error(`WARNING: every describe route failed for ${pair.id}; its keyframes are skipped this run — rerun with --resume`);
+          continue;
         }
         await mkdir(dirname(file), { recursive: true });
         await writeFile(file, raw);
@@ -163,6 +173,7 @@ async function main() {
       const todo: Job[] = [];
       for (const j of jobs.filter((x) => x.round === i + 1)) {
         if (existsSync(j.out)) continue; // --resume: the image is already there
+        if (!looks.has(j.pair)) continue; // describe failed: wait for --resume
         const refs = j.refs.map((r) => local(j, r));
         if (refs.some((r) => r === null)) {
           console.warn(`skip ${j.key}: a referenced frame has no pick yet`);
@@ -178,7 +189,7 @@ async function main() {
             runKieTask({
               kie,
               model: model.model,
-              input: model.input({ prompt, refs: await Promise.all((refs as string[]).map((p) => uploads.urlFor(p))) }),
+              input: model.input({ prompt, refs: await uploadRefs(uploads, refs as string[]) }),
               estUsd: IMAGE_USD,
               timeoutMs: 5 * 60_000,
               save: async (bytes) => {
@@ -190,7 +201,9 @@ async function main() {
         });
       }
       console.log(`round ${i + 1}: ${todo.length} images to make`);
-      const s = await runJobs({ resultsFile: join(runDir, "kf", "xmas-results.jsonl"), jobs: todo, budgetUsd: Number(args.budget), concurrency: Number(args.concurrency), execute: true });
+      const remaining = Number(args.budget) - spent;
+      const s = await runJobs({ resultsFile: join(runDir, "kf", "xmas-results.jsonl"), jobs: todo, budgetUsd: remaining, concurrency: Number(args.concurrency), execute: true });
+      spent += s.spentUsd;
       if (s.aborted) {
         if (isQuotaError(s.aborted)) return quota();
         throw new Error(`stopped: ${s.aborted}`);

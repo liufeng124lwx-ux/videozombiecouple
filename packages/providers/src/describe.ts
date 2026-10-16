@@ -22,10 +22,15 @@ const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null;
  * Errors carry only the code: never the answer, the prompt or the image URLs.
  */
 export class KieDescriber implements DescribeAdapter {
-  constructor(
-    private readonly apiKey: string,
-    private readonly fetcher: typeof fetch = fetch,
-  ) {}
+  // Plain fields, not parameter properties: Node's strip-only TypeScript loads this file as is
+  // (the eval scripts import it). The default calls fetch unbound to avoid "Illegal invocation".
+  private readonly apiKey: string;
+  private readonly fetcher: typeof fetch;
+
+  constructor(apiKey: string, fetcher: typeof fetch = (input, init) => fetch(input, init)) {
+    this.apiKey = apiKey;
+    this.fetcher = fetcher;
+  }
 
   async describe(route: RouteSeed, prompt: string, images: string[]) {
     const claude = route.model.startsWith("claude-");
