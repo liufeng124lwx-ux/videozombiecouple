@@ -26,7 +26,7 @@ const { Content } = await render(entry);
   <div class="included">
     <h2 class="scene">{t("pricing.included", {}, locale)}</h2>
     <ul>
-      <li>{t("pricing.inc.film", { seconds: fact("video.seconds"), w: fact("video.width"), h: fact("video.height") }, locale)}</li>
+      <li>{t("pricing.inc.film", { zombie: fact("story.zombie.seconds"), christmas: fact("story.christmas.seconds"), w: fact("video.width"), h: fact("video.height") }, locale)}</li>
       <li>{t("pricing.inc.preview", {}, locale)}</li>
       <li>{t("pricing.inc.title", {}, locale)}</li>
       <li>{t("pricing.inc.refund", {}, locale)}</li>

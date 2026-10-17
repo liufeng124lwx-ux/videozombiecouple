@@ -1,4 +1,4 @@
-import { fact, type StoryId, storyOf } from "@vzc/catalog";
+import { fact, pagePath, type StoryId, storyOf, storyPage } from "@vzc/catalog";
 import { type SharedFilm, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useReducer, useRef, useState } from "preact/hooks";
@@ -59,6 +59,12 @@ const DOWNLOAD_NAME: Record<StoryId, string> = {
   christmas: "our-christmas-film.mp4",
 };
 
+/** "Make your own" on a shared film: that film's story page, or the home page. */
+function makeYourOwn(shared: SharedFilm | "gone"): string {
+  const page = shared === "gone" ? undefined : storyPage(shared.story);
+  return page ? pagePath(page) : "/";
+}
+
 const deleteDate = (ms: number) =>
   new Date(ms).toLocaleDateString("en-US", { month: "long", day: "numeric" });
 
@@ -78,7 +84,11 @@ export default function StoryTool({
   mode = "home",
   pollMs = POLL_MS,
 }: StoryToolProps) {
-  const [s, dispatch] = useReducer(reduce, initialState(preset));
+  // A story page makes its own story (no preset: the zombie film); /story?id= follows the story.
+  const [s, dispatch] = useReducer(
+    reduce,
+    initialState(preset, mode === "home" ? (preset ?? {}) : null),
+  );
   const [credits, setCredits] = useState<number | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [verified, setVerified] = useState(true);
@@ -352,7 +362,7 @@ export default function StoryTool({
             </div>
           </div>
         )}
-        <a class="btn btn-primary btn-lg btn-block" href="/">
+        <a class="btn btn-primary btn-lg btn-block" href={makeYourOwn(shared)}>
           {t("story.shared.cta")}
         </a>
       </div>
@@ -475,7 +485,10 @@ export default function StoryTool({
             </button>
             <p class="fine">
               {christmas
-                ? t("story.christmas.cta.note", { price: fact("story.christmas.usd") })
+                ? t("story.christmas.cta.note", {
+                    price: fact("story.christmas.usd"),
+                    remakes: fact("remakes.perFilm"),
+                  })
                 : t("story.cta.note", {
                     price: fact("price.fromPerVideo"),
                     remakes: fact("remakes.perFilm"),

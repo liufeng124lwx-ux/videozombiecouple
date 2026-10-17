@@ -296,7 +296,8 @@ export const en = {
   "story.christmas.ready.oneLeft": "You have enough for one Christmas film",
   "story.christmas.done.caption": "Our {years}th Christmas.",
   "story.christmas.pack": "{n} Christmas film",
-  "story.christmas.cta.note": "A Christmas film is {price}. We check your photos before you pay.",
+  "story.christmas.cta.note":
+    "A Christmas film is {price}. We check your photos first, and if the faces don't come out right you can remake it once for free.",
   "cookie.label": "Cookie choices",
   // Keep it short: a longer text than the hero lede becomes the LCP element (scripts/lighthouse.ts).
   "cookie.text": "Analytics cookies help us improve. Essential ones stay on.",
@@ -305,7 +306,7 @@ export const en = {
   "cookie.accept": "Accept",
   "pricing.included": "Every video includes",
   "pricing.inc.film":
-    "A {seconds}-second vertical film ({w}×{h}) with music, ready for TikTok, Reels and Shorts",
+    "A vertical film ({w}×{h}) with music, ready for TikTok, Reels and Shorts: {zombie}-second zombie love story, {christmas}-second Christmas film",
   "pricing.inc.preview": "One free remake if the faces don't come out right",
   "pricing.inc.title": "Your names and date on the end title, with one free change",
   "pricing.inc.refund": "Your video back automatically if it fails",

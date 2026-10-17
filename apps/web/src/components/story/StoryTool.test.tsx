@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import { fact } from "@vzc/catalog";
+import { fact, pagePath, type StoryId, storyPage } from "@vzc/catalog";
 import { type StoryView, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api.ts";
@@ -43,6 +43,12 @@ vi.mock("../pricing/PackRows.tsx", () => ({
 }));
 
 import StoryTool from "./StoryTool.tsx";
+
+const storyPath = (story: StoryId) => {
+  const page = storyPage(story);
+  if (!page) throw new Error(`no page for ${story}`);
+  return pagePath(page);
+};
 
 const view = (status: StoryView["status"], over: Partial<StoryView> = {}): StoryView => ({
   id: "S1",
@@ -234,7 +240,9 @@ describe("StoryTool", () => {
     render(<StoryTool posters={{}} mode="story" pollMs={10} />);
     await screen.findByText("Ana & Leo");
     expect(document.querySelector("video")?.getAttribute("src")).toBe("https://f/v.mp4");
-    expect(screen.getByRole("link", { name: "Make your own" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Make your own" }).getAttribute("href")).toBe(
+      storyPath("zombie"),
+    );
     expect(client.getStory).not.toHaveBeenCalled();
   });
 
@@ -251,6 +259,11 @@ describe("StoryTool", () => {
     await screen.findByText("50 Christmases");
     expect(container.textContent).toContain(`${fact("story.christmas.seconds")}-second`);
     expect(container.textContent?.toLowerCase()).not.toContain("zombie");
+    // "Make your own" goes to the Christmas film's page, not the home page.
+    expect(screen.getByRole("link", { name: "Make your own" }).getAttribute("href")).toBe(
+      storyPath("christmas"),
+    );
+    expect(storyPath("christmas")).toBe("/ai-christmas-video");
   });
 
   it("shares the film's public link", async () => {
@@ -390,7 +403,9 @@ describe("StoryTool", () => {
       const note = container.querySelector(".tool-bar .fine")?.textContent ?? "";
       expect(note).toContain(fact("story.christmas.usd"));
       expect(note).not.toContain(fact("price.fromPerVideo"));
-      expect(note).not.toMatch(/free/i);
+      // Christmas films get the same free remake as the ready and done screens promise.
+      expect(fact("remakes.perFilm")).toBe("1");
+      expect(note).toMatch(/remake it once for free/);
     });
 
     it("scene picker lists only the story's live scenes (showcase spec §5.1)", () => {
@@ -415,7 +430,7 @@ describe("StoryTool", () => {
       me.credits = 10;
       client.getStory.mockResolvedValue(xmas("preview_ready"));
       localStorage.setItem("vzc-story", "S1");
-      render(<StoryTool posters={{}} pollMs={10} />);
+      render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
       const packs = await screen.findByTestId("packs");
       expect(packs.getAttribute("data-story")).toBe("christmas");
       expect(screen.queryByRole("button", { name: "Make the film" })).toBeNull();
@@ -426,7 +441,7 @@ describe("StoryTool", () => {
       me.credits = 20;
       client.getStory.mockResolvedValue(xmas("preview_ready"));
       localStorage.setItem("vzc-story", "S1");
-      render(<StoryTool posters={{}} pollMs={10} />);
+      render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
       fireEvent.click(await screen.findByRole("button", { name: "Make the film" }));
       await waitFor(() => expect(client.render).toHaveBeenCalled());
     });
@@ -439,7 +454,9 @@ describe("StoryTool", () => {
           stages: [...ids, "compose"].map((id) => ({ id, state: "waiting" as const })),
         }),
       );
-      const { container } = render(<StoryTool posters={{}} pollMs={10} />);
+      const { container } = render(
+        <StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />,
+      );
       await screen.findByText("Rolling camera");
       const names = [...container.querySelectorAll(".shot-list li .name")].map(
         (n) => n.textContent,
@@ -452,7 +469,9 @@ describe("StoryTool", () => {
     it("film length comes from the story", async () => {
       localStorage.setItem("vzc-story", "S1");
       client.getStory.mockResolvedValue(xmas("rendering"));
-      const { container } = render(<StoryTool posters={{}} pollMs={10} />);
+      const { container } = render(
+        <StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />,
+      );
       await screen.findByText("Rolling camera");
       const secs = fact("story.christmas.seconds");
       expect(container.querySelector(".monitor .tc")?.textContent).toContain(`/ 00:${secs}`);
@@ -461,7 +480,7 @@ describe("StoryTool", () => {
     it("the ready screen tells the story's length", async () => {
       client.getStory.mockResolvedValue(xmas("preview_ready"));
       localStorage.setItem("vzc-story", "S1");
-      render(<StoryTool posters={{}} pollMs={10} />);
+      render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
       await screen.findByText(new RegExp(`${fact("story.christmas.seconds")}-second film`));
     });
 
@@ -470,13 +489,70 @@ describe("StoryTool", () => {
       client.getStory.mockResolvedValue(
         xmas("done", { video: { url: "v", poster: "p", expiresAt: 0 } }),
       );
-      render(<StoryTool posters={{}} pollMs={10} />);
+      render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
       const link = await screen.findByRole("link", { name: "Download the video" });
       expect(link.getAttribute("download")).toBe("our-christmas-film.mp4");
       const writeText = vi.fn(async () => undefined);
       Object.assign(navigator, { clipboard: { writeText }, share: undefined });
       fireEvent.click(screen.getByRole("button", { name: "Copy caption" }));
       expect(writeText).toHaveBeenCalledWith(`Our ${fact("story.christmas.years")}th Christmas.`);
+    });
+  });
+
+  describe("a story page resumes only its own story", () => {
+    const xmas = (status: StoryView["status"], over: Partial<StoryView> = {}) =>
+      view(status, { story: "christmas", scene: "snow-cabin", ...over });
+    const sceneNames = () =>
+      screen
+        .getAllByRole("radio")
+        .filter((r) => r.classList.contains("scene-tile"))
+        .map((r) => r.querySelector(".scene-name")?.textContent);
+
+    it("Christmas page with a remembered zombie story shows the Christmas setup", async () => {
+      localStorage.setItem("vzc-story", "S1");
+      client.getStory.mockResolvedValue(
+        view("done", { video: { url: "v", poster: "p", expiresAt: 0 } }),
+      );
+      render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
+      await waitFor(() => expect(client.getStory).toHaveBeenCalledWith("S1"));
+      await waitFor(() => expect(sceneNames()).toEqual(["Snowy cabin", "Old city flat"]));
+      expect(screen.queryByRole("link", { name: "Download the video" })).toBeNull();
+      expect(screen.getByText("Role: You")).toBeTruthy();
+      // Left remembered for its own page.
+      expect(localStorage.getItem("vzc-story")).toBe("S1");
+    });
+
+    it("zombie page with a remembered christmas story shows the zombie setup", async () => {
+      me.credits = 10;
+      localStorage.setItem("vzc-story", "S1");
+      client.getStory.mockResolvedValue(xmas("preview_ready"));
+      render(<StoryTool posters={{}} pollMs={10} />);
+      await waitFor(() => expect(client.getStory).toHaveBeenCalledWith("S1"));
+      await waitFor(() => expect(sceneNames()).toContain("Cabin → Wheat field"));
+      expect(screen.queryByTestId("packs")).toBeNull();
+      expect(screen.queryByText("Snowy cabin")).toBeNull();
+      expect(localStorage.getItem("vzc-story")).toBe("S1");
+    });
+
+    it("reset returns to the page preset", async () => {
+      localStorage.setItem("vzc-story", "S1");
+      client.getStory.mockResolvedValue(
+        xmas("done", { scene: "city-flat", video: { url: "v", poster: "p", expiresAt: 0 } }),
+      );
+      render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
+      fireEvent.click(await screen.findByRole("button", { name: "Make another" }));
+      await waitFor(() => expect(sceneNames()).toEqual(["Snowy cabin", "Old city flat"]));
+      expect(
+        screen.getByRole("radio", { name: /Old city flat/ }).getAttribute("aria-checked"),
+      ).toBe("true");
+    });
+
+    it("/story?id= still opens a christmas story", async () => {
+      history.replaceState(null, "", "/story?id=S1");
+      client.getStory.mockResolvedValue(xmas("preview_ready"));
+      render(<StoryTool posters={{}} mode="story" pollMs={10} />);
+      const packs = await screen.findByTestId("packs");
+      expect(packs.getAttribute("data-story")).toBe("christmas");
     });
   });
 });

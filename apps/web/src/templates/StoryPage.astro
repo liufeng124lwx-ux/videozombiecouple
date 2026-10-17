@@ -5,16 +5,18 @@ import type { LocaleId } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import StoryTool from "../components/story/StoryTool.tsx";
 import { sampleImage } from "../lib/sample-images.ts";
-import { filmLoop, filmPoster, ZOMBIE_FILMS } from "../lib/samples.ts";
+import { filmLoop, filmPoster } from "../lib/samples.ts";
+import { pickerFilms } from "../lib/story-landing.ts";
 
 interface Props {
   locale: LocaleId;
   h1: string;
 }
 const { locale, h1 } = Astro.props;
+// It can open any story (and start it over): posters for every story's live scenes.
 const posters = Object.fromEntries(
   await Promise.all(
-    ZOMBIE_FILMS.filter((f) => f.kind === "human").map(async (f) => [
+    pickerFilms().map(async (f) => [
       f.scene,
       { still: (await sampleImage(filmPoster(f.id), "120px", [240])).src, clip: filmLoop(f.id) },
     ]),

@@ -67,6 +67,16 @@ export function toolFilms(story: StoryId): SampleFilm[] {
   return storyFilms(story).filter((f) => f.kind === "human");
 }
 
+/**
+ * The scene picker's films on the /story?id= page, which can open any story: one per live scene of
+ * every story.
+ */
+export function pickerFilms(): SampleFilm[] {
+  return SAMPLE_FILMS.filter(
+    (f) => f.kind === "human" && STORIES[f.story].scenes[f.scene]?.live === true,
+  );
+}
+
 export type StorySample = { film: SampleFilm; scene: string; alt: string };
 
 /** One sample per scene, labelled as an AI example of its eval persona (spec §6). */

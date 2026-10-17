@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fact } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import { describe, expect, it } from "vitest";
 import { packCardsFor } from "../lib/pricing-view.ts";
@@ -29,5 +30,20 @@ describe("PricingPage", () => {
     expect(markup.replace(/fact\("[^"]+"\)/g, "")).not.toMatch(
       /\$\d|\b\d+ (videos|days|seconds)\b/,
     );
+  });
+  it("tells each film's own length: it sells the zombie film and the Christmas film", () => {
+    const source = readFileSync(join(import.meta.dirname, "PricingPage.astro"), "utf8");
+    expect(source).toMatch(/fact\("story\.zombie\.seconds"\)/);
+    expect(source).toMatch(/fact\("story\.christmas\.seconds"\)/);
+    expect(source).not.toMatch(/fact\("video\.seconds"\)/);
+    const line = t("pricing.inc.film", {
+      zombie: fact("story.zombie.seconds"),
+      christmas: fact("story.christmas.seconds"),
+      w: fact("video.width"),
+      h: fact("video.height"),
+    });
+    expect(line).toContain(`${fact("story.zombie.seconds")}-second`);
+    expect(line).toContain(`${fact("story.christmas.seconds")}-second`);
+    expect(line).not.toMatch(/\{/);
   });
 });

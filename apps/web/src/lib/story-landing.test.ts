@@ -5,6 +5,7 @@ import {
   clock,
   heroFilm,
   ogFrames,
+  pickerFilms,
   storyBeats,
   storyFilms,
   storySamples,
@@ -116,5 +117,21 @@ describe("share image frames", () => {
       },
       labels: { before: "christmas.og.before", after: "christmas.og.after" },
     });
+  });
+});
+
+describe("scene posters on the /story?id= page (it can open any story)", () => {
+  it("has a film for every live scene of every story, and nothing else", () => {
+    const live = Object.values(STORIES).flatMap((story) =>
+      Object.values(story.scenes)
+        .filter((scene) => scene.live)
+        .map((scene) => scene.id),
+    );
+    const films = pickerFilms();
+    expect(films.map((f) => f.scene).sort()).toEqual([...live].sort());
+    expect(films.every((f) => f.kind === "human")).toBe(true);
+    expect(films.map((f) => f.id)).toEqual(
+      expect.arrayContaining(["xmas-snow-cabin", "xmas-city-flat"]),
+    );
   });
 });

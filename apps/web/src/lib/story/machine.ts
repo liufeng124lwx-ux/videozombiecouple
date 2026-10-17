@@ -18,6 +18,12 @@ export type Phase =
   | "failed";
 
 export type ToolState = {
+  /**
+   * The page's own story and its opening kind and scene. A story page resumes only a story of its
+   * own, and "start over" comes back here. null: the /story?id= page, which follows the story it
+   * opened.
+   */
+  page: PagePreset | null;
   /** Which story the film tells (the record's own id is `storyId`). */
   tale: StoryId;
   kind: Kind;
@@ -55,6 +61,7 @@ export type ToolEvent =
   | { type: "reset" };
 
 export type Preset = { story?: StoryId; kind?: Kind; scene?: string };
+export type PagePreset = Preset & { story: StoryId };
 
 /** The story's first live scene (zombie: cabin-wheat). */
 function firstScene(story: StoryId): string {
@@ -62,11 +69,13 @@ function firstScene(story: StoryId): string {
   return (scenes.find((s) => s.live) ?? scenes[0])?.id ?? "";
 }
 
-export function initialState(over: Preset = {}): ToolState {
+/** `page`: the page's preset (default: `over`); null on the /story?id= page. */
+export function initialState(over: Preset = {}, page: Preset | null = over): ToolState {
   const tale = over.story ?? "zombie";
   const { scenes, kinds } = storyOf({ story: tale });
   const kind = over.kind && kinds.includes(over.kind) ? over.kind : (kinds[0] ?? "human");
   return {
+    page: page ? { ...page, story: page.story ?? "zombie" } : null,
     tale,
     kind,
     photos: { survivor: null, infected: null },
@@ -153,6 +162,9 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
       // While the person picks a pack, polls that still say "preview_ready" keep the picker open.
       const phase = s.phase === "paying" && next === "preview_ready" ? "paying" : next;
       const tale = e.view.story ?? "zombie";
+      // Another story's record (one this browser remembers from another page): leave it be and
+      // show this page's own setup.
+      if (s.page && tale !== s.page.story) return initialState(s.page, s.page);
       const scenes = storyOf({ story: tale }).scenes;
       return {
         ...s,
@@ -173,7 +185,12 @@ export function reduce(s: ToolState, e: ToolEvent): ToolState {
     case "error":
       // Before a story exists, go back to the setup with the photos kept.
       return s.storyId ? { ...s, error: e.code } : { ...s, phase: "setup", error: e.code };
-    case "reset":
-      return initialState({ story: s.tale, kind: s.kind, scene: s.scene });
+    case "reset": {
+      // Back to the page's story; the kind and scene the person picked stay if it is the same.
+      const page = s.page ?? { story: s.tale };
+      return page.story === s.tale
+        ? initialState({ ...page, kind: s.kind, scene: s.scene }, s.page)
+        : initialState(page, s.page);
+    }
   }
 }

@@ -127,10 +127,14 @@ describe("story tool machine", () => {
   });
 
   it("resumes a christmas story with its own scene", () => {
-    const s = run([
-      { type: "resume", storyId: "S1" },
-      { type: "view", view: view("rendering", { story: "christmas", scene: "city-flat" }) },
-    ]);
+    // The /story?id= page has no story of its own: it follows whatever story it opened.
+    const s = run(
+      [
+        { type: "resume", storyId: "S1" },
+        { type: "view", view: view("rendering", { story: "christmas", scene: "city-flat" }) },
+      ],
+      initialState({}, null),
+    );
     expect(s).toMatchObject({ tale: "christmas", scene: "city-flat" });
     // Starting over keeps the story and its scene.
     expect(run([{ type: "reset" }], s)).toMatchObject({ tale: "christmas", scene: "city-flat" });
@@ -144,5 +148,55 @@ describe("story tool machine", () => {
     });
     expect(initialState({ story: "christmas" }).scene).toBe("snow-cabin");
     expect(initialState()).toMatchObject({ tale: "zombie", scene: "cabin-wheat" });
+  });
+
+  describe("a story page resumes only its own story", () => {
+    it("Christmas page with a remembered zombie story shows the Christmas setup", () => {
+      const s = run(
+        [
+          { type: "resume", storyId: "S1" },
+          { type: "view", view: view("done", { video: { url: "v", poster: "p", expiresAt: 0 } }) },
+        ],
+        initialState({ story: "christmas" }),
+      );
+      expect(s).toMatchObject({ phase: "setup", tale: "christmas", storyId: null, story: null });
+      expect(s.scene).toBe("snow-cabin");
+    });
+
+    it("zombie page with a remembered christmas story shows the zombie setup", () => {
+      const s = run([
+        { type: "resume", storyId: "S1" },
+        { type: "view", view: view("preview_ready", { story: "christmas", scene: "city-flat" }) },
+      ]);
+      expect(s).toMatchObject({ phase: "setup", tale: "zombie", scene: "cabin-wheat" });
+      expect(s.storyId).toBeNull();
+    });
+
+    it("keeps the page's own story", () => {
+      const s = run(
+        [
+          { type: "resume", storyId: "S1" },
+          { type: "view", view: view("done", { story: "christmas", scene: "city-flat" }) },
+        ],
+        initialState({ story: "christmas" }),
+      );
+      expect(s).toMatchObject({ phase: "done", tale: "christmas", storyId: "S1" });
+    });
+
+    it("reset returns to the page preset", () => {
+      const page = initialState({ story: "christmas" });
+      const off: ToolState = { ...page, tale: "zombie", scene: "rain-chapel", phase: "done" };
+      expect(run([{ type: "reset" }], off)).toMatchObject({
+        tale: "christmas",
+        scene: "snow-cabin",
+        phase: "setup",
+      });
+      // Same story: the scene the person picked stays.
+      const own: ToolState = { ...page, scene: "city-flat", phase: "failed", storyId: "S1" };
+      expect(run([{ type: "reset" }], own)).toMatchObject({
+        tale: "christmas",
+        scene: "city-flat",
+      });
+    });
   });
 });
