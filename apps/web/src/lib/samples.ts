@@ -28,9 +28,15 @@ export const PET_PAIR: SamplePair = {
   who: "a woman with long brown hair and her orange tabby cat",
 };
 
-/** Any example by id (the pet example is not part of the couples' gallery). */
+/** The second Christmas example (eval persona p07); it has no standoff frames, only its film. */
+export const CHRISTMAS_PAIR: SamplePair = {
+  id: "p07",
+  who: "an older bald man and a woman with short grey hair",
+};
+
+/** Any example by id (the pet and Christmas examples are not part of the couples' gallery). */
 export function samplePair(id: string): SamplePair | undefined {
-  return [...SAMPLE_PAIRS, PET_PAIR].find((p) => p.id === id);
+  return [...SAMPLE_PAIRS, PET_PAIR, CHRISTMAS_PAIR].find((p) => p.id === id);
 }
 
 export type Frame = "A" | "B" | "C" | "survivor" | "infected";
@@ -63,18 +69,24 @@ export const HERO_SIZES = "(min-width: 900px) 420px, 82vw";
  * match cut (scene picker), and `film-<id>-poster.jpg` its opening frame.
  */
 export type SampleFilm = {
-  id: "cabin" | "chapel" | "beach" | "pet";
-  scene: "cabin-wheat" | "rain-chapel" | "lighthouse-beach";
+  id: "cabin" | "chapel" | "beach" | "pet" | "xmas-snow-cabin" | "xmas-city-flat";
+  story: "zombie" | "christmas";
+  scene: "cabin-wheat" | "rain-chapel" | "lighthouse-beach" | "snow-cabin" | "city-flat";
   pair: string;
   kind: "human" | "pet";
 };
 
 export const SAMPLE_FILMS: readonly SampleFilm[] = [
-  { id: "cabin", scene: "cabin-wheat", pair: "p02", kind: "human" },
-  { id: "chapel", scene: "rain-chapel", pair: "p02", kind: "human" },
-  { id: "beach", scene: "lighthouse-beach", pair: "p03", kind: "human" },
-  { id: "pet", scene: "cabin-wheat", pair: "q01", kind: "pet" },
+  { id: "cabin", story: "zombie", scene: "cabin-wheat", pair: "p02", kind: "human" },
+  { id: "chapel", story: "zombie", scene: "rain-chapel", pair: "p02", kind: "human" },
+  { id: "beach", story: "zombie", scene: "lighthouse-beach", pair: "p03", kind: "human" },
+  { id: "pet", story: "zombie", scene: "cabin-wheat", pair: "q01", kind: "pet" },
+  { id: "xmas-snow-cabin", story: "christmas", scene: "snow-cabin", pair: "p03", kind: "human" },
+  { id: "xmas-city-flat", story: "christmas", scene: "city-flat", pair: "p07", kind: "human" },
 ];
+
+/** The zombie films only: the home page's scene picker and gallery read scenes from the zombie story. */
+export const ZOMBIE_FILMS: readonly SampleFilm[] = SAMPLE_FILMS.filter((f) => f.story === "zombie");
 
 export const filmSrc = (id: SampleFilm["id"]) => `/samples/films/${id}.mp4`;
 export const filmLoop = (id: SampleFilm["id"]) => `/samples/films/${id}-loop.mp4`;
