@@ -24,6 +24,9 @@ describe("nav", () => {
       { label: "Zombie Love Story AI", href: "/zombie-love-story-ai" },
     ]);
   });
+  it("links the Christmas film's page from every footer (showcase spec §2: indexed before December)", () => {
+    expect(storyLinks("en").map((l) => l.href)).toContain("/ai-christmas-video");
+  });
   it("links live company pages", () => {
     expect(companyLinks("en", PAGES_UNDER_TEST).map((l) => l.href)).toEqual([
       "/pricing",

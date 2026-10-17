@@ -4,6 +4,7 @@ export type NavLink = { label: string; href: string };
 
 const STORIES = [
   "home",
+  "ai-christmas-video",
   "zombie-love-story-ai",
   "pet-zombie-video",
   "ai-zombie-filter",

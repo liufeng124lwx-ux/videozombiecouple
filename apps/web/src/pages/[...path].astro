@@ -4,6 +4,7 @@ import { indexable, pageById, pagePath } from "@vzc/catalog";
 import F from "../components/F.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { pageContent } from "../lib/content.ts";
+import { homeHero } from "../lib/home.ts";
 import { type RouteProps, staticPaths } from "../lib/routes.ts";
 import { sampleImage } from "../lib/sample-images.ts";
 import { filmPoster } from "../lib/samples.ts";
@@ -13,6 +14,7 @@ import { heroFilm } from "../lib/story-landing.ts";
 import AccountPage from "../templates/AccountPage.astro";
 import BlogPage from "../templates/BlogPage.astro";
 import HomePage from "../templates/HomePage.astro";
+import LandingPage from "../templates/LandingPage.astro";
 import LegalPage from "../templates/LegalPage.astro";
 import PhotoPage from "../templates/PhotoPage.astro";
 import PricingPage from "../templates/PricingPage.astro";
@@ -43,14 +45,14 @@ const schemas = pageSchemas({
 const links = alternateLinks(page, buildMode(), absoluteUrl);
 // Start the hero film's poster with the HTML, not after the stylesheets (LCP on phones).
 const HERO_POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
-const hero =
-  page.kind === "home" || page.kind === "landing"
-    ? await sampleImage(
-        filmPoster(heroFilm(entry?.data.film, page.preset?.story ?? "zombie").id),
-        HERO_POSTER_SIZES,
-        [540],
-      )
-    : null;
+// The home page's film is the featured story's (decided at build time, like the page itself).
+const heroId =
+  page.kind === "home"
+    ? homeHero(Date.now()).film.id
+    : page.kind === "landing"
+      ? heroFilm(entry?.data.film, page.preset?.story ?? "zombie").id
+      : null;
+const hero = heroId ? await sampleImage(filmPoster(heroId), HERO_POSTER_SIZES, [540]) : null;
 ---
 <BaseLayout
   title={entry?.data.title ?? `${h1} (draft) | VideoZombieCouple`}
@@ -77,8 +79,10 @@ const hero =
     )
   }
   {
-    (page.kind === "home" || page.kind === "landing") && entry ? (
-      <HomePage locale={locale} h1={h1} page={page} entry={entry} variant={page.kind === "home" ? "home" : "landing"} />
+    page.kind === "home" && entry ? (
+      <HomePage locale={locale} h1={h1} entry={entry} />
+    ) : page.kind === "landing" && entry ? (
+      <LandingPage locale={locale} h1={h1} page={page} entry={entry} />
     ) : page.kind === "photo" && entry ? (
       <PhotoPage locale={locale} h1={h1} entry={entry} />
     ) : page.kind === "story" ? (

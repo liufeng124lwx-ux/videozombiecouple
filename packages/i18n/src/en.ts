@@ -9,7 +9,7 @@ export const en = {
   "footer.company": "Company",
   "footer.make": "Make one",
   "footer.tagline":
-    "Your zombie love story, starring the two of you. A short AI film made from two photos.",
+    "Short AI films starring the two of you, a zombie love story or a Christmas story, made from two photos.",
   "footer.licenses": "Open-source licenses",
   "footer.cookies": "Cookie settings",
   "footer.copyright": "© {year} Arrayon Inc.",
@@ -89,6 +89,23 @@ export const en = {
   "home.faq.title": "Questions",
   "home.readMore": "Read the full guide",
   "home.closing.since": "since the summer we met",
+  "home.featured.zombie.eyebrow": "A zombie love story · Starring you two",
+  "home.featured.zombie.subtitle":
+    "One of you has turned, the other can't let go. Two photos in, a {seconds}-second film out.",
+  "home.featured.zombie.cta": "Make your zombie love story →",
+  "home.featured.christmas.eyebrow": "New for Christmas · {years} Christmases",
+  "home.featured.christmas.subtitle":
+    "A film of the two of you, {years} Christmases from now. Two photos in, a {seconds}-second film out.",
+  "home.featured.christmas.cta": "Make your Christmas film →",
+  "home.wall.kicker": "Example films",
+  "home.wall.title": "Every film we can make",
+  "home.wall.text":
+    "Pick a film and make it with your own photos. Each one came out of the same pipeline you use. The people and the cat are AI-generated.",
+  "home.wall.filter": "Show films",
+  "home.wall.all": "All",
+  "home.wall.christmas": "Christmas",
+  "home.wall.zombie": "Zombie",
+  "home.wall.pet": "Pet",
   "christmas.kicker": "{years} Christmases · Starring you two",
   "christmas.cta": "Make our Christmas film",
   "christmas.watch": "Watch the examples",

@@ -1,0 +1,375 @@
+---
+import "../styles/story.css";
+import "../styles/home.css";
+import "../styles/pricing.css";
+import { type CollectionEntry, render } from "astro:content";
+import {
+  fact,
+  type LocaleId,
+  liveRelated,
+  type PageConfig,
+  pageById,
+  pagePath,
+  sceneLabel,
+} from "@vzc/catalog";
+import { t } from "@vzc/i18n";
+import F from "../components/F.astro";
+import Faq from "../components/Faq.astro";
+import FilmGallery from "../components/FilmGallery.tsx";
+import HeroFilm from "../components/HeroFilm.tsx";
+import StickyCta from "../components/site/StickyCta.tsx";
+import StoryTool from "../components/story/StoryTool.tsx";
+import { sampleImage } from "../lib/sample-images.ts";
+import {
+  filmLoop,
+  filmMemory,
+  filmPoster,
+  filmSrc,
+  HERO_PAIR,
+  SAMPLE_PAIRS,
+  sampleAlt,
+  sampleFile,
+  samplePair,
+} from "../lib/samples.ts";
+import {
+  clock,
+  heroFilm,
+  storyBeats,
+  storyFilms,
+  storySamples,
+  toolFilms,
+} from "../lib/story-landing.ts";
+
+interface Props {
+  locale: LocaleId;
+  h1: string;
+  page: PageConfig;
+  entry: CollectionEntry<"pages">;
+}
+/** A story's own page (kind "landing"): its film, the tool preset to it, and the story's sections. */
+const { locale, h1, page, entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+const hero = samplePair(d.hero ?? HERO_PAIR) ?? SAMPLE_PAIRS[0];
+if (!hero) throw new Error("no sample pair");
+
+const preset = page.preset ?? {};
+/** The story the page's tool makes; a story other than the zombie film gets its own sections. */
+const story = preset.story ?? "zombie";
+const isStory = story !== "zombie";
+const samples = storySamples(story);
+const timeline = storyBeats(story);
+if (isStory && d.beats && d.beats.length !== timeline.length)
+  throw new Error(`${entry.id}: ${d.beats.length} beats, the ${story} film has ${timeline.length}`);
+
+const POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
+// Carry-over ruling: the film the frontmatter names, or the story's first; an unknown id throws.
+const film = heroFilm(d.film, story);
+const heroPoster = await sampleImage(filmPoster(film.id), POSTER_SIZES, [540]);
+const filmPairInfo = samplePair(film.pair);
+const heroLabel = isStory
+  ? (samples.find((s) => s.film.id === film.id)?.alt ?? `AI example: ${filmPairInfo?.who ?? ""}`)
+  : `Example film: ${filmPairInfo?.who ?? ""}`;
+const GALLERY_SIZES = "(min-width: 900px) 260px, 44vw";
+const gallery = await Promise.all(
+  isStory
+    ? samples.map(async (s) => ({
+        id: s.film.id,
+        src: filmSrc(s.film.id),
+        poster: (await sampleImage(filmMemory(s.film.id), GALLERY_SIZES, [360])).src,
+        scene: s.scene,
+        who: s.alt,
+      }))
+    : storyFilms(story).map(async (f) => ({
+        id: f.id,
+        src: filmSrc(f.id),
+        poster: (await sampleImage(filmMemory(f.id), GALLERY_SIZES, [360])).src,
+        scene: f.kind === "pet" ? `${sceneLabel(f.scene)} · pet` : sceneLabel(f.scene),
+        who: `AI example: ${samplePair(f.pair)?.who ?? ""}`,
+      })),
+);
+// Scene picker: each scene's poster frame and its silent loop around the match cut.
+const posters = Object.fromEntries(
+  await Promise.all(
+    toolFilms(story).map(async (f) => [
+      f.scene,
+      { still: (await sampleImage(filmPoster(f.id), "120px", [240])).src, clip: filmLoop(f.id) },
+    ]),
+  ),
+);
+const BEAT_SIZES = "(min-width: 900px) 300px, 62vw";
+const beats = await Promise.all(
+  (["A", "B", "C"] as const).map((f) => sampleImage(sampleFile(hero.id, f), BEAT_SIZES)),
+);
+// One-sheet hero: the film's opening frame, blurred, is the poster's backdrop (tiny; it's blurred).
+const backdrop = await sampleImage(filmPoster(film.id), "100vw", [360]);
+// Poster billing: alternating large and small words, true facts only (design lock "One-Sheet").
+const billing = t("home.billing", { seconds: fact("video.seconds") }, locale).split("|");
+const cta = isStory ? t("christmas.cta", {}, locale) : t("home.cta", {}, locale);
+const heroBeats = isStory
+  ? timeline.map((beat, i) => ({ label: d.beats?.[i]?.title ?? "", from: beat.start }))
+  : undefined;
+const related = isStory ? liveRelated(page, locale) : [];
+const privacyPage = pageById("privacy");
+---
+<section class="hero onesheet" aria-label={h1}>
+  <div class="onesheet-backdrop" aria-hidden="true">
+    <img src={backdrop.src} alt="" width="360" height="640" decoding="async" fetchpriority="low" />
+  </div>
+  <div class="wrap onesheet-grid">
+    <div class="onesheet-copy">
+      <p class="onesheet-kicker">{isStory ? t("christmas.kicker", { years: fact("story.christmas.years") }, locale) : t("home.kicker", {}, locale)}</p>
+      <h1 class="onesheet-title">{h1}</h1>
+      <p class="onesheet-rule" aria-hidden="true"><span></span></p>
+      {
+        !isStory && (
+          <p class="billing">
+            {billing.map((word, i) => <span class={i % 2 ? "b-sm" : "b-lg"}>{word}</span>)}
+          </p>
+        )
+      }
+      {d.lede && <p class="lede">{d.lede}</p>}
+      <div class="onesheet-actions">
+        <a class="btn btn-primary btn-lg" href="#make">{cta}</a>
+        <a class="btn btn-lg btn-line" href="#film">{isStory ? t("christmas.watch", {}, locale) : t("home.watch", {}, locale)}</a>
+      </div>
+      {
+        d.trust && (
+          <ul class="trust">
+            {d.trust.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+    <figure class="onesheet-film">
+      <HeroFilm
+        client:load
+        src={filmSrc(film.id)}
+        poster={heroPoster.src}
+        label={heroLabel}
+        {...(heroBeats ? { beats: heroBeats } : {})}
+      />
+    </figure>
+  </div>
+</section>
+
+<StickyCta client:idle href="#make" label={cta} target="make" />
+
+<section
+  class="make"
+  id="make"
+  aria-label={isStory ? t("christmas.makeLabel", {}, locale) : t("home.makeLabel", {}, locale)}
+>
+  <div class="wrap">
+    <StoryTool client:load posters={posters} preset={preset} />
+  </div>
+</section>
+
+<section class="films now-showing" id="film">
+  <div class="wrap showing-grid">
+    <div class="showing-rail">
+      <p class="scene">{t("home.film.kicker", {}, locale)} · {gallery.length}</p>
+      <h2>{isStory ? t("christmas.films.title", {}, locale) : t("home.films.title", {}, locale)}</h2>
+      <p class="small muted">{isStory ? t("christmas.films.text", {}, locale) : t("home.films.text", {}, locale)}</p>
+    </div>
+    <FilmGallery client:visible films={gallery} />
+  </div>
+</section>
+
+
+{
+  !isStory && d.beats && (
+    <section class="section beats-section">
+      <div class="wrap">
+        <p class="scene">{t("home.beats.kicker", {}, locale)}</p>
+        <h2>{t("home.beats.title", { seconds: fact("video.seconds") }, locale)}</h2>
+      </div>
+      <ol class="filmstrip">
+        {d.beats.map((beat, i) => (
+          <li class={`beat beat-${i + 1}`}>
+            <img
+              src={beats[i]?.src}
+              srcset={beats[i]?.srcset}
+              sizes={BEAT_SIZES}
+              width="720"
+              height="1280"
+              alt={sampleAlt(hero, (["A", "B", "C"] as const)[i] ?? "A")}
+              loading="lazy"
+              decoding="async"
+            />
+            <p class="scene">{`SC. ${i + 1}`}</p>
+            <h3>{beat.title}</h3>
+            <p class="small muted">{beat.text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+{
+  isStory && d.beats && (
+    <section class="section steps-section beats-timeline">
+      <div class="wrap">
+        <p class="scene">{t("christmas.beats.kicker", {}, locale)}</p>
+        <h2>{t("christmas.beats.title", { seconds: fact(`story.${story}.seconds`) }, locale)}</h2>
+        <ol class="steps">
+          {timeline.map((beat, i) => (
+            <li>
+              <span class="step-n scene">
+                {t("christmas.beats.time", { start: clock(beat.start), end: clock(beat.end) }, locale)}
+              </span>
+              <div>
+                <h3>{d.beats?.[i]?.title}</h3>
+                <p class="muted">{d.beats?.[i]?.text}</p>
+                {beat.lines.map((line) => (
+                  <p class="beat-line">“{line}”</p>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
+
+
+{
+  isStory && d.tips && (
+    <section class="section tips-section">
+      <div class="wrap tips-grid">
+        <div>
+          <h2>{t("home.tips.title", {}, locale)}</h2>
+        </div>
+        <div>
+          <p class="scene">{t("home.tips.good", {}, locale)}</p>
+          <ul class="lines">{d.tips.good.map((x) => <li>{x}</li>)}</ul>
+        </div>
+        <div>
+          <p class="scene">{t("home.tips.avoid", {}, locale)}</p>
+          <ul class="lines avoid">{d.tips.avoid.map((x) => <li>{x}</li>)}</ul>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+{
+  d.steps && (
+    <section class="section steps-section">
+      <div class="wrap">
+        <h2>{t("home.steps.title", {}, locale)}</h2>
+        <ol class="steps">
+          {d.steps.map((step, i) => (
+            <li>
+              <span class="step-n scene">{`0${i + 1}`}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p class="muted">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
+{
+  isStory && d.privacy && (
+    <section class="section story-privacy">
+      <div class="wrap">
+        <h2>{d.privacy.title}</h2>
+        <p class="lede">{d.privacy.text}</p>
+        {privacyPage && <a href={pagePath(privacyPage, locale)}>{privacyPage.locales[locale]?.h1}</a>}
+      </div>
+    </section>
+  )
+}
+
+
+{
+  d.compare && (
+    <section class="section compare">
+      <div class="wrap">
+        <h2>{d.compare.title}</h2>
+        {d.compare.intro && <p class="lede">{d.compare.intro}</p>}
+        <div class="compare-table" role="table">
+          <div class="compare-row head" role="row">
+            <span role="columnheader">{t("home.compare.way", {}, locale)}</span>
+            <span role="columnheader">{t("home.compare.how", {}, locale)}</span>
+            <span role="columnheader">{t("home.compare.catch", {}, locale)}</span>
+          </div>
+          {d.compare.rows.map((row, i) => (
+            <div class={`compare-row${i === d.compare!.rows.length - 1 ? " ours" : ""}`} role="row">
+              <span role="cell">{row.way}</span>
+              <span role="cell">{row.how}</span>
+              <span role="cell">{row.catch}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
+<section class="section">
+  <div class="wrap prose long-read" data-fold>
+    <Content components={{ F }} />
+  </div>
+  <div class="wrap fold-more">
+    <button type="button" class="btn btn-lg btn-line" data-unfold>{t("home.readMore", {}, locale)}</button>
+  </div>
+  <noscript><style>.long-read[data-fold]{max-height:none;mask-image:none}.fold-more{display:none}</style></noscript>
+</section>
+
+<script>
+  import { wireFolds } from "../lib/fold.ts";
+  wireFolds();
+</script>
+
+{
+  d.faq && d.faq.length > 0 && (
+    <section class="section faq-section">
+      <div class="wrap">
+        <h2>{t("home.faq.title", {}, locale)}</h2>
+        <Faq items={d.faq} />
+      </div>
+    </section>
+  )
+}
+
+{
+  related.length > 0 && (
+    <section class="section related-films" data-section="related">
+      <div class="wrap">
+        <h2>{t("christmas.related", {}, locale)}</h2>
+        <ul class="lines">
+          {related.map((p) => (
+            <li>
+              <a href={pagePath(p, locale)}>{p.locales[locale]?.h1}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+{
+  d.closing && (
+    <section class="closing">
+      <div class="wrap closing-card">
+        <p class="tc-line">{d.closing.title}</p>
+        <p class="tc-names">{t("story.title.namesPlaceholder", {}, locale)} · {isStory ? t("story.christmas.title.datePlaceholder", {}, locale) : t("home.closing.since", {}, locale)}</p>
+        <p class="lede">{d.closing.text}</p>
+        <a class="btn btn-primary btn-lg" href="#make">{cta}</a>
+      </div>
+    </section>
+  )
+}

@@ -16,7 +16,7 @@ const faq = [...frontmatter.matchAll(/- q: (.+)\n\s+a: (.+)/g)].map((m) => ({
   q: m[1] ?? "",
   a: m[2] ?? "",
 }));
-const template = readFileSync(join(import.meta.dirname, "HomePage.astro"), "utf8");
+const template = readFileSync(join(import.meta.dirname, "LandingPage.astro"), "utf8");
 const markup = template.split("---").slice(2).join("---");
 
 describe("/ai-christmas-video content (showcase spec §5)", () => {
@@ -73,7 +73,7 @@ describe("/ai-christmas-video content (showcase spec §5)", () => {
   });
 });
 
-describe("HomePage.astro on a story page", () => {
+describe("LandingPage.astro on a story page", () => {
   it("opens the tool on the page's preset and builds story sections from the catalog", () => {
     expect(markup).toMatch(/<StoryTool client:load posters=\{posters\} preset=\{preset\} \/>/);
     expect(template).toMatch(/storyBeats\(story\)/);

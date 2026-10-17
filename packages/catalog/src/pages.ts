@@ -1,4 +1,5 @@
-import type { StoryId } from "./stories/types.ts";
+import { STORIES } from "./stories/index.ts";
+import type { Story, StoryId } from "./stories/types.ts";
 import type { Kind } from "./story.ts";
 
 /** Spec §1.3: English only; the i18n structure stays for later. */
@@ -54,7 +55,8 @@ const legal = (id: string, slug: string, h1: string): PageConfig => ({
 
 /** Spec §6 and §9: phase one ships home, the love-story page and pricing; phase two the rest. */
 export const PAGES: readonly PageConfig[] = [
-  page("home", "home", "", "AI Zombie Couple Video", "live", [
+  // Showcase spec §4 (owner, 2026-10-16): the home page shows every story, so its H1 names none.
+  page("home", "home", "", "AI couple videos from your photos", "live", [
     "zombie-love-story-ai",
     "pet-zombie-video",
   ]),
@@ -199,4 +201,59 @@ export function alternates(
   return locales.includes("en")
     ? [{ hreflang: "x-default", path: pagePath(page, "en") }, ...links]
     : links;
+}
+
+/** Showcase spec §4: the story the home page's first screen features between two dates (UTC days). */
+export type FeaturedWindow = { story: StoryId; from: string; until: string };
+
+/**
+ * The site is built statically: the home page and every "make a film" link change at the first
+ * build on or after `from` (and after `until`). Rebuild and deploy the site on 2026-11-01 and on
+ * 2026-12-27, or the old story stays featured.
+ */
+export const FEATURED: readonly FeaturedWindow[] = [
+  { story: "christmas", from: "2026-11-01", until: "2026-12-26" },
+];
+
+/** Featured when no window is open. */
+export const DEFAULT_FEATURED: StoryId = "zombie";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The featured story at `now` (ms): an open window's story if it has a live scene, else the zombie film. */
+export function featuredStory(
+  now: number,
+  windows: readonly FeaturedWindow[] = FEATURED,
+  stories: Readonly<Record<StoryId, Story>> = STORIES,
+): StoryId {
+  const open = windows.find(
+    (w) =>
+      now >= Date.parse(`${w.from}T00:00:00Z`) &&
+      now < Date.parse(`${w.until}T00:00:00Z`) + DAY_MS &&
+      Object.values(stories[w.story].scenes).some((scene) => scene.live),
+  );
+  return open?.story ?? DEFAULT_FEATURED;
+}
+
+/** A story's own live page: the landing page whose tool is preset to it (and to the pet version). */
+export function storyPage(
+  story: StoryId,
+  kind: "human" | "pet" = "human",
+  locale: LocaleId = "en",
+  pages: readonly PageConfig[] = PAGES,
+): PageConfig | undefined {
+  return pages.find(
+    (p) =>
+      p.kind === "landing" &&
+      isLive(p, locale) &&
+      (p.preset?.story ?? "zombie") === story &&
+      (p.preset?.kind ?? "human") === kind,
+  );
+}
+
+/** Where every "make a film" link goes (showcase spec §5a): the featured story's page. */
+export function makeHref(now: number, locale: LocaleId = "en"): string {
+  const page = storyPage(featuredStory(now), "human", locale) ?? storyPage(DEFAULT_FEATURED);
+  if (!page) throw new Error("no live story page to make a film on");
+  return pagePath(page, locale);
 }

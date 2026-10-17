@@ -18,6 +18,12 @@
     "gzip": true
   },
   {
+    "name": "film wall (home page)",
+    "path": "dist/_astro/FilmWall.*.js",
+    "limit": "1 kB",
+    "gzip": true
+  },
+  {
     "name": "error catcher (every page)",
     "path": "dist/_astro/BaseLayout.astro_astro_type_script_index_0_lang.*.js",
     "limit": "1 kB",

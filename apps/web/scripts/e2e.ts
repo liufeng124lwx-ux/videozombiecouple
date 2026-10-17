@@ -191,6 +191,8 @@ async function main() {
     await page.goto(`${SITE}/`);
     const width = await page.evaluate(() => document.documentElement.scrollWidth);
     step("home fits a phone", width <= 390, `${width}px`);
+    // The tool lives on each story's page (showcase spec §4); the zombie film's page has it.
+    await page.goto(`${SITE}/zombie-love-story-ai`);
 
     const inputs = page.locator('#make input[type="file"]');
     step("two photo slots", (await inputs.count()) === 2);

@@ -1,4 +1,4 @@
-import { fact, PHOTO } from "@vzc/catalog";
+import { fact, makeHref, PHOTO } from "@vzc/catalog";
 import { type StoryView, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -122,7 +122,7 @@ export default function PhotoTool({ pollMs = 3_000 }: { pollMs?: number }) {
                 price: fact("price.fromPerVideo"),
               })}
             </p>
-            <a class="btn btn-lg" href="/#make">
+            <a class="btn btn-lg" href={makeHref(Date.now())}>
               {t("photo.upsell.cta")}
             </a>
           </div>

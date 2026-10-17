@@ -1,6 +1,6 @@
 ---
 import { type CollectionEntry, render } from "astro:content";
-import { isLive, type LocaleId, pageById, pagePath } from "@vzc/catalog";
+import { featuredStory, type LocaleId, makeHref, storyPage } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import AdSlot from "../components/AdSlot.astro";
 import F from "../components/F.astro";
@@ -13,12 +13,12 @@ interface Props {
 const { locale, h1, entry } = Astro.props;
 const { Content } = await render(entry);
 const published = entry.data.published;
-// Every post ends by pointing to the tool on the home page.
-const home = pageById("home");
-const toolLink =
-  home && isLive(home, locale)
-    ? { href: `${pagePath(home, locale)}#make`, label: home.locales[locale]?.h1 ?? "" }
-    : null;
+// Every post ends by pointing to the tool on the featured story's page (showcase spec §5a).
+const now = Date.now();
+const featured = storyPage(featuredStory(now), "human", locale);
+const toolLink = featured
+  ? { href: makeHref(now, locale), label: featured.locales[locale]?.h1 ?? "" }
+  : null;
 const date = (d: Date) =>
   d.toLocaleDateString("en-US", {
     year: "numeric",

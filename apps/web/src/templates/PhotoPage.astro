@@ -3,7 +3,7 @@ import "../styles/story.css";
 import "../styles/home.css";
 import "../styles/photo.css";
 import { type CollectionEntry, render } from "astro:content";
-import type { LocaleId } from "@vzc/catalog";
+import { type LocaleId, makeHref } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import F from "../components/F.astro";
 import Faq from "../components/Faq.astro";
@@ -141,7 +141,7 @@ const examples = await Promise.all(
       <div class="wrap closing-card">
         <p class="tc-line">{d.closing.title}</p>
         <p class="lede">{d.closing.text}</p>
-        <a class="btn btn-primary btn-lg" href="/#make">{t("photo.upsell.cta", {}, locale)}</a>
+        <a class="btn btn-primary btn-lg" href={makeHref(Date.now(), locale)}>{t("photo.upsell.cta", {}, locale)}</a>
       </div>
     </section>
   )
