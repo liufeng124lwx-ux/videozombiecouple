@@ -172,6 +172,7 @@
 - [ ] **Step 4 (owner confirms):** `scripts/deploy.sh production`; smoke `{"ok":true}`; open `/ai-christmas-video`; one live `christmas1` checkout page loads (no purchase unless the owner wants one).
 - [ ] **Step 5:** Google Search Console: submit the sitemap, request indexing of `/ai-christmas-video` and `/`.
 - [ ] **Step 6:** Record the launch in `docs/lessons.md` and commit.
+- [ ] **Step 7 (owner confirms each deploy):** rebuild and deploy production on 2026-11-01 and again on 2026-12-27 (`scripts/deploy.sh production`). The featured story (`FEATURED` in `packages/catalog/src/pages.ts`) switches only at build: without these deploys the home page and every "make a film" link keep the old story.
 
 ## Cost
 
@@ -181,6 +182,7 @@
 | Staging end-to-end check (1 film, Stripe test card) | ≈ $1.92 KIE |
 | Optional live purchase check | $9.99 charged and refundable |
 | Running cost per Christmas film | ≈ $1.92–1.96 model + Stripe fees ≈ $0.9–1.0 on $9.99 → ≈ $7 gross margin |
+| Free remake (one per film, `REMAKES_PER_FILM`) | ≈ $1.92 model cost worst case per film (every buyer remakes); margin then ≈ $5 |
 | New-payer cap 50 → 100 credits/day | worst case per fraudulent new account ≈ 5 films ≈ $10 model cost/day, still bounded by the KIE key's $60/day cap (`KIE_KEY_DAILY_CAP_USD`) |
 | Page weight | film wall loads posters only; loops on view; samples ≤ 4 MB full, ≤ 250 KB loop |
 
