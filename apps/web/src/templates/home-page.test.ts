@@ -43,7 +43,11 @@ describe("home page (showcase spec §4)", () => {
     expect(zombie.cta).toMatch(/zombie/i);
 
     expect(markup).toMatch(/href=\{hero\.href\}/);
-    expect(template).toMatch(/homeHero\(now\)/);
+    // One build-time hero for the preload and the page, so they can't disagree.
+    expect(template).toMatch(/homeHero\(BUILD_NOW\)/);
+    expect(read("pages/[...path].astro")).toMatch(/homeHero\(BUILD_NOW\)/);
+    expect(template).not.toMatch(/Date\.now\(\)/);
+    expect(read("pages/[...path].astro")).not.toMatch(/Date\.now\(\)/);
   });
 
   it("has no upload tool: a visitor picks a story first", () => {
@@ -76,9 +80,11 @@ describe("home page (showcase spec §4)", () => {
     expect(markup).toMatch(/<FilmWall client:visible tiles=\{wall\}/);
   });
 
-  it("keeps how it works, pricing and the FAQ; the pack return lands on the featured page", () => {
+  it("keeps how it works, pricing and the FAQ; the pack band returns to /pricing", () => {
     expect(markup).toMatch(/d\.steps/);
-    expect(markup).toMatch(/<PackRows client:visible returnPath=\{hero\.href\}/);
+    // A sign-in comes back as /pricing?buy=<pack>: the pricing page continues the purchase
+    // (landing pages only mount pack rows in the tool's pay phase and would drop ?buy=).
+    expect(markup).toMatch(/<PackRows client:visible returnPath="\/pricing"/);
     expect(markup).toMatch(/d\.faq/);
   });
 
@@ -103,8 +109,11 @@ describe("'make a film' links (showcase spec §5a)", () => {
     );
     expect(left).toEqual([]);
     expect(read("components/layout/Header.astro")).toMatch(/href=\{makeHref\(/);
-    expect(read("components/photo/PhotoTool.tsx")).toMatch(/href=\{makeHref\(/);
-    expect(read("templates/PhotoPage.astro")).toMatch(/href=\{makeHref\(/);
+    // The photo filter's upsell describes the zombie film: always the zombie page.
+    for (const file of ["components/photo/PhotoTool.tsx", "templates/PhotoPage.astro"]) {
+      expect(read(file)).not.toMatch(/makeHref/);
+      expect(read(file)).toMatch(/storyPage\("zombie"\)/);
+    }
     expect(read("templates/BlogPage.astro")).toMatch(/makeHref\(/);
     expect(makeHref(at("2026-11-15"))).toBe("/ai-christmas-video");
   });

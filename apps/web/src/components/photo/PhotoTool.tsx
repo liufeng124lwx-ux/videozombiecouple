@@ -1,4 +1,4 @@
-import { fact, makeHref, PHOTO } from "@vzc/catalog";
+import { fact, PHOTO, pagePath, storyPage } from "@vzc/catalog";
 import { type StoryView, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -7,6 +7,10 @@ import { ApiError } from "../../lib/api.ts";
 import { createPhoto, getStory, newIdempotencyKey, uploadPhoto } from "../../lib/story/client.ts";
 import { preparePhoto } from "../../lib/story/prepare.ts";
 import { getToken } from "../../lib/turnstile.ts";
+
+/** The upsell describes the zombie film, so it always goes to the zombie story's page. */
+const zombiePage = storyPage("zombie");
+const ZOMBIE_HREF = zombiePage ? pagePath(zombiePage) : "/";
 
 type Phase = "setup" | "working" | "done";
 
@@ -122,7 +126,7 @@ export default function PhotoTool({ pollMs = 3_000 }: { pollMs?: number }) {
                 price: fact("price.fromPerVideo"),
               })}
             </p>
-            <a class="btn btn-lg" href={makeHref(Date.now())}>
+            <a class="btn btn-lg" href={ZOMBIE_HREF}>
               {t("photo.upsell.cta")}
             </a>
           </div>

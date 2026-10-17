@@ -11,7 +11,7 @@ import FilmWall from "../components/FilmWall.tsx";
 import HeroFilm from "../components/HeroFilm.tsx";
 import PackRows from "../components/pricing/PackRows.tsx";
 import { pageContent } from "../lib/content.ts";
-import { homeHero, wallTiles } from "../lib/home.ts";
+import { BUILD_NOW, homeHero, wallTiles } from "../lib/home.ts";
 import { sampleImage } from "../lib/sample-images.ts";
 import { filmMemory, filmPoster, filmSrc, samplePair } from "../lib/samples.ts";
 import { storyBeats, storySamples } from "../lib/story-landing.ts";
@@ -30,8 +30,7 @@ const { Content } = await render(entry);
 const d = entry.data;
 
 // Build time decides the featured story (catalog FEATURED); the switch needs a rebuild on its date.
-const now = Date.now();
-const hero = homeHero(now);
+const hero = homeHero(BUILD_NOW);
 const film = hero.film;
 const POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
 const heroPoster = await sampleImage(filmPoster(film.id), POSTER_SIZES, [540]);
@@ -57,7 +56,8 @@ const wall = await Promise.all(
     poster: (await sampleImage(filmMemory(tile.id), WALL_SIZES, [360])).src,
   })),
 );
-// The packs that pay for the featured story's film; after checkout the buyer lands on its tool.
+// The packs that pay for the featured story's film. Sign-in and checkout come back to /pricing,
+// which seeds its pick from ?buy= and continues the purchase (landing pages would drop ?buy=).
 const packStory = hero.story === "zombie" ? undefined : hero.story;
 ---
 <section class="hero onesheet" aria-label={h1}>
@@ -133,7 +133,7 @@ const packStory = hero.story === "zombie" ? undefined : hero.story;
       <p class="lede">{t("home.pricing.text", {}, locale)}</p>
       <a href="/pricing">{t("home.pricing.more", {}, locale)}</a>
     </div>
-    <PackRows client:visible returnPath={hero.href} {...(packStory ? { story: packStory } : {})} />
+    <PackRows client:visible returnPath="/pricing" {...(packStory ? { story: packStory } : {})} />
   </div>
 </section>
 

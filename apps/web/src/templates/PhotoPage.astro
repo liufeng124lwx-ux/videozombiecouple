@@ -3,7 +3,7 @@ import "../styles/story.css";
 import "../styles/home.css";
 import "../styles/photo.css";
 import { type CollectionEntry, render } from "astro:content";
-import { type LocaleId, makeHref } from "@vzc/catalog";
+import { type LocaleId, pagePath, storyPage } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import F from "../components/F.astro";
 import Faq from "../components/Faq.astro";
@@ -29,6 +29,9 @@ const examples = await Promise.all(
     after: await sampleImage(`zombie-photo-${id}-after.jpg`, SIZES, [240, 360]),
   })),
 );
+// The closing upsell describes the zombie film, so it always goes to the zombie story's page.
+const zombiePage = storyPage("zombie");
+const zombieHref = zombiePage ? pagePath(zombiePage, locale) : "/";
 ---
 <section class="hero photo-hero" aria-label={h1}>
   <div class="wrap">
@@ -141,7 +144,7 @@ const examples = await Promise.all(
       <div class="wrap closing-card">
         <p class="tc-line">{d.closing.title}</p>
         <p class="lede">{d.closing.text}</p>
-        <a class="btn btn-primary btn-lg" href={makeHref(Date.now(), locale)}>{t("photo.upsell.cta", {}, locale)}</a>
+        <a class="btn btn-primary btn-lg" href={zombieHref}>{t("photo.upsell.cta", {}, locale)}</a>
       </div>
     </section>
   )

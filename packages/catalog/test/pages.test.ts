@@ -89,6 +89,7 @@ describe("pages", () => {
   it("show only live related pages", () => {
     const home = pageById("home") as PageConfig;
     expect(liveRelated(home).map((p) => p.id)).toEqual([
+      "ai-christmas-video",
       "zombie-love-story-ai",
       "pet-zombie-video",
     ]);
@@ -134,8 +135,12 @@ describe("pages", () => {
     expect(pagePath(page as PageConfig)).toBe("/ai-christmas-video");
   });
 
-  it("leave the zombie pages' rows as they were", () => {
-    expect(pageById("home")?.related).toEqual(["zombie-love-story-ai", "pet-zombie-video"]);
+  it("leave the zombie pages' rows as they were; home relates to every story page", () => {
+    expect(pageById("home")?.related).toEqual([
+      "ai-christmas-video",
+      "zombie-love-story-ai",
+      "pet-zombie-video",
+    ]);
     expect(pageById("zombie-love-story-ai")?.preset).toBeUndefined();
     expect(pageById("zombie-love-story-ai")?.related).toEqual([
       "home",

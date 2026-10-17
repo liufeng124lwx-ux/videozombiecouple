@@ -57,6 +57,7 @@ const legal = (id: string, slug: string, h1: string): PageConfig => ({
 export const PAGES: readonly PageConfig[] = [
   // Showcase spec §4 (owner, 2026-10-16): the home page shows every story, so its H1 names none.
   page("home", "home", "", "AI couple videos from your photos", "live", [
+    "ai-christmas-video",
     "zombie-love-story-ai",
     "pet-zombie-video",
   ]),

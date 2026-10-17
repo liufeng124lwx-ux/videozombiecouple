@@ -4,7 +4,7 @@ import { indexable, pageById, pagePath } from "@vzc/catalog";
 import F from "../components/F.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { pageContent } from "../lib/content.ts";
-import { homeHero } from "../lib/home.ts";
+import { BUILD_NOW, homeHero } from "../lib/home.ts";
 import { type RouteProps, staticPaths } from "../lib/routes.ts";
 import { sampleImage } from "../lib/sample-images.ts";
 import { filmPoster } from "../lib/samples.ts";
@@ -48,7 +48,7 @@ const HERO_POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
 // The home page's film is the featured story's (decided at build time, like the page itself).
 const heroId =
   page.kind === "home"
-    ? homeHero(Date.now()).film.id
+    ? homeHero(BUILD_NOW).film.id
     : page.kind === "landing"
       ? heroFilm(entry?.data.film, page.preset?.story ?? "zombie").id
       : null;

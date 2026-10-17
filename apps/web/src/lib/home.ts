@@ -51,6 +51,12 @@ export function wallTiles(): WallTile[] {
     .sort((a, b) => WALL_GROUPS.indexOf(a.group) - WALL_GROUPS.indexOf(b.group));
 }
 
+/**
+ * The build's clock, read once: the home page's preload and its first screen both use it, so they
+ * can't disagree. The site is static; the featured story changes at the next build.
+ */
+export const BUILD_NOW = Date.now();
+
 export type HomeHero = {
   story: StoryId;
   film: SampleFilm;

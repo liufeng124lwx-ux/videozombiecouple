@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import { makeHref } from "@vzc/catalog";
 import { type StoryView, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
 import { errorMessage, t } from "@vzc/i18n";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -79,9 +78,9 @@ describe("PhotoTool (the free AI zombie filter)", () => {
     expect(screen.getByRole("link", { name: /Download/ }).getAttribute("href")).toBe(
       "https://r2/out/P1/zombie.jpg",
     );
-    // The film is made on the featured story's page (showcase spec §5a), not on the home page.
+    // The upsell describes the zombie film, so it always goes to the zombie story's page.
     expect(screen.getByRole("link", { name: /Make the film/ }).getAttribute("href")).toBe(
-      makeHref(Date.now()),
+      "/zombie-love-story-ai",
     );
   });
 
