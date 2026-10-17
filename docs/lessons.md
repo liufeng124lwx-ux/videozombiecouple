@@ -169,3 +169,4 @@ docker run --rm --cpus=2 --memory=7g --shm-size=1g -v /tmp/repo.tar:/repo.tar:ro
 - 测试站的新付费用户每天只能花 50 积分（现已改为 100），R2 跑第 3 条时被 `DAILY_LIMIT` 拦下：测试账号要么设 `users.daily_credit_cap`，要么分天跑。
 - 同一浏览器只记住一个故事（`vzc-story`）：带 `preset.story` 的页面只恢复同类故事，否则做过丧尸片的人打开圣诞页会看到丧尸片（最终审查发现）。
 - 上线前没有在测试站用测试卡完整买过一单 `christmas1`（所有者决定跳过）；生产首单要人工确认订单、积分和成片。
+- Search Console：域名资源提交站点地图要填完整网址（`https://videozombiecouple.com/sitemap-index.xml`），只填路径会报「站点地图地址无效」。「请求编入索引」按钮不认脚本点击，用 `cliclick c:x,y` 做真实点击（先把 Chrome 切到前台；坐标 = window.screenX + 元素中心，y 再加 outerHeight − innerHeight）。2026-10-16 已为 `/ai-christmas-video` 和 `/` 请求编入索引。
