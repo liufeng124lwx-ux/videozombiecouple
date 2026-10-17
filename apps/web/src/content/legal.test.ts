@@ -45,6 +45,19 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
     expect(text).toContain(DMCA);
   });
 
+  it("privacy names every processor the Christmas film uses", () => {
+    const text = page("privacy");
+    for (const name of ["Anthropic", "Claude", "Google (Gemini)", "clothing and hair"])
+      expect(text, name).toContain(name);
+    // The describe step runs after payment, and the text goes away with the photos.
+    expect(text).toMatch(/Christmas film[^\n]*after you pay[^\n]*Anthropic/);
+    expect(text).toMatch(/description[^\n]*deleted with (the|your) photos/);
+    expect(text).toMatch(/not used to compute face features|no face features/i);
+    expect(text).toMatch(/\| kie\.ai[^\n]*Anthropic/);
+    expect(text).toContain("updated: 2026-10-16");
+    expect(text).toContain("Last updated: October 16, 2026");
+  });
+
   it("privacy has a public biometric data policy: what, why, consent, retention schedule, no sale", () => {
     const text = page("privacy");
     expect(text).toContain("## Biometric data");
