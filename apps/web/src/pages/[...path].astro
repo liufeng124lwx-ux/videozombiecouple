@@ -38,6 +38,7 @@ const schemas = pageSchemas({
   homeUrl: absoluteUrl("/"),
   image: absoluteUrl(ogImagePath(locale, page.id)),
   content: entry?.data ?? null,
+  story: page.preset?.story,
 });
 const links = alternateLinks(page, buildMode(), absoluteUrl);
 // Start the hero film's poster with the HTML, not after the stylesheets (LCP on phones).

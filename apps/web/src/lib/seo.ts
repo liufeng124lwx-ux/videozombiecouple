@@ -1,12 +1,14 @@
 import {
   alternates,
   type BuildMode,
+  fact,
   indexable,
   type LocaleId,
   PAGES,
   type PageConfig,
   type PageKind,
   pageEntries,
+  type StoryId,
 } from "@vzc/catalog";
 
 export type Schema = Record<string, unknown>;
@@ -29,7 +31,13 @@ export function organization(origin: string): Schema {
   };
 }
 
-export function webApplication(o: { name: string; url: string; description: string }): Schema {
+export function webApplication(o: {
+  name: string;
+  url: string;
+  description: string;
+  /** The offer's price ("9.99"); "0" when absent (the tool's free photo check). */
+  price?: string;
+}): Schema {
   return {
     "@context": CONTEXT,
     "@type": "WebApplication",
@@ -39,7 +47,7 @@ export function webApplication(o: { name: string; url: string; description: stri
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Any",
     browserRequirements: "Requires JavaScript",
-    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    offers: { "@type": "Offer", price: o.price ?? "0", priceCurrency: "USD" },
   };
 }
 
@@ -120,6 +128,8 @@ export type SchemaInput = {
   homeUrl: string;
   image: string;
   content: SchemaContent | null;
+  /** The story a landing page's tool makes; a Christmas page offers the Christmas film's price. */
+  story?: StoryId | undefined;
 };
 
 /** Spec 2.4: WebApplication, FAQPage, HowTo and BreadcrumbList; Article on blog posts. */
@@ -129,7 +139,16 @@ export function pageSchemas(input: SchemaInput): Schema[] {
   const out: Schema[] = [];
   if (input.kind === "home") out.push(organization(new URL(input.homeUrl).origin));
   if (TOOL_KINDS.includes(input.kind))
-    out.push(webApplication({ name: input.h1, url: input.url, description: content.description }));
+    out.push(
+      webApplication({
+        name: input.h1,
+        url: input.url,
+        description: content.description,
+        ...(input.story === "christmas"
+          ? { price: fact("story.christmas.usd").replace("$", "") }
+          : {}),
+      }),
+    );
   if (input.kind === "blog" && content.published)
     out.push(
       article({

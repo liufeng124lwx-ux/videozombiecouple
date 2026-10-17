@@ -130,7 +130,8 @@ export function ScenePicker(props: {
   const zombie = tale === "zombie";
   const scenes = zombie
     ? SCENE_IDS.map((id) => SCENES[id])
-    : Object.values(storyOf({ story: tale }).scenes);
+    : // Showcase spec §5.1: another story's picker shows its live scenes only.
+      Object.values(storyOf({ story: tale }).scenes).filter((scene) => scene.live);
   const line = (id: string) =>
     (zombie ? `story.scene.line.${id}` : `story.${tale}.scene.line.${id}`) as MessageKey;
   return (

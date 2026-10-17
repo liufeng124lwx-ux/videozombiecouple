@@ -393,18 +393,14 @@ describe("StoryTool", () => {
       expect(note).not.toMatch(/free/i);
     });
 
-    it('scene picker lists the story\'s own scenes; farmhouse shows "soon" and is disabled', () => {
+    it("scene picker lists only the story's live scenes (showcase spec §5.1)", () => {
       render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
       const tiles = screen.getAllByRole("radio").filter((r) => r.classList.contains("scene-tile"));
       expect(tiles.map((r) => r.querySelector(".scene-name")?.textContent)).toEqual([
         "Snowy cabin",
         "Old city flat",
-        "Farmhouse",
       ]);
-      const farm = tiles[2] as HTMLButtonElement;
-      expect(farm.disabled).toBe(true);
-      expect(farm.classList.contains("soon")).toBe(true);
-      expect(farm.textContent).toContain("Soon");
+      for (const tile of tiles) expect((tile as HTMLButtonElement).disabled).toBe(false);
       expect(tiles[0]?.getAttribute("aria-checked")).toBe("true");
     });
 

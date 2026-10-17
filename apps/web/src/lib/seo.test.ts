@@ -1,4 +1,4 @@
-import type { PageConfig } from "@vzc/catalog";
+import { fact, type PageConfig } from "@vzc/catalog";
 import { describe, expect, it } from "vitest";
 import {
   alternateLinks,
@@ -35,6 +35,22 @@ const landing = (over: Partial<SchemaInput> = {}): SchemaInput => ({
 const types = (schemas: Record<string, unknown>[]) => schemas.map((s) => s["@type"]);
 
 describe("structured data (spec 2.4)", () => {
+  it("prices the Christmas page's offer at the Christmas film's catalog price", () => {
+    const app = pageSchemas(landing({ story: "christmas" })).find(
+      (s) => s["@type"] === "WebApplication",
+    );
+    expect(app?.offers).toEqual({
+      "@type": "Offer",
+      price: fact("story.christmas.usd").replace("$", ""),
+      priceCurrency: "USD",
+    });
+  });
+
+  it("leaves the other tool pages' offers as they were", () => {
+    const app = pageSchemas(landing()).find((s) => s["@type"] === "WebApplication");
+    expect(app?.offers).toEqual({ "@type": "Offer", price: "0", priceCurrency: "USD" });
+  });
+
   it("describes a landing page as an app with its FAQ, how-to and breadcrumb", () => {
     const schemas = pageSchemas(landing());
     expect(types(schemas)).toEqual(["WebApplication", "HowTo", "FAQPage", "BreadcrumbList"]);
