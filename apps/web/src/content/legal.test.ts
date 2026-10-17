@@ -47,7 +47,12 @@ describe("compliance pages (spec §8.1, plan Task 7)", () => {
 
   it("privacy names every processor the Christmas film uses", () => {
     const text = page("privacy");
-    for (const name of ["Anthropic", "Claude", "Google (Gemini)", "clothing and hair"])
+    for (const name of [
+      "Anthropic",
+      "Claude",
+      "Google (Gemini)",
+      "head coverings (such as hats or headscarves), hair, facial hair and glasses",
+    ])
       expect(text, name).toContain(name);
     // The describe step runs after payment, and the text goes away with the photos.
     expect(text).toMatch(/Christmas film[^\n]*after you pay[^\n]*Anthropic/);
