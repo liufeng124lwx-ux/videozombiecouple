@@ -12,8 +12,8 @@ check each submit page before paying; any paid listing needs the owner's OK firs
 | 2 | There's An AI For That (theresanaiforthat.com) | reported free path and paid options | largest AI browse traffic | to do |
 | 3 | Futurepedia (futurepedia.io) | reported paid | widely cited AI directory | owner decides |
 | 4 | Toolify (toolify.ai) | reported paid only | large catalogue | owner decides |
-| 5 | AlternativeTo (alternativeto.net) | free | "alternatives to X" answers; list as alternative to photo-to-video apps | to do |
-| 6 | SaaSHub (saashub.com) | free | alternatives/comparison pages | to do |
+| 5 | AlternativeTo (alternativeto.net) | free (priority review is a paid one-off) | "alternatives to X" answers; list as alternative to photo-to-video apps | submitted 2026-10-16, free queue (can be very long); no alternatives linked yet — add Kling AI / Pika / Hailuo from My submissions |
+| 6 | SaaSHub (saashub.com) | free (1–12 weeks) / $75 / $99 priority | alternatives/comparison pages | submitted 2026-10-16, free; competitors Pika, Hailuo AI, KLING AI; listed as alternative to Animoto; categories AI, AI Videos, Video Maker. To do: confirm the signup email; verify with a @videozombiecouple.com address for priority; add logo, pricing, long description |
 | 7 | BetaList (betalist.com) | free (queue) / paid skip | early-adopter audience | optional |
 | 8 | Free AI directories (20-odd small ones) | free | backlinks; little traffic | batch later |
 
