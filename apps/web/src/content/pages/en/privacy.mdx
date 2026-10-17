@@ -52,7 +52,7 @@ Our legal bases under the GDPR are: performing our contract with you (running th
 
 **AI generation.** After you pay, to make keyframes and video shots, your photos are sent to AI models through kie.ai, which runs models from OpenAI, Google, Anthropic, Kuaishou (Kling) and ByteDance (Seedance). They process the photos to return the result to us. We never use your photos to train AI.
 
-**Describing clothing and hair (Christmas film).** For the Christmas film, after you pay, both photos go through kie.ai to Anthropic (Claude) or, if that is unavailable, Google (Gemini). The model writes a short description of the clothing and hair that are visible, so the film can match how you look. We keep this description with your story, and it is deleted with the photos, within <F k="retention.photosDays" /> days. It is used only to make that film. It is not used to compute face features, and the model providers process the photos only to return the description to us.
+**Describing head coverings and hair (Christmas film).** For the Christmas film, after you pay, both photos go through kie.ai to Anthropic (Claude) or, if Claude fails or is unavailable, Google (Gemini). The model writes a short description of visible head coverings (such as hats or headscarves), hair, facial hair and glasses, so the people in the film keep their hair, head coverings and glasses. We keep this description with your story, and it is deleted with the photos, within <F k="retention.photosDays" /> days. It is used only to make that film. It is not used to compute face features, and the model providers process the photos only to return the description to us.
 
 ## Biometric data
 
@@ -75,7 +75,7 @@ Our legal bases under the GDPR are: performing our contract with you (running th
 | Cloudflare | Hosting, file storage, compute for the photo check and video assembly, sending sign-in, film-ready and reminder emails | Everything you send to the site, including photos |
 | Cloudflare Turnstile | Checking that a visitor is human | Browser and connection signals |
 | SeeAPI | Checking uploaded photos for nudity before you pay | Each uploaded photo, through a short-lived private link |
-| kie.ai, and the model providers behind it: OpenAI, Google (Gemini), Anthropic (Claude), Kuaishou (Kling) and ByteDance (Seedance) | Running the AI models that make keyframes and video shots, and, for the Christmas film, write a short description of visible clothing and hair | Your photos and the instructions for that job |
+| kie.ai, and the model providers behind it: OpenAI, Google (Gemini), Anthropic (Claude), Kuaishou (Kling) and ByteDance (Seedance) | Running the AI models that make keyframes and video shots, and, for the Christmas film, write a short description of visible head coverings (such as hats or headscarves), hair, facial hair and glasses | Your photos and the instructions for that job |
 | Stripe | Payments, as merchant of record (Stripe Managed Payments) | Your email, what you buy, payment details |
 | Google | Sign-in with Google, if you choose it | Your Google account ID and email |
 | Google Analytics | Visit statistics, only with consent where required | Pages viewed, events, a random browser ID |
@@ -86,7 +86,7 @@ These companies act on our instructions and may not use your data for their own 
 
 ## How long we keep it
 
-- Original photos and keyframes: deleted within <F k="retention.photosDays" /> days. The Christmas film's clothing-and-hair description is deleted at the same time.
+- Original photos and keyframes: deleted within <F k="retention.photosDays" /> days. The Christmas film's description of head coverings and hair is deleted at the same time.
 - Finished films, and the shots we keep so you can change the end title once: deleted after <F k="retention.guestFilmDays" /> days for accounts whose email isn’t confirmed (for example, if you bought as a guest), and after <F k="retention.memberFilmDays" /> days once the email is confirmed. You confirm it by opening the link in the film email, signing in with a code, or signing in with Google. We email you when the film is ready, with the deletion date, and once the day before. Download your film before then.
 - The free remake uses your original photos, so it is only possible while they still exist.
 - The free AI zombie filter: the photo you upload and the zombie photo we make from it are both deleted after <F k="photo.keepHours" /> hours.
