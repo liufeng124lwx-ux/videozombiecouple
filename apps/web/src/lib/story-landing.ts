@@ -1,4 +1,4 @@
-import { fact, STORIES, type StoryId } from "@vzc/catalog";
+import { fact, STORIES, type StoryId, totalSeconds } from "@vzc/catalog";
 import type { MessageKey } from "@vzc/i18n";
 import {
   filmMemory,
@@ -111,5 +111,33 @@ export function ogFrames(story: StoryId): {
   return {
     sample: { before: filmPoster(film.id), after: filmMemory(film.id) },
     labels: { before: "christmas.og.before", after: "christmas.og.after" },
+  };
+}
+
+/** The story's name in a sample film's title. */
+const STORY_TITLE: Record<StoryId, string> = {
+  zombie: "Zombie love story",
+  christmas: `${fact("story.christmas.years")} Christmases`,
+};
+
+export type SampleVideo = {
+  name: string;
+  description: string;
+  uploadDate: string;
+  durationSec: number;
+};
+
+/** What a sample film is, for its VideoObject: title, AI-example label, length from the catalog. */
+export function sampleVideo(film: SampleFilm): SampleVideo {
+  const scene = STORIES[film.story].scenes[film.scene]?.label ?? film.scene;
+  const who = samplePair(film.pair)?.who;
+  if (!who) throw new Error(`sample film ${film.id} has no pair ${film.pair}`);
+  const older = film.story === "christmas" ? `, ${fact("story.christmas.years")} years on` : "";
+  const pet = film.kind === "pet" ? " · pet version" : "";
+  return {
+    name: `${STORY_TITLE[film.story]} — ${scene}${pet} (AI example)`,
+    description: `AI example: ${who}${older}.`,
+    uploadDate: film.added,
+    durationSec: totalSeconds(STORIES[film.story], film.kind),
   };
 }

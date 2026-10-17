@@ -74,15 +74,59 @@ export type SampleFilm = {
   scene: "cabin-wheat" | "rain-chapel" | "lighthouse-beach" | "snow-cabin" | "city-flat";
   pair: string;
   kind: "human" | "pet";
+  /** The day the film was added to the site (VideoObject uploadDate). */
+  added: string;
 };
 
 export const SAMPLE_FILMS: readonly SampleFilm[] = [
-  { id: "cabin", story: "zombie", scene: "cabin-wheat", pair: "p02", kind: "human" },
-  { id: "chapel", story: "zombie", scene: "rain-chapel", pair: "p02", kind: "human" },
-  { id: "beach", story: "zombie", scene: "lighthouse-beach", pair: "p03", kind: "human" },
-  { id: "pet", story: "zombie", scene: "cabin-wheat", pair: "q01", kind: "pet" },
-  { id: "xmas-snow-cabin", story: "christmas", scene: "snow-cabin", pair: "p03", kind: "human" },
-  { id: "xmas-city-flat", story: "christmas", scene: "city-flat", pair: "p07", kind: "human" },
+  {
+    id: "cabin",
+    story: "zombie",
+    scene: "cabin-wheat",
+    pair: "p02",
+    kind: "human",
+    added: "2026-10-14",
+  },
+  {
+    id: "chapel",
+    story: "zombie",
+    scene: "rain-chapel",
+    pair: "p02",
+    kind: "human",
+    added: "2026-10-14",
+  },
+  {
+    id: "beach",
+    story: "zombie",
+    scene: "lighthouse-beach",
+    pair: "p03",
+    kind: "human",
+    added: "2026-10-14",
+  },
+  {
+    id: "pet",
+    story: "zombie",
+    scene: "cabin-wheat",
+    pair: "q01",
+    kind: "pet",
+    added: "2026-10-14",
+  },
+  {
+    id: "xmas-snow-cabin",
+    story: "christmas",
+    scene: "snow-cabin",
+    pair: "p03",
+    kind: "human",
+    added: "2026-10-16",
+  },
+  {
+    id: "xmas-city-flat",
+    story: "christmas",
+    scene: "city-flat",
+    pair: "p07",
+    kind: "human",
+    added: "2026-10-16",
+  },
 ];
 
 /** The zombie films only: the home page's scene picker and gallery read scenes from the zombie story. */

@@ -6,6 +6,7 @@ import {
   heroFilm,
   ogFrames,
   pickerFilms,
+  sampleVideo,
   storyBeats,
   storyFilms,
   storySamples,
@@ -133,5 +134,25 @@ describe("scene posters on the /story?id= page (it can open any story)", () => {
     expect(films.map((f) => f.id)).toEqual(
       expect.arrayContaining(["xmas-snow-cabin", "xmas-city-flat"]),
     );
+  });
+});
+
+describe("sampleVideo: what a sample film is, for structured data", () => {
+  it("a Christmas sample: its scene, an AI-example label, the story's length and date added", () => {
+    const film = storyFilms("christmas").find((f) => f.scene === "snow-cabin")!;
+    const v = sampleVideo(film);
+    expect(v.name).toBe("50 Christmases — Snowy cabin (AI example)");
+    expect(v.description).toMatch(/^AI example: /);
+    expect(v.durationSec).toBe(Number(fact("story.christmas.seconds")));
+    expect(v.uploadDate).toBe("2026-10-16");
+  });
+
+  it("every sample film has a date added and a length from the catalog", () => {
+    for (const story of Object.keys(STORIES) as (keyof typeof STORIES)[])
+      for (const film of storyFilms(story)) {
+        const v = sampleVideo(film);
+        expect(v.uploadDate, film.id).toMatch(/^2026-\d\d-\d\d$/);
+        expect(v.durationSec, film.id).toBeGreaterThan(0);
+      }
   });
 });

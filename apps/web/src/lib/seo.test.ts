@@ -9,6 +9,7 @@ import {
   sitemapGroups,
   sitemapIndexXml,
   urlsetXml,
+  videoObject,
 } from "./seo.ts";
 
 const HOME = "https://videozombiecouple.com/";
@@ -193,5 +194,44 @@ describe("sitemaps and robots (spec 2.4)", () => {
 
   it("names share images by locale and page", () => {
     expect(ogImagePath("en", "home")).toBe("/og/en/home.jpg");
+  });
+});
+
+describe("sample films as VideoObject (so search engines and AI answers know what the film is)", () => {
+  const video = {
+    name: "50 Christmases — Snowy cabin (AI example)",
+    description:
+      "AI example: a young man with blond hair and a woman with long red hair, 50 years on.",
+    contentUrl: "https://videozombiecouple.com/samples/films/xmas-snow-cabin.mp4",
+    thumbnailUrl: "https://videozombiecouple.com/_astro/film-xmas-snow-cabin-poster.abc.avif",
+    uploadDate: "2026-10-16",
+    durationSec: 32,
+  };
+
+  it("describes one film with an ISO 8601 duration and absolute URLs", () => {
+    expect(videoObject(video)).toEqual({
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      name: video.name,
+      description: video.description,
+      contentUrl: video.contentUrl,
+      thumbnailUrl: [video.thumbnailUrl],
+      uploadDate: "2026-10-16",
+      duration: "PT32S",
+    });
+    expect(videoObject({ ...video, durationSec: 75 }).duration).toBe("PT1M15S");
+  });
+
+  it("a page lists one VideoObject per sample film it shows", () => {
+    const schemas = pageSchemas(landing({ videos: [video, { ...video, name: "Old city flat" }] }));
+    expect(types(schemas).filter((t) => t === "VideoObject")).toHaveLength(2);
+    expect(types(pageSchemas(landing()))).not.toContain("VideoObject");
+  });
+
+  it("the organization says what the site makes", () => {
+    const org = pageSchemas(landing({ kind: "home", url: HOME })).find(
+      (s) => s["@type"] === "Organization",
+    );
+    expect(org?.description).toBe("AI couple films made from two photos.");
   });
 });

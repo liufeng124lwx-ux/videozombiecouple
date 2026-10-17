@@ -26,6 +26,7 @@ export function organization(origin: string): Schema {
     "@type": "Organization",
     name: "VideoZombieCouple",
     legalName: "Arrayon Inc.",
+    description: "AI couple films made from two photos.",
     url: `${origin}/`,
     email: "hello@videozombiecouple.com",
   };
@@ -48,6 +49,33 @@ export function webApplication(o: {
     operatingSystem: "Any",
     browserRequirements: "Requires JavaScript",
     offers: { "@type": "Offer", price: o.price ?? "0", priceCurrency: "USD" },
+  };
+}
+
+export type Video = {
+  name: string;
+  description: string;
+  contentUrl: string;
+  thumbnailUrl: string;
+  uploadDate: string;
+  durationSec: number;
+};
+
+/** 75 → "PT1M15S" (ISO 8601). */
+const isoDuration = (sec: number) =>
+  `PT${sec >= 60 ? `${Math.floor(sec / 60)}M` : ""}${sec % 60 ? `${sec % 60}S` : ""}`;
+
+/** A sample film the page shows, so search engines and AI answers can say what the film is. */
+export function videoObject(v: Video): Schema {
+  return {
+    "@context": CONTEXT,
+    "@type": "VideoObject",
+    name: v.name,
+    description: v.description,
+    contentUrl: v.contentUrl,
+    thumbnailUrl: [v.thumbnailUrl],
+    uploadDate: v.uploadDate,
+    duration: isoDuration(v.durationSec),
   };
 }
 
@@ -130,6 +158,8 @@ export type SchemaInput = {
   content: SchemaContent | null;
   /** The story a landing page's tool makes; a Christmas page offers the Christmas film's price. */
   story?: StoryId | undefined;
+  /** Sample films the page shows (absolute URLs). */
+  videos?: Video[] | undefined;
 };
 
 /** Spec 2.4: WebApplication, FAQPage, HowTo and BreadcrumbList; Article on blog posts. */
@@ -165,6 +195,7 @@ export function pageSchemas(input: SchemaInput): Schema[] {
       howTo(content.howTo ?? `How to make a ${input.h1.toLowerCase()} video`, content.steps),
     );
   if (content.faq && content.faq.length > 0) out.push(faqPage(content.faq));
+  for (const v of input.videos ?? []) out.push(videoObject(v));
   if (input.kind !== "home")
     out.push(
       breadcrumbs([

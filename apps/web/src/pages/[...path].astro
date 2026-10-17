@@ -7,10 +7,10 @@ import { pageContent } from "../lib/content.ts";
 import { BUILD_NOW, homeHero } from "../lib/home.ts";
 import { type RouteProps, staticPaths } from "../lib/routes.ts";
 import { sampleImage } from "../lib/sample-images.ts";
-import { filmPoster } from "../lib/samples.ts";
+import { filmPoster, filmSrc, type SampleFilm } from "../lib/samples.ts";
 import { alternateLinks, ogImagePath, pageSchemas } from "../lib/seo.ts";
 import { absoluteUrl, buildMode } from "../lib/site.ts";
-import { heroFilm } from "../lib/story-landing.ts";
+import { heroFilm, sampleVideo, storyFilms } from "../lib/story-landing.ts";
 import AccountPage from "../templates/AccountPage.astro";
 import BlogPage from "../templates/BlogPage.astro";
 import HomePage from "../templates/HomePage.astro";
@@ -33,6 +33,20 @@ const entry = await pageContent(page, locale, draft);
 const Content = entry ? (await render(entry)).Content : null;
 const noindex = !indexable({ page, locale, path, draft }, buildMode());
 const url = absoluteUrl(path);
+// Sample films described as VideoObjects: a story page's films, or the home page's featured film.
+const videoFilms: SampleFilm[] =
+  page.kind === "home"
+    ? [homeHero(BUILD_NOW).film]
+    : page.kind === "landing"
+      ? storyFilms(page.preset?.story ?? "zombie")
+      : [];
+const videos = await Promise.all(
+  videoFilms.map(async (film) => ({
+    ...sampleVideo(film),
+    contentUrl: absoluteUrl(filmSrc(film.id)),
+    thumbnailUrl: absoluteUrl((await sampleImage(filmPoster(film.id), "540px", [540])).src),
+  })),
+);
 const schemas = pageSchemas({
   kind: page.kind,
   h1,
@@ -41,6 +55,7 @@ const schemas = pageSchemas({
   image: absoluteUrl(ogImagePath(locale, page.id)),
   content: entry?.data ?? null,
   story: page.preset?.story,
+  videos,
 });
 const links = alternateLinks(page, buildMode(), absoluteUrl);
 // Start the hero film's poster with the HTML, not after the stylesheets (LCP on phones).
