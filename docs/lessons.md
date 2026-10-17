@@ -161,3 +161,11 @@ docker run --rm --cpus=2 --memory=7g --shm-size=1g -v /tmp/repo.tar:/repo.tar:ro
 - 部署会重启实例，部署后实例为 0 不能证明修好：要等真实请求把它叫醒，再看 10 分钟（`sleepAfter`）后能不能自己回到 0（`wrangler containers list`）。
 - 这个 Cloudflare 账号的账单和 video2mp4（`v2m-*`）混在一起，看 Billable usage 前先按应用分清是谁在花钱。
 - R2 生命周期不跟仓库走：线上规则曾经是 15 天，而页面承诺 30 天。现在 `deploy.sh` 每次部署都应用 `infra/r2-lifecycle.json`。
+
+## 上线「50 Christmases」（2026-10-16）
+- 生产从 `feat/christmas-content` 用 `scripts/deploy.sh production` 手动部署；`feat/model-eval` 快进到同一提交并推送，`main` 未使用。
+- **首页主打故事只在构建时切换**（`FEATURED` in `packages/catalog/src/pages.ts`）：2026-11-01（切到圣诞）和 2026-12-27（切回）必须各重新部署一次生产。
+- Stripe 新商品先要有上线的场景：`stripe-setup.ts` 只为 `SALE_PRODUCTS` 建商品，所以先在本地把场景 `live` 打开，再跑 `stripe-setup test|live --yes`，把打印的 `STRIPE_PRICES` 贴进对应 wrangler 配置。live 前先在 SunBrowser 确认商户是 VideoZombieCouple。
+- 测试站的新付费用户每天只能花 50 积分（现已改为 100），R2 跑第 3 条时被 `DAILY_LIMIT` 拦下：测试账号要么设 `users.daily_credit_cap`，要么分天跑。
+- 同一浏览器只记住一个故事（`vzc-story`）：带 `preset.story` 的页面只恢复同类故事，否则做过丧尸片的人打开圣诞页会看到丧尸片（最终审查发现）。
+- 上线前没有在测试站用测试卡完整买过一单 `christmas1`（所有者决定跳过）；生产首单要人工确认订单、积分和成片。
