@@ -1,4 +1,4 @@
-import { isLive, type LocaleId, PAGES, type PageConfig, pagePath } from "@vzc/catalog";
+import { isLive, type LocaleId, localizedPath, PAGES, type PageConfig } from "@vzc/catalog";
 
 export type NavLink = { label: string; href: string };
 
@@ -13,15 +13,16 @@ const STORIES = [
 ];
 const COMPANY = ["pricing", "about", "contact", "privacy", "terms", "refund", "dmca"];
 
-const link = (page: PageConfig, locale: LocaleId): NavLink => ({
-  label: page.locales[locale]?.h1 ?? page.id,
-  href: pagePath(page, locale),
+/** A page without a translation links to the English page, under its English name. */
+export const pageLink = (page: PageConfig, locale: LocaleId): NavLink => ({
+  label: (isLive(page, locale) ? page.locales[locale]?.h1 : page.locales.en.h1) ?? page.id,
+  href: localizedPath(page, locale),
 });
 
 function liveLinks(ids: string[], locale: LocaleId, pages: readonly PageConfig[]): NavLink[] {
   return ids.flatMap((id) => {
     const page = pages.find((p) => p.id === id);
-    return page && isLive(page, locale) ? [link(page, locale)] : [];
+    return page && isLive(page, "en") ? [pageLink(page, locale)] : [];
   });
 }
 

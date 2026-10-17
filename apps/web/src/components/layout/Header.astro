@@ -1,5 +1,5 @@
 ---
-import { isLive, type LocaleId, makeHref, PAGES, type PageConfig, pagePath } from "@vzc/catalog";
+import { type LocaleId, localizedPath, makeHref, PAGES, type PageConfig } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import AccountChip from "../auth/AccountChip.tsx";
 import SignInHost from "../auth/SignInHost.tsx";
@@ -12,12 +12,13 @@ interface Props {
 }
 const { locale } = Astro.props;
 const pricing = PAGES.find((p) => p.id === "pricing");
-const pricingHref = pricing && isLive(pricing, locale) ? pagePath(pricing, locale) : "/pricing";
+const home = PAGES.find((p) => p.id === "home");
+const pricingHref = pricing ? localizedPath(pricing, locale) : "/pricing";
 ---
 <AnnouncementBar client:idle />
 <header class="hdr">
   <div class="wrap">
-    <Wordmark href="/" />
+    <Wordmark href={home ? localizedPath(home, locale) : "/"} />
     <nav class="nav" aria-label={t("nav.main", {}, locale)}>
       <a href={pricingHref}>{t("nav.pricing", {}, locale)}</a>
     </nav>

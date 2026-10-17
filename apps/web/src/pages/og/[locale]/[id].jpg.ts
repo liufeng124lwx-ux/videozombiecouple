@@ -1,5 +1,6 @@
 import { type LocaleId, pageEntries, type StoryId } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
+import "@vzc/i18n/all";
 import type { APIRoute, GetStaticPaths } from "astro";
 import { renderOg } from "../../../lib/og.ts";
 import { buildMode } from "../../../lib/site.ts";

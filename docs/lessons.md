@@ -170,3 +170,11 @@ docker run --rm --cpus=2 --memory=7g --shm-size=1g -v /tmp/repo.tar:/repo.tar:ro
 - 同一浏览器只记住一个故事（`vzc-story`）：带 `preset.story` 的页面只恢复同类故事，否则做过丧尸片的人打开圣诞页会看到丧尸片（最终审查发现）。
 - 上线前没有在测试站用测试卡完整买过一单 `christmas1`（所有者决定跳过）；生产首单要人工确认订单、积分和成片。
 - Search Console：域名资源提交站点地图要填完整网址（`https://videozombiecouple.com/sitemap-index.xml`），只填路径会报「站点地图地址无效」。「请求编入索引」按钮不认脚本点击，用 `cliclick c:x,y` 做真实点击（先把 Chrome 切到前台；坐标 = window.screenX + 元素中心，y 再加 outerHeight − innerHeight）。2026-10-16 已为 `/ai-christmas-video` 和 `/` 请求编入索引。
+
+## 多语言（2026-10-17）
+- **不传 locale 的 `t()` 用页面语言**：构建时 `[...path].astro` 先 `setLocale(locale)`，浏览器里读 `<html lang>`。这依赖 Astro 一次只渲染一个页面（`build.concurrency` 默认 1），别调高它。不经过 `[...path].astro` 的页面要自己设：404 显式 `setLocale("en")`，否则会沿用上一个外语页的语言。
+- **岛屿包里只有英文**：外语页把本语言字符串内联成 `globalThis.__vzcMessages`（`BaseLayout.astro`，gzip 约 9 KB）。`@vzc/i18n/all` 只能在构建时代码（frontmatter、scripts）里导入，导入到岛屿会把四种语言都打进包里（size-limit「shared strings」会报）。
+- **模块顶层别算链接或文案**：`const X = t(...)` / `pagePath(...)` 在模块加载时只算一次，永远是英文。改成函数（例：`PhotoTool.tsx` 的 `zombieHref()`）。
+- **守护**：`scripts/checks.ts` 的 `checkLanguage`：外语页的 `lang` 要对，而且正文里不能出现任何 ≥20 字符的英文 UI 句子；`packages/i18n/test/locales.test.ts` 要求每种语言键齐全、`{param}` 一致、不含数字。
+- 西、葡、法语说同样的内容比英文多约一成词，落地页字数上限对外语放宽到 1.1 倍（`wordsFor`）。
+- 改英文文案时三种语言要同步改，否则测试失败。

@@ -1,11 +1,11 @@
-import { type Kind, sceneLabel, TIERS } from "@vzc/catalog";
+import { type Kind, TIERS } from "@vzc/catalog";
 import {
   type AccountView,
   type BillingView,
   isSameSitePath,
   type StoryStatus,
 } from "@vzc/contracts";
-import { t } from "@vzc/i18n";
+import { localePath, sceneName, t } from "@vzc/i18n";
 import { useEffect, useState } from "preact/hooks";
 import { ApiError, api, post } from "../../lib/api.ts";
 import { notifySignedIn, onSignedIn, openSignIn } from "../../lib/bus.ts";
@@ -42,10 +42,10 @@ const sameSite = (path: string | null): path is string => path !== null && isSam
 const count = (n: number) => n.toLocaleString("en-US");
 
 function StoryRow({ story }: { story: StorySummary }) {
-  const scene = sceneLabel(story.scene);
+  const scene = sceneName(story.scene);
   return (
     <li>
-      <a href={`/story?id=${encodeURIComponent(story.id)}`}>
+      <a href={localePath(`/story?id=${encodeURIComponent(story.id)}`)}>
         <span class="story-name">
           {scene} · {t(`story.kind.${story.kind}` as const)}
         </span>
@@ -81,7 +81,7 @@ export default function AccountPanel({ navigate = (url: string) => location.assi
     }
     await refreshMe();
     notifySignedIn(result.created === true);
-    if (sameSite(next) && next !== "/account") {
+    if (sameSite(next) && next !== localePath("/account")) {
       navigate(next);
       return false;
     }
@@ -190,7 +190,7 @@ export default function AccountPanel({ navigate = (url: string) => location.assi
           <button
             type="button"
             class="btn btn-primary"
-            onClick={() => openSignIn({ next: "/account" })}
+            onClick={() => openSignIn({ next: localePath("/account") })}
           >
             {t("nav.signIn")}
           </button>
@@ -242,7 +242,7 @@ export default function AccountPanel({ navigate = (url: string) => location.assi
           </b>
         </div>
         <div class="actions">
-          <a class="btn btn-primary" href="/pricing">
+          <a class="btn btn-primary" href={localePath("/pricing")}>
             {t("account.buyVideos")}
           </a>
         </div>

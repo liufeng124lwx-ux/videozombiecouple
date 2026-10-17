@@ -1,0 +1,41 @@
+---
+title: Preços – Vídeos de casal zumbi a partir de {{price.fromPerVideo}} cada
+description: "Pague por vídeo, sem cadastro: {{pack.pack1.usd}} por um, {{pack.pack3.usd}} por {{pack.pack3.videos}}, {{pack.pack5.usd}} por {{pack.pack5.videos}}. Pacotes avulsos, sem assinatura, uma refação grátis por filme."
+faq:
+  - q: Posso testar antes de pagar?
+    a: "Nada é gerado de graça, porque cada filme custa dinheiro de verdade para ser feito. Os filmes de exemplo do site mostram exatamente o que você recebe. Antes de você pagar, verificamos suas duas fotos de graça, então você só paga quando sabemos que elas vão funcionar. Se os rostos não ficarem bons, você pode refazer o filme uma vez de graça."
+  - q: Preciso me cadastrar?
+    a: "Não. Antes de pagar você digita seu e-mail. Ele vira sua conta, sem senha, e enviamos para lá o filme, o recibo e os vídeos que sobrarem no seu pacote. Se o e-mail já tiver uma conta, você entra com um código que enviamos por e-mail. Os pacotes podem ser comprados do mesmo jeito."
+  - q: O que um vídeo inclui?
+    a: "Um MP4 vertical de {{video.seconds}} segundos em {{video.width}}×{{video.height}} com música, um título final opcional com os nomes de vocês e uma data, uma troca grátis desse título e uma refação grátis se os rostos não ficarem bons."
+  - q: Meus vídeos expiram?
+    a: "Os vídeos que você compra em pacote nunca expiram. Os filmes prontos ficam guardados por {{retention.guestFilmDays}} dias se você comprou sem conta, e por {{retention.memberFilmDays}} dias depois que você confirma seu e-mail. Avisamos por e-mail antes de um filme ser apagado, mas baixe o seu assim que estiver pronto."
+  - q: Sou cobrado se um vídeo falhar?
+    a: Não. Se a geração de um vídeo falhar, o vídeo volta automaticamente para o seu saldo.
+  - q: Posso pedir reembolso?
+    a: "Sim, para um pacote não usado, em até {{refund.packDays}} dias após a compra. O reembolso retira esses vídeos do seu saldo. A política de reembolso tem os detalhes."
+  - q: É uma assinatura?
+    a: Não. Os pacotes são pagamentos únicos. Os preços são em dólares americanos, e a Stripe, nossa parceira de pagamentos e comerciante registrada (merchant of record), adiciona no checkout qualquer imposto sobre vendas ou IVA aplicável.
+---
+
+## Como funcionam os preços
+
+Envie duas fotos. Verificamos as fotos de graça em nossos próprios servidores: o rosto de um adulto em cada uma, ninguém que pareça ter menos de 18 anos. Depois você paga e nós fazemos o filme inteiro. Nada é gerado antes de você pagar, então os filmes de exemplo do site são a melhor forma de ver o que você recebe.
+
+Você não precisa se cadastrar. Digite seu e-mail no checkout e ele vira sua conta, sem senha. Compre <F k="pack.pack1.videos" /> vídeo por <F k="pack.pack1.usd" />, <F k="pack.pack3.videos" /> por <F k="pack.pack3.usd" /> (<F k="pack.pack3.perVideo" /> cada) ou <F k="pack.pack5.videos" /> por <F k="pack.pack5.usd" /> (<F k="pack.pack5.perVideo" /> cada).
+
+## O que um vídeo inclui
+
+- Um MP4 vertical de <F k="video.seconds" /> segundos em <F k="video.width" />×<F k="video.height" />, pronto para TikTok, Reels e Shorts.
+- Música e um título final opcional com os nomes de vocês e uma data.
+- Uma troca grátis do título final.
+- Uma refação grátis se os rostos não ficarem bons, enquanto suas fotos ainda estiverem guardadas (<F k="retention.photosDays" /> dias).
+- Uma pequena logo no canto.
+
+## Por quanto tempo guardamos seu filme
+
+Os filmes prontos ficam guardados por <F k="retention.guestFilmDays" /> dias se você comprou sem conta, e por <F k="retention.memberFilmDays" /> dias depois que você confirma seu e-mail, abrindo o link do e-mail do filme, entrando com um código ou entrando com o Google. Avisamos por e-mail quando o filme estiver pronto e lembramos você uma vez, na véspera da exclusão. Baixe cedo.
+
+## Sem assinatura, sem surpresas
+
+Os pacotes são pagamentos únicos, e os vídeos neles nunca expiram. Se um vídeo falhar, ele volta automaticamente para o seu saldo. Pacotes não usados podem ser reembolsados em até <F k="refund.packDays" /> dias após a compra.

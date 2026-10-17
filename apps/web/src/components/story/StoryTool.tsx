@@ -1,6 +1,6 @@
-import { fact, pagePath, type StoryId, storyOf, storyPage } from "@vzc/catalog";
+import { fact, localizedPath, type StoryId, storyOf, storyPage } from "@vzc/catalog";
 import { type SharedFilm, UPLOAD_CONSENT_VERSION } from "@vzc/contracts";
-import { errorMessage, t } from "@vzc/i18n";
+import { currentLocale, errorMessage, localePath, t } from "@vzc/i18n";
 import { useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { track } from "../../lib/analytics.ts";
 import { ApiError } from "../../lib/api.ts";
@@ -62,11 +62,11 @@ const DOWNLOAD_NAME: Record<StoryId, string> = {
 /** "Make your own" on a shared film: that film's story page, or the home page. */
 function makeYourOwn(shared: SharedFilm | "gone"): string {
   const page = shared === "gone" ? undefined : storyPage(shared.story);
-  return page ? pagePath(page) : "/";
+  return page ? localizedPath(page, currentLocale()) : localePath("/");
 }
 
 const deleteDate = (ms: number) =>
-  new Date(ms).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  new Date(ms).toLocaleDateString(currentLocale(), { month: "long", day: "numeric" });
 
 function message(code: string | null): string | null {
   if (!code) return null;
@@ -582,7 +582,7 @@ export default function StoryTool({
               <div class="pay">
                 <p class="scene">{t("story.pay.title")}</p>
                 <PackRows
-                  returnPath={`/story?id=${s.storyId}&render=1`}
+                  returnPath={localePath(`/story?id=${s.storyId}&render=1`)}
                   balance={credits ?? 0}
                   {...(tale === "zombie" ? {} : { story: tale })}
                 />
@@ -644,8 +644,8 @@ export default function StoryTool({
                 class="btn btn-sm"
                 onClick={async () => {
                   const url = story.shareToken
-                    ? `${location.origin}/story?id=${story.id}&t=${story.shareToken}`
-                    : `${location.origin}/story?id=${story.id}`;
+                    ? `${location.origin}${localePath(`/story?id=${story.id}&t=${story.shareToken}`)}`
+                    : `${location.origin}${localePath(`/story?id=${story.id}`)}`;
                   if (navigator.share)
                     await navigator.share({ url, text: caption }).catch(() => undefined);
                   else {

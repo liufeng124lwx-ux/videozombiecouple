@@ -1,9 +1,12 @@
+import { ES_H1 } from "./locales/es.ts";
+import { FR_H1 } from "./locales/fr.ts";
+import { PT_H1 } from "./locales/pt.ts";
 import { STORIES } from "./stories/index.ts";
 import type { Story, StoryId } from "./stories/types.ts";
 import type { Kind } from "./story.ts";
 
-/** Spec §1.3: English only; the i18n structure stays for later. */
-export const LOCALE_IDS = ["en"] as const;
+/** English first (x-default). Spanish, Portuguese and French since 2026-10-17: GPT sends them. */
+export const LOCALE_IDS = ["en", "es", "pt", "fr"] as const;
 export type LocaleId = (typeof LOCALE_IDS)[number];
 
 export type PageKind =
@@ -29,6 +32,40 @@ export type PageConfig = {
   related: readonly string[];
 };
 
+/**
+ * Pages translated into every locale: the ones people land on, and the tool's own pages so a
+ * visitor stays in their language. Legal pages stay English (the English text is the binding one).
+ */
+export const TRANSLATED_PAGES = [
+  "home",
+  "zombie-love-story-ai",
+  "pet-zombie-video",
+  "ai-christmas-video",
+  "ai-zombie-filter",
+  "zombie-couple-halloween",
+  "pricing",
+  "story",
+  "account",
+] as const;
+
+const H1S: Record<Exclude<LocaleId, "en">, Record<string, string>> = {
+  es: ES_H1,
+  pt: PT_H1,
+  fr: FR_H1,
+};
+
+/** The translations of a page with the English slug: live where its English page is live. */
+function translations(id: string, en: PageLocale): Partial<Record<LocaleId, PageLocale>> {
+  if (!(TRANSLATED_PAGES as readonly string[]).includes(id)) return {};
+  return Object.fromEntries(
+    Object.entries(H1S).map(([locale, h1s]) => {
+      const h1 = h1s[id];
+      if (!h1) throw new Error(`page ${id} has no ${locale} H1`);
+      return [locale, { slug: en.slug, status: en.status, h1 }];
+    }),
+  );
+}
+
 const page = (
   id: string,
   kind: PageKind,
@@ -41,7 +78,7 @@ const page = (
   id,
   kind,
   ...(preset ? { preset } : {}),
-  locales: { en: { slug, status, h1 } },
+  locales: { en: { slug, status, h1 }, ...translations(id, { slug, status, h1 }) },
   related,
 });
 
@@ -154,12 +191,22 @@ export function pagePath(page: PageConfig, locale: LocaleId = "en"): string {
   return `${prefix}/${entry.slug}`;
 }
 
+/** Where to link a page from a page in `locale`: its translation if live, else the English page. */
+export function localizedPath(page: PageConfig, locale: LocaleId): string {
+  return pagePath(page, isLive(page, locale) ? locale : "en");
+}
+
 /** Spec 2.1: production builds emit live locales only; preview (staging, local) emits all, noindexed. */
 export type BuildMode = "production" | "preview";
 
 export type PageEntry = { page: PageConfig; locale: LocaleId; path: string; draft: boolean };
 
-export const LOCALE_NAMES: Record<LocaleId, string> = { en: "English" };
+export const LOCALE_NAMES: Record<LocaleId, string> = {
+  en: "English",
+  es: "Español",
+  pt: "Português",
+  fr: "Français",
+};
 
 export function builtLocales(page: PageConfig, mode: BuildMode): LocaleId[] {
   return LOCALE_IDS.filter((locale) => {
@@ -256,5 +303,5 @@ export function storyPage(
 export function makeHref(now: number, locale: LocaleId = "en"): string {
   const page = storyPage(featuredStory(now), "human", locale) ?? storyPage(DEFAULT_FEATURED);
   if (!page) throw new Error("no live story page to make a film on");
-  return pagePath(page, locale);
+  return localizedPath(page, locale);
 }

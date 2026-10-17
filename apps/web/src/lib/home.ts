@@ -1,5 +1,5 @@
-import { fact, featuredStory, pagePath, STORIES, type StoryId, storyPage } from "@vzc/catalog";
-import { t } from "@vzc/i18n";
+import { fact, featuredStory, localizedPath, STORIES, type StoryId, storyPage } from "@vzc/catalog";
+import { currentLocale, sceneName, t } from "@vzc/i18n";
 import { filmLoop, SAMPLE_FILMS, type SampleFilm, samplePair } from "./samples.ts";
 import { heroFilm } from "./story-landing.ts";
 
@@ -28,7 +28,7 @@ const groupOf = (film: SampleFilm): WallGroup => (film.kind === "pet" ? "pet" : 
 function hrefOf(film: SampleFilm): string {
   const page = storyPage(film.story, film.kind);
   if (!page) throw new Error(`sample film ${film.id}: its story has no live page`);
-  return pagePath(page);
+  return localizedPath(page, currentLocale());
 }
 
 /** One tile per sample film whose scene is live, Christmas first, then zombie, then pet. */
@@ -36,7 +36,7 @@ export function wallTiles(): WallTile[] {
   return SAMPLE_FILMS.filter((film) => STORIES[film.story].scenes[film.scene]?.live)
     .map((film) => {
       const group = groupOf(film);
-      const scene = STORIES[film.story].scenes[film.scene]?.label ?? film.scene;
+      const scene = sceneName(film.scene);
       const who = samplePair(film.pair)?.who;
       if (!who) throw new Error(`sample film ${film.id} has no pair ${film.pair}`);
       return {
@@ -79,7 +79,7 @@ export function homeHero(now: number): HomeHero {
   return {
     story,
     film: heroFilm(undefined, story),
-    href: pagePath(page),
+    href: localizedPath(page, currentLocale()),
     eyebrow: t(`home.featured.${story}.eyebrow`, facts),
     subtitle: t(`home.featured.${story}.subtitle`, facts),
     cta: t(`home.featured.${story}.cta`, facts),

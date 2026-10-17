@@ -1,6 +1,8 @@
 ---
 import { render } from "astro:content";
 import { indexable, pageById, pagePath } from "@vzc/catalog";
+import { localePath, setLocale } from "@vzc/i18n";
+import "@vzc/i18n/all";
 import F from "../components/F.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { pageContent } from "../lib/content.ts";
@@ -25,6 +27,8 @@ export function getStaticPaths() {
 }
 
 const { pageId, locale, draft } = Astro.props as RouteProps;
+// Before anything renders: islands and helpers that call t() without a locale use the page's.
+setLocale(locale);
 const page = pageById(pageId);
 if (!page) throw new Error(`Unknown page ${pageId}`);
 const path = pagePath(page, locale);
@@ -51,7 +55,7 @@ const schemas = pageSchemas({
   kind: page.kind,
   h1,
   url,
-  homeUrl: absoluteUrl("/"),
+  homeUrl: absoluteUrl(localePath("/", locale)),
   image: absoluteUrl(ogImagePath(locale, page.id)),
   content: entry?.data ?? null,
   story: page.preset?.story,

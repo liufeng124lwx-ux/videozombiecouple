@@ -304,6 +304,9 @@ export function wordCount(text: string): number {
 }
 
 export const WORDS = { min: 1200, max: 1800 } as const;
+/** Spanish, Portuguese and French take about a tenth more words than English to say the same. */
+const wordsFor = (locale: LocaleId) =>
+  locale === "en" ? WORDS : { min: WORDS.min, max: Math.round(WORDS.max * 1.1) };
 
 /** Plan Task 6: the home and landing pages carry 1,200–1,800 words of real text. */
 export const LONG_KINDS: readonly PageKind[] = ["home", "landing", "photo"];
@@ -315,6 +318,33 @@ export const LONG_KINDS: readonly PageKind[] = ["home", "landing", "photo"];
 export const TOOL_SECTIONS: Partial<Record<PageKind, string[]>> = {};
 /** Optional sections that may follow the required ones, in this order. */
 const TAIL = ["related", "closing"];
+
+/** UI strings this long are sentences: one in English on a translated page means a missed locale. */
+const LEAK_MIN = 20;
+
+/** i18n spec: a translated page has its own lang and no English UI sentence (text or attribute). */
+export function checkLanguage(
+  pages: BuiltPage[],
+  en: Record<string, string>,
+  translations: Partial<Record<LocaleId, Record<string, string>>>,
+): string[] {
+  const errors: string[] = [];
+  for (const page of pages) {
+    if (page.locale === "en") continue;
+    const lang = page.html.match(/<html[^>]*\slang="([^"]*)"/)?.[1];
+    if (lang !== page.locale)
+      errors.push(`${page.path}: lang is "${lang}", should be "${page.locale}"`);
+    const own = translations[page.locale] ?? {};
+    // The page's inlined strings (__vzcMessages) hold the translations, never English.
+    const body = decode(page.html.slice(page.html.indexOf("<body")));
+    for (const [key, text] of Object.entries(en)) {
+      if (text.length < LEAK_MIN || text.includes("{") || own[key] === text) continue;
+      if (body.includes(text))
+        errors.push(`${page.path}: English text "${text}" (${key}) on a ${page.locale} page`);
+    }
+  }
+  return errors;
+}
 
 /** Spec 2.2 and 2.5 rule 6: story pages keep their section order and have 1,200–1,800 words. */
 export function checkToolPages(
@@ -334,8 +364,9 @@ export function checkToolPages(
     }
     if (!LONG_KINDS.includes(page.kind)) continue;
     const words = wordCount(mainText(page.html));
-    if (words < WORDS.min || words > WORDS.max)
-      errors.push(`${page.path}: ${words} words, needs ${WORDS.min}–${WORDS.max}`);
+    const range = wordsFor(page.locale);
+    if (words < range.min || words > range.max)
+      errors.push(`${page.path}: ${words} words, needs ${range.min}–${range.max}`);
   }
   return errors;
 }

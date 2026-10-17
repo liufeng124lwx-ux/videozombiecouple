@@ -171,6 +171,42 @@ describe("sitemaps and robots (spec 2.4)", () => {
           "/contact",
         ],
       ],
+      [
+        "es",
+        [
+          "/es",
+          "/es/zombie-love-story-ai",
+          "/es/pet-zombie-video",
+          "/es/ai-christmas-video",
+          "/es/zombie-couple-halloween",
+          "/es/ai-zombie-filter",
+          "/es/pricing",
+        ],
+      ],
+      [
+        "pt",
+        [
+          "/pt",
+          "/pt/zombie-love-story-ai",
+          "/pt/pet-zombie-video",
+          "/pt/ai-christmas-video",
+          "/pt/zombie-couple-halloween",
+          "/pt/ai-zombie-filter",
+          "/pt/pricing",
+        ],
+      ],
+      [
+        "fr",
+        [
+          "/fr",
+          "/fr/zombie-love-story-ai",
+          "/fr/pet-zombie-video",
+          "/fr/ai-christmas-video",
+          "/fr/zombie-couple-halloween",
+          "/fr/ai-zombie-filter",
+          "/fr/pricing",
+        ],
+      ],
     ]);
   });
 

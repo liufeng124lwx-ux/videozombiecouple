@@ -1,8 +1,10 @@
 ---
-import { t } from "@vzc/i18n";
+import { setLocale, t } from "@vzc/i18n";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { storyLinks } from "../lib/nav.ts";
 
+// The previous page rendered may have been a translation.
+setLocale("en");
 const links = storyLinks("en");
 ---
 <BaseLayout

@@ -147,6 +147,16 @@
 .footer-link:hover {
   color: var(--text);
 }
+/* This page in the other languages: one quiet row under the columns. */
+.site-footer .languages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 32px;
+}
+.site-footer .languages a[aria-current="page"] {
+  color: var(--text);
+}
 .visually-hidden {
   position: absolute;
   width: 1px;

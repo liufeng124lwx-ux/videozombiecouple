@@ -1,14 +1,6 @@
-import {
-  fact,
-  type Kind,
-  SCENE_IDS,
-  SCENES,
-  type StoryId,
-  sceneLabel,
-  storyOf,
-} from "@vzc/catalog";
+import { fact, type Kind, SCENE_IDS, SCENES, type StoryId, storyOf } from "@vzc/catalog";
 import type { StageView } from "@vzc/contracts";
-import { type MessageKey, t } from "@vzc/i18n";
+import { type MessageKey, sceneName, t } from "@vzc/i18n";
 import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Photo, Slot } from "../../lib/story/machine.ts";
@@ -152,7 +144,7 @@ export function ScenePicker(props: {
               disabled={props.disabled || !scene.live}
               onClick={() => props.onPick(id)}
             >
-              <span class="scene-name">{scene.label}</span>
+              <span class="scene-name">{sceneName(scene.id)}</span>
               <span class="ticket-window">
                 {poster ? (
                   <SceneClip poster={poster} on={on} />
@@ -322,7 +314,7 @@ export function RenderMonitor(props: {
           <div class="slate">
             <span class="slate-stick" />
             <span class="slate-board">
-              <b>{sceneLabel(props.scene)}</b>
+              <b>{sceneName(props.scene)}</b>
               <i>{t("story.rendering.slate")}</i>
             </span>
           </div>

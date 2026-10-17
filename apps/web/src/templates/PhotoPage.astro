@@ -3,7 +3,7 @@ import "../styles/story.css";
 import "../styles/home.css";
 import "../styles/photo.css";
 import { type CollectionEntry, render } from "astro:content";
-import { type LocaleId, pagePath, storyPage } from "@vzc/catalog";
+import { type LocaleId, localizedPath, storyPage } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import F from "../components/F.astro";
 import Faq from "../components/Faq.astro";
@@ -31,7 +31,7 @@ const examples = await Promise.all(
 );
 // The closing upsell describes the zombie film, so it always goes to the zombie story's page.
 const zombiePage = storyPage("zombie");
-const zombieHref = zombiePage ? pagePath(zombiePage, locale) : "/";
+const zombieHref = zombiePage ? localizedPath(zombiePage, locale) : "/";
 ---
 <section class="hero photo-hero" aria-label={h1}>
   <div class="wrap">

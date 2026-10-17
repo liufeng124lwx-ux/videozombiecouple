@@ -1,5 +1,6 @@
 import { fact, STORIES, type StoryId, totalSeconds } from "@vzc/catalog";
 import type { MessageKey } from "@vzc/i18n";
+import { sceneName } from "@vzc/i18n";
 import {
   filmMemory,
   filmPoster,
@@ -82,7 +83,7 @@ export type StorySample = { film: SampleFilm; scene: string; alt: string };
 /** One sample per scene, labelled as an AI example of its eval persona (spec §6). */
 export function storySamples(story: StoryId): StorySample[] {
   return toolFilms(story).map((film) => {
-    const scene = STORIES[story].scenes[film.scene]?.label ?? film.scene;
+    const scene = sceneName(film.scene);
     const who = samplePair(film.pair)?.who;
     if (!who) throw new Error(`sample film ${film.id} has no pair ${film.pair}`);
     const older = story === "christmas" ? `, ${fact("story.christmas.years")} years on` : "";
@@ -129,7 +130,7 @@ export type SampleVideo = {
 
 /** What a sample film is, for its VideoObject: title, AI-example label, length from the catalog. */
 export function sampleVideo(film: SampleFilm): SampleVideo {
-  const scene = STORIES[film.story].scenes[film.scene]?.label ?? film.scene;
+  const scene = sceneName(film.scene);
   const who = samplePair(film.pair)?.who;
   if (!who) throw new Error(`sample film ${film.id} has no pair ${film.pair}`);
   const older = film.story === "christmas" ? `, ${fact("story.christmas.years")} years on` : "";

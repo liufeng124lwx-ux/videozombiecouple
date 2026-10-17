@@ -1,0 +1,41 @@
+---
+title: "Tarifs – Vidéos de couple zombie dès {{price.fromPerVideo}}"
+description: "Paie par vidéo, sans inscription : {{pack.pack1.usd}} l’une, {{pack.pack3.usd}} les {{pack.pack3.videos}}, {{pack.pack5.usd}} les {{pack.pack5.videos}}. Paiement unique, sans abonnement, une nouvelle version gratuite par film."
+faq:
+  - q: "Je peux essayer avant de payer ?"
+    a: "Rien n’est généré gratuitement, parce que chaque film nous coûte vraiment de l’argent à fabriquer. Les films d’exemple du site montrent exactement ce que tu obtiens. Avant que tu paies, on vérifie gratuitement tes deux photos, pour que tu ne paies qu’une fois qu’on sait qu’elles conviennent. Si les visages ne sont pas réussis, tu peux refaire le film une fois gratuitement."
+  - q: "Il faut s’inscrire ?"
+    a: "Non. Avant de payer, tu tapes ton e-mail. Il devient ton compte, sans mot de passe, et on y envoie le film, le reçu et les vidéos qui restent dans ton pack. Si l’adresse a déjà un compte, tu te connectes plutôt avec un code qu’on t’envoie par e-mail. Les packs s’achètent de la même façon."
+  - q: "Que comprend une vidéo ?"
+    a: "Un MP4 vertical de {{video.seconds}} secondes en {{video.width}}×{{video.height}} avec musique, un titre de fin facultatif avec vos prénoms et une date, une modification gratuite de ce titre, et une nouvelle version gratuite si les visages ne sont pas réussis."
+  - q: "Mes vidéos expirent ?"
+    a: "Les vidéos achetées dans un pack n’expirent jamais. Les films terminés sont conservés {{retention.guestFilmDays}} jours si tu as acheté sans compte, et {{retention.memberFilmDays}} jours une fois ton e-mail confirmé. On t’envoie un e-mail avant la suppression d’un film, mais télécharge le tien dès qu’il est prêt."
+  - q: "Je paie si une vidéo échoue ?"
+    a: "Non. Si une vidéo n’arrive pas à se générer, elle est automatiquement remise sur ton solde."
+  - q: "Je peux être remboursé ?"
+    a: "Oui, pour un pack non utilisé, sous {{refund.packDays}} jours après l’achat. Le remboursement retire ces vidéos de ton solde. Tous les détails sont dans la politique de remboursement."
+  - q: "C’est un abonnement ?"
+    a: "Non. Les packs se paient une seule fois. Les prix sont en dollars américains, et Stripe, notre partenaire de paiement et vendeur officiel (merchant of record), ajoute la taxe de vente ou la TVA éventuelle au moment du paiement."
+---
+
+## Comment fonctionnent les tarifs
+
+Envoie deux photos. On les vérifie gratuitement sur nos propres serveurs : un seul visage d’adulte sur chacune, et personne qui paraisse mineur. Ensuite tu paies, et on fait le film en entier. Rien n’est généré avant le paiement, donc les films d’exemple du site sont le meilleur moyen de voir ce que tu obtiens.
+
+Pas besoin de t’inscrire. Tape ton e-mail au moment du paiement et il devient ton compte, sans mot de passe. Achète <F k="pack.pack1.videos" /> vidéo pour <F k="pack.pack1.usd" />, <F k="pack.pack3.videos" /> pour <F k="pack.pack3.usd" /> (<F k="pack.pack3.perVideo" /> chacune), ou <F k="pack.pack5.videos" /> pour <F k="pack.pack5.usd" /> (<F k="pack.pack5.perVideo" /> chacune).
+
+## Ce que comprend une vidéo
+
+- Un MP4 vertical de <F k="video.seconds" /> secondes en <F k="video.width" />×<F k="video.height" />, prêt pour TikTok, Reels et Shorts.
+- De la musique, et un titre de fin facultatif avec vos prénoms et une date.
+- Une modification gratuite du titre de fin.
+- Une nouvelle version gratuite si les visages ne sont pas réussis, tant que tes photos sont encore conservées (<F k="retention.photosDays" /> jours).
+- Un petit logo dans le coin.
+
+## Combien de temps on garde ton film
+
+Les films terminés sont conservés <F k="retention.guestFilmDays" /> jours si tu as acheté sans compte, et <F k="retention.memberFilmDays" /> jours une fois ton e-mail confirmé, en ouvrant le lien de l’e-mail du film, en te connectant avec un code ou en te connectant avec Google. On t’envoie un e-mail quand le film est prêt et on te rappelle une fois, la veille de sa suppression. Télécharge-le tôt.
+
+## Sans abonnement, sans surprise
+
+Les packs se paient une seule fois, et les vidéos qu’ils contiennent n’expirent jamais. Si une vidéo échoue, elle est automatiquement remise sur ton solde. Les packs non utilisés sont remboursables sous <F k="refund.packDays" /> jours après l’achat.

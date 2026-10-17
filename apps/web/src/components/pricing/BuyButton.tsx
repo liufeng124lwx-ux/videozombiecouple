@@ -1,5 +1,5 @@
 import { WITHDRAWAL_WAIVER_VERSION } from "@vzc/contracts";
-import { t } from "@vzc/i18n";
+import { localePath, t } from "@vzc/i18n";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { gaClientId, track } from "../../lib/analytics.ts";
 import { ApiError, post } from "../../lib/api.ts";
@@ -32,7 +32,7 @@ export default function BuyButton({
   productKey,
   label,
   primary = false,
-  returnPath = "/pricing",
+  returnPath = localePath("/pricing"),
   navigate = (url) => location.assign(url),
 }: Props) {
   const [busy, setBusy] = useState(false);
@@ -119,7 +119,7 @@ export default function BuyButton({
       </button>
       {hasPlan && (
         <p class="small muted">
-          {t("pricing.hasPlan")} <a href="/account">{t("pricing.toAccount")}</a>
+          {t("pricing.hasPlan")} <a href={localePath("/account")}>{t("pricing.toAccount")}</a>
         </p>
       )}
       {error && (

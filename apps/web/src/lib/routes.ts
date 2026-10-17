@@ -1,5 +1,7 @@
 import { type BuildMode, type LocaleId, PAGES, type PageConfig, pageEntries } from "@vzc/catalog";
 import { hasMessages } from "@vzc/i18n";
+// Build-time module: every locale's strings, so staticPaths can check them.
+import "@vzc/i18n/all";
 
 export type RouteProps = { pageId: string; locale: LocaleId; draft: boolean };
 

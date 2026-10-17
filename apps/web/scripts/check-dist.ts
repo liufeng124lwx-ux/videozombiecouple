@@ -9,10 +9,12 @@ import {
   pageEntries,
   pagePath,
 } from "@vzc/catalog";
+import { MESSAGES } from "@vzc/i18n/all";
 import {
   type BuiltPage,
   checkAlternates,
   checkHead,
+  checkLanguage,
   checkLinks,
   checkOgImages,
   checkPreview,
@@ -66,6 +68,7 @@ const errors =
   mode === "production"
     ? [
         ...checkHead(pages, origin),
+        ...checkLanguage(pages, MESSAGES.en, MESSAGES),
         ...checkAlternates(pages, origin),
         ...checkSitemaps(pages, sitemapFiles(), origin),
         ...checkStructuredData(pages),
@@ -87,6 +90,7 @@ const errors =
       ]
     : [
         ...checkPreview(pages),
+        ...checkLanguage(pages, MESSAGES.en, MESSAGES),
         ...checkToolPages(pages.filter((p) => p.html.includes('data-section="hero"'))),
       ];
 

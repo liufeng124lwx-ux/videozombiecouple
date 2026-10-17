@@ -20,12 +20,15 @@ const MAX_CLS = 0.1;
 
 type Result = { score: number; lcp: number; cls: number; why?: string };
 
-/** The home page (with the story tool), the landing page that carries the tool too, and pricing. */
+/**
+ * The home page (with the story tool), the landing page that carries the tool too, pricing, and the
+ * Spanish home page (a translated page carries its strings inline: i18n spec, 2026-10-17).
+ */
 function pages(): string[] {
   const landing = readdirSync("dist")
     .filter((f) => f.endsWith(".html") && f !== "index.html")
     .find((f) => readFileSync(`dist/${f}`, "utf8").includes('id="make"'));
-  return ["/", ...(landing ? [`/${landing.replace(/\.html$/, "")}`] : []), "/pricing"];
+  return ["/", ...(landing ? [`/${landing.replace(/\.html$/, "")}`] : []), "/pricing", "/es"];
 }
 
 async function serve(): Promise<ChildProcess> {

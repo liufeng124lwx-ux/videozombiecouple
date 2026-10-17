@@ -1,5 +1,5 @@
 import type { MeView } from "@vzc/contracts";
-import { t } from "@vzc/i18n";
+import { localePath, t } from "@vzc/i18n";
 import { useEffect, useState } from "preact/hooks";
 import { onAccountChanged, onSignedIn, openSignIn } from "../../lib/bus.ts";
 import { loadMe, refreshMe } from "../../lib/me.ts";
@@ -66,7 +66,10 @@ export default function AccountChip() {
   }, []);
 
   const live = rendering && (
-    <a class="chip rendering-chip" href={`/story?id=${encodeURIComponent(rendering.id)}`}>
+    <a
+      class="chip rendering-chip"
+      href={localePath(`/story?id=${encodeURIComponent(rendering.id)}`)}
+    >
       <span class="rec-dot" aria-hidden="true" />
       {t("nav.rendering")}
       {rendering.etaMs !== null && rendering.etaMs > 60_000
@@ -93,10 +96,10 @@ export default function AccountChip() {
   return (
     <>
       {live}
-      <a class="hdr-films" href="/account#stories">
+      <a class="hdr-films" href={localePath("/account#stories")}>
         {t("nav.films")}
       </a>
-      <a class="chip account-chip" href="/account" title={t("chip.account")}>
+      <a class="chip account-chip" href={localePath("/account")} title={t("chip.account")}>
         <span aria-hidden="true">⚡</span>{" "}
         {t("chip.credits", { n: state.credits.toLocaleString("en-US") })}
         <span class="avatar" aria-hidden="true">

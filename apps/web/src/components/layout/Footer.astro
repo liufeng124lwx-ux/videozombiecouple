@@ -1,13 +1,19 @@
 ---
-import type { LocaleId } from "@vzc/catalog";
+import { LOCALE_IDS, LOCALE_NAMES, type LocaleId } from "@vzc/catalog";
 import { t } from "@vzc/i18n";
 import { companyLinks, storyLinks } from "../../lib/nav.ts";
 import Wordmark from "./Wordmark.astro";
 
 interface Props {
   locale: LocaleId;
+  /** The page's hreflang alternates: the language links go to this page in each language. */
+  alternates?: { hreflang: string; href: string }[];
 }
-const { locale } = Astro.props;
+const { locale, alternates = [] } = Astro.props;
+const languages = LOCALE_IDS.flatMap((id) => {
+  const alt = alternates.find((a) => a.hreflang === id);
+  return alt ? [{ id, name: LOCALE_NAMES[id], path: new URL(alt.href).pathname }] : [];
+});
 ---
 <footer class="site-footer">
   <div class="wrap cols">
@@ -27,4 +33,20 @@ const { locale } = Astro.props;
       <button type="button" class="footer-link" data-cookie-settings>{t("footer.cookies", {}, locale)}</button>
     </div>
   </div>
+  {
+    languages.length > 1 && (
+      <nav class="wrap languages" aria-label={t("footer.language", {}, locale)}>
+        {languages.map((l) => (
+          <a
+            href={l.path}
+            hreflang={l.id}
+            lang={l.id}
+            aria-current={l.id === locale ? "page" : undefined}
+          >
+            {l.name}
+          </a>
+        ))}
+      </nav>
+    )
+  }
 </footer>

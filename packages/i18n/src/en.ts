@@ -12,6 +12,15 @@ export const en = {
     "Short AI films starring the two of you, a zombie love story or a Christmas story, made from two photos.",
   "footer.licenses": "Open-source licenses",
   "footer.cookies": "Cookie settings",
+  "footer.language": "Language",
+  "seo.home": "Home",
+  "seo.howTo": "How to make a {name} video",
+  "scene.cabin-wheat": "Cabin → Wheat field",
+  "scene.rain-chapel": "Rainy city → Chapel",
+  "scene.lighthouse-beach": "Lighthouse → Beach",
+  "scene.snow-cabin": "Snowy cabin",
+  "scene.city-flat": "Old city flat",
+  "scene.farmhouse": "Farmhouse",
   "footer.copyright": "© {year} Arrayon Inc.",
   "og.before": "Standoff",
   "og.after": "Memory",
@@ -49,8 +58,7 @@ export const en = {
   "banner.label": "Announcement",
   "banner.close": "Dismiss",
   "notFound.title": "Page Not Found – This Page Is Out of Focus | VideoZombieCouple",
-  "notFound.description":
-    "We couldn’t find that page. Try Unblur Image or one of our other photo tools instead.",
+  "notFound.description": "We couldn’t find that page. Try one of our films instead.",
   "notFound.heading": "This page is out of focus",
   "notFound.text": "We couldn’t find it. Try one of these instead.",
   "home.cta": "Make my film",
@@ -434,7 +442,7 @@ export const en = {
   "error.FILE_UNSUPPORTED": "We can’t open this file. Try a JPG, PNG, WEBP or HEIC photo.",
   "error.FILE_TOO_LARGE": "This photo is over {maxMb} MB. Try a smaller copy.",
   "error.PHOTO_TOO_NARROW":
-    "This photo is too long and thin to unblur. Crop it to a less extreme shape and try again.",
+    "This photo is too long and thin to use. Crop it to a less extreme shape and try again.",
   "error.QUOTA_EXHAUSTED": "That’s the limit for today. Nothing was charged.",
   "error.CREDITS_LOW": "You don’t have enough credits for this. Nothing was charged.",
   "error.CONTENT_REJECTED": "The AI’s safety filter blocked this photo. Nothing was charged.",
@@ -444,7 +452,7 @@ export const en = {
   "error.RATE_LIMITED": "That’s a lot of tries in a row. Wait {seconds} seconds and try again.",
   "error.RESULT_FETCH": "Your result is ready, but we couldn’t load it. Try again in a moment.",
   "error.FREE_TIER_PAUSED":
-    "Free unblurs are paused for a moment because we’re very busy. Nothing was charged.",
+    "Free checks are paused for a moment because we’re very busy. Nothing was charged.",
   "error.PAUSED":
     "Processing is paused for a moment while we check something. Nothing was charged. Try again later.",
   "error.DAILY_LIMIT":

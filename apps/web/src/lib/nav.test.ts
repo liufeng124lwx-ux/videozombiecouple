@@ -33,4 +33,12 @@ describe("nav", () => {
       "/privacy",
     ]);
   });
+  it("on a translated page, links translations and falls back to English pages", () => {
+    const es = storyLinks("es");
+    expect(es.map((l) => l.href)).toContain("/es/ai-christmas-video");
+    expect(es.every((l) => l.href.startsWith("/es"))).toBe(true);
+    const company = companyLinks("es").map((l) => l.href);
+    expect(company).toContain("/es/pricing");
+    expect(company).toContain("/privacy");
+  });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkAlternates,
   checkHead,
+  checkLanguage,
   checkLinks,
   checkOgImages,
   checkPreview,
@@ -285,6 +286,7 @@ describe("checkToolPages (spec 2.2, 2.5 rule 6)", () => {
     expect(checkToolPages([story(short)])).toEqual([
       expect.stringContaining("/: 103 words, needs 1200–1800"),
     ]);
+    expect(checkToolPages([{ ...story(section("faq", 1900)), locale: "es" }])).toEqual([]);
     expect(checkToolPages([story(long, "landing")])).toEqual([
       expect.stringContaining("words, needs 1200–1800"),
     ]);
@@ -303,5 +305,41 @@ describe("checkVideos (plan Task 8)", () => {
     const ok = built({ html: html({ body: '<video preload="none" src="/a.mp4"></video>' }) });
     const eager = built({ path: "/b", html: html({ body: '<video src="/b.mp4"></video>' }) });
     expect(checkVideos([ok, eager])).toEqual(['/b: a <video> without preload="none" (/b.mp4)']);
+  });
+});
+
+describe("checkLanguage (i18n spec, 2026-10-17)", () => {
+  const en = { a: "Make your zombie love story", b: "Short", c: "Pick {n} scenes for your film" };
+  const es = { a: "Haz tu historia de amor zombi", b: "Corto", c: "Elige {n} escenas" };
+  const page = (body: string, lang = "es") =>
+    built({
+      path: "/es",
+      locale: "es",
+      html: html({ body }).replace('lang="en"', `lang="${lang}"`),
+    });
+
+  it("passes a page in its own language", () => {
+    expect(checkLanguage([page("<p>Haz tu historia de amor zombi</p>")], en, { es })).toEqual([]);
+  });
+
+  it("finds English UI text on a translated page", () => {
+    expect(checkLanguage([page("<p>Make your zombie love story</p>")], en, { es })).toEqual([
+      '/es: English text "Make your zombie love story" (a) on a es page',
+    ]);
+  });
+
+  it("checks the page's lang", () => {
+    expect(checkLanguage([page("", "en")], en, { es })).toEqual([
+      '/es: lang is "en", should be "es"',
+    ]);
+  });
+
+  it("ignores short strings, strings with params and English pages", () => {
+    expect(checkLanguage([page("<p>Short</p>")], en, { es })).toEqual([]);
+    expect(
+      checkLanguage([built({ html: html({ body: "<p>Make your zombie love story</p>" }) })], en, {
+        es,
+      }),
+    ).toEqual([]);
   });
 });

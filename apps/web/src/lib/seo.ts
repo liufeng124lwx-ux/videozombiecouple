@@ -10,6 +10,7 @@ import {
   pageEntries,
   type StoryId,
 } from "@vzc/catalog";
+import { currentLocale, t } from "@vzc/i18n";
 
 export type Schema = Record<string, unknown>;
 export type Faq = { q: string; a: string };
@@ -192,14 +193,20 @@ export function pageSchemas(input: SchemaInput): Schema[] {
     );
   if (content.steps)
     out.push(
-      howTo(content.howTo ?? `How to make a ${input.h1.toLowerCase()} video`, content.steps),
+      howTo(
+        content.howTo ??
+          t("seo.howTo", {
+            name: currentLocale() === "en" ? input.h1.toLowerCase() : input.h1,
+          }),
+        content.steps,
+      ),
     );
   if (content.faq && content.faq.length > 0) out.push(faqPage(content.faq));
   for (const v of input.videos ?? []) out.push(videoObject(v));
   if (input.kind !== "home")
     out.push(
       breadcrumbs([
-        { name: "Home", url: input.homeUrl },
+        { name: t("seo.home"), url: input.homeUrl },
         { name: input.h1, url: input.url },
       ]),
     );

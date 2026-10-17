@@ -1,5 +1,5 @@
 import type { AccountView } from "@vzc/contracts";
-import { t } from "@vzc/i18n";
+import { localePath, t } from "@vzc/i18n";
 import { useState } from "preact/hooks";
 import { ApiError, apiOrigin, post } from "../../lib/api.ts";
 import { messageOf } from "../auth/SignInDialog.tsx";
@@ -38,7 +38,9 @@ export default function SignInMethods({ account, onSignedOut }: Props) {
         {account.google ? (
           <b>{t("account.connected")}</b>
         ) : (
-          <a href={`${apiOrigin()}/auth/google/start?next=${encodeURIComponent("/account")}`}>
+          <a
+            href={`${apiOrigin()}/auth/google/start?next=${encodeURIComponent(localePath("/account"))}`}
+          >
             {t("account.connect")}
           </a>
         )}
