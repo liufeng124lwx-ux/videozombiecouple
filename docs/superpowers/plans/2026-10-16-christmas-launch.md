@@ -192,7 +192,7 @@
 - **Biometrics/region:** two-person films stay unavailable in Illinois (existing rule covers Christmas, `stories.ts:78`).
 - **Face data:** unchanged — computed in composer memory only; appearance text lives in the Durable Object and is cleared with the photos.
 - **Payments:** Stripe Managed Payments, VideoZombieCouple account only; live product created only after the owner confirms (Task 2 Step 3); webhook mode check unchanged.
-- **Truthful claims:** prices, seconds, minutes, credits and deletion days come from the catalog; samples labelled "AI example"; no "free" claim.
+- **Truthful claims:** prices, seconds, minutes, credits and deletion days come from the catalog; samples labelled "AI example"; "free" appears only for what the code really gives free (the photo check and the one remake per film, counts from the catalog).
 - **Staging-only state:** `PREVIEW_SCENES` stays out of production config; the staging test account's extra credits and cap are staging-only.
 - **AI disclosure:** film metadata and corner mark already say AI-generated (composer); unchanged.
 - **Known gaps accepted at launch:** describe fallback (Gemini) has thin evidence; describe bypasses the KIE pause/breaker; films take 11–14 minutes (the page says about 15). Farmhouse stays closed until one full film passes.
