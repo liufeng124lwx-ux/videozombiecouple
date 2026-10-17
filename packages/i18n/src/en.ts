@@ -265,7 +265,7 @@ export const en = {
   "story.christmas.ready.balance": "You have enough for {n} Christmas films",
   "story.christmas.ready.oneLeft": "You have enough for one Christmas film",
   "story.christmas.done.caption": "Our {years}th Christmas.",
-  "story.christmas.pack": "One Christmas film",
+  "story.christmas.pack": "{n} Christmas film",
   "cookie.label": "Cookie choices",
   // Keep it short: a longer text than the hero lede becomes the LCP element (scripts/lighthouse.ts).
   "cookie.text": "Analytics cookies help us improve. Essential ones stay on.",

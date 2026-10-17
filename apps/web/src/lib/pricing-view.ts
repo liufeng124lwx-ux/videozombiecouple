@@ -56,7 +56,7 @@ export function packCardsFor(story?: StoryId, balance = 0): PackCard[] {
   return [
     ...own.map((pack) => ({
       id: pack.id,
-      videos: 1,
+      videos: pack.credits / storyOf({ story: pack.story ?? "zombie" }).credits,
       price: usd(pack.usd),
       perVideo: usd(pack.usd),
       productKey: pack.productKey,

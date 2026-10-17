@@ -17,7 +17,7 @@ describe("PricingPage", () => {
     const xmas = rows.find((r) => r.story === "christmas");
     expect(xmas?.price).toBe("$9.99");
     expect(xmas?.productKey).toBe("christmas1");
-    expect(t("story.christmas.pack")).toBe("One Christmas film");
+    expect(t("story.christmas.pack", { n: xmas?.videos })).toBe("1 Christmas film");
     // The video packs stay, the Christmas film joins them.
     expect(rows.some((r) => !r.story)).toBe(true);
     const source = readFileSync(join(import.meta.dirname, "PricingPage.astro"), "utf8");

@@ -29,6 +29,34 @@ describe("PackRows", () => {
     ]);
   });
 
+  it("the pricing page lists the Christmas film but still picks the popular pack", () => {
+    render(<PackRows returnPath="/pricing" story="christmas" allPacks />);
+    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    expect(radios.map((r) => r.value)).toEqual(["christmas1", "pack1", "pack3", "pack5"]);
+    expect(radios.find((r) => r.checked)?.value).toBe("pack3");
+    expect(screen.getAllByText("1 Christmas film").length).toBeGreaterThan(0);
+  });
+
+  it("returning to /pricing?buy=pack3 picks pack3 and mounts its buy button", () => {
+    history.replaceState(null, "", "/pricing?buy=pack3");
+    render(<PackRows returnPath="/pricing" story="christmas" allPacks />);
+    expect((screen.getAllByRole("radio") as HTMLInputElement[]).find((r) => r.checked)?.value).toBe(
+      "pack3",
+    );
+    expect(screen.getByRole("button").textContent).toContain("$13.99");
+    history.replaceState(null, "", "/");
+  });
+
+  it("returning to /pricing?buy=christmas1 picks the Christmas film", () => {
+    history.replaceState(null, "", "/pricing?buy=christmas1");
+    render(<PackRows returnPath="/pricing" story="christmas" allPacks />);
+    expect((screen.getAllByRole("radio") as HTMLInputElement[]).find((r) => r.checked)?.value).toBe(
+      "christmas1",
+    );
+    expect(screen.getByRole("button").textContent).toContain("$9.99");
+    history.replaceState(null, "", "/");
+  });
+
   it("a story's pack comes first and is picked", () => {
     const xmas = PACKS.find((p) => p.story === "christmas");
     render(<PackRows returnPath="/story?id=S1&render=1" story="christmas" />);
