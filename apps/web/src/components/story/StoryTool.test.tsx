@@ -383,6 +383,16 @@ describe("StoryTool", () => {
       );
     });
 
+    it("states the Christmas film's own price under the button, not a zombie video's", () => {
+      const { container } = render(
+        <StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />,
+      );
+      const note = container.querySelector(".tool-bar .fine")?.textContent ?? "";
+      expect(note).toContain(fact("story.christmas.usd"));
+      expect(note).not.toContain(fact("price.fromPerVideo"));
+      expect(note).not.toMatch(/free/i);
+    });
+
     it('scene picker lists the story\'s own scenes; farmhouse shows "soon" and is disabled', () => {
       render(<StoryTool posters={{}} preset={{ story: "christmas" }} pollMs={10} />);
       const tiles = screen.getAllByRole("radio").filter((r) => r.classList.contains("scene-tile"));

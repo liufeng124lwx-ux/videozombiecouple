@@ -474,10 +474,12 @@ export default function StoryTool({
                   : t("story.cta.addPhotos")}
             </button>
             <p class="fine">
-              {t("story.cta.note", {
-                price: fact("price.fromPerVideo"),
-                remakes: fact("remakes.perFilm"),
-              })}
+              {christmas
+                ? t("story.christmas.cta.note", { price: fact("story.christmas.usd") })
+                : t("story.cta.note", {
+                    price: fact("price.fromPerVideo"),
+                    remakes: fact("remakes.perFilm"),
+                  })}
             </p>
           </div>
         </div>

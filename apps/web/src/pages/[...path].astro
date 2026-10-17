@@ -9,6 +9,7 @@ import { sampleImage } from "../lib/sample-images.ts";
 import { filmPoster } from "../lib/samples.ts";
 import { alternateLinks, ogImagePath, pageSchemas } from "../lib/seo.ts";
 import { absoluteUrl, buildMode } from "../lib/site.ts";
+import { heroFilm } from "../lib/story-landing.ts";
 import AccountPage from "../templates/AccountPage.astro";
 import BlogPage from "../templates/BlogPage.astro";
 import HomePage from "../templates/HomePage.astro";
@@ -43,7 +44,11 @@ const links = alternateLinks(page, buildMode(), absoluteUrl);
 const HERO_POSTER_SIZES = "(min-width: 900px) 380px, 86vw";
 const hero =
   page.kind === "home" || page.kind === "landing"
-    ? await sampleImage(filmPoster(entry?.data.film ?? "cabin"), HERO_POSTER_SIZES, [540])
+    ? await sampleImage(
+        filmPoster(heroFilm(entry?.data.film, page.preset?.story ?? "zombie").id),
+        HERO_POSTER_SIZES,
+        [540],
+      )
     : null;
 ---
 <BaseLayout

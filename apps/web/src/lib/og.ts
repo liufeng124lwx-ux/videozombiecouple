@@ -22,6 +22,9 @@ const node = (
 });
 
 const PHOTO_WIDTH = 378;
+/** Words longer than this ("CHRISTMAS", "HALLOWEEN") overflow the text column at 64px. */
+const LONG_WORD = 8;
+const longestWord = (title: string) => Math.max(...title.split(/\s+/).map((w) => w.length));
 const TEXT_WIDTH = OG_SIZE.width - 2 * PHOTO_WIDTH - 4;
 
 /** Share card: the cold standoff and the warm memory split by the ember cut, then the page name. */
@@ -38,7 +41,7 @@ export function ogTree(
   const name = node(
     "div",
     {
-      fontSize: photos ? 64 : 96,
+      fontSize: photos ? (longestWord(title) > LONG_WORD ? 50 : 64) : 96,
       lineHeight: 0.95,
       letterSpacing: -1.5,
       textTransform: "uppercase",

@@ -26,6 +26,15 @@ describe("share images (spec 2.4, design §10)", () => {
     expect(json).toContain("Memory");
   });
 
+  it("shrinks the page name when a long word would not fit beside the frames", () => {
+    const size = (title: string) =>
+      JSON.stringify(ogTree(title, { before: "data:b", after: "data:a" }, LABELS)).match(
+        /"fontSize":(\d+),"lineHeight"/,
+      )?.[1];
+    expect(size("Zombie Love Story AI")).toBe("64");
+    expect(size("AI Christmas Video")).toBe("50");
+  });
+
   it("uses a name-only layout for pages without a sample", () => {
     expect(JSON.stringify(ogTree("Pricing", null, LABELS))).not.toContain('"img"');
   });

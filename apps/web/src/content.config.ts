@@ -42,6 +42,8 @@ const pages = defineCollection({
       })
       .optional(),
     pet: z.object({ title: text, text }).optional(),
+    /** Story pages: what happens to the photos (showcase spec §5.4). */
+    privacy: z.object({ title: text, text }).optional(),
     closing: z.object({ title: text, text }).optional(),
     faq: z.array(z.object({ q: text, a: text })).optional(),
     published: z.coerce.date().optional(),

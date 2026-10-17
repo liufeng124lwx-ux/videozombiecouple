@@ -29,13 +29,16 @@ type Props = {
   label: string;
   /** The two example photos the film was made from. */
   sources?: { src: string; alt: string }[];
+  /** Another story's beats (label, start second); absent: the zombie film's. */
+  beats?: { label: string; from: number }[];
 };
 
 /**
  * The home page's first view: a finished example film, playing muted in a 9:16 frame, with the
  * story beats lighting up as it plays. Still (poster + play button) for reduced motion.
  */
-export default function HeroFilm({ src, poster, label, sources = [] }: Props) {
+export default function HeroFilm({ src, poster, label, sources = [], beats }: Props) {
+  const marks = beats ?? BEATS.map((b) => ({ label: t(b.key), from: b.from }));
   const video = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
@@ -49,7 +52,7 @@ export default function HeroFilm({ src, poster, label, sources = [] }: Props) {
     const room = v.closest<HTMLElement>(".hero");
     const onTime = () => {
       const now = v.currentTime;
-      const at = BEATS.reduce((found, b, i) => (now >= b.from ? i : found), 0);
+      const at = marks.reduce((found, b, i) => (now >= b.from ? i : found), 0);
       setBeat(at);
       room?.style.setProperty("--spill", SPILL[at] ?? SPILL[0]);
     };
@@ -111,10 +114,10 @@ export default function HeroFilm({ src, poster, label, sources = [] }: Props) {
         </div>
       </div>
       <ol class="reel-beats" aria-hidden="true">
-        {BEATS.map((b, i) => (
-          <li key={b.key} class={i === beat ? "on" : ""}>
+        {marks.map((b, i) => (
+          <li key={b.label} class={i === beat ? "on" : ""}>
             <span class="scene">{`0${i + 1}`}</span>
-            {t(b.key)}
+            {b.label}
           </li>
         ))}
       </ol>

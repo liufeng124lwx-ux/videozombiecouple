@@ -71,6 +71,16 @@ export const PAGES: readonly PageConfig[] = [
     ["home", "zombie-love-story-ai"],
     { kind: "pet" },
   ),
+  // Showcase spec §5: the Christmas film's own page; launched with the tool open (no "opening soon").
+  page(
+    "ai-christmas-video",
+    "landing",
+    "ai-christmas-video",
+    "AI Christmas Video",
+    "live",
+    ["home", "zombie-love-story-ai"],
+    { story: "christmas" },
+  ),
   page(
     "zombie-love-story-prompts",
     "blog",

@@ -76,6 +76,7 @@ describe("pages", () => {
       "home",
       "zombie-love-story-ai",
       "pet-zombie-video",
+      "ai-christmas-video",
       "zombie-couple-halloween",
       "ai-zombie-filter",
       "pricing",
@@ -118,5 +119,27 @@ describe("pages", () => {
       h1: "AI Zombie Filter",
     });
     expect(page?.related).toEqual(["home", "pet-zombie-video", "zombie-couple-halloween"]);
+  });
+
+  it("has the Christmas page: a live landing page whose tool opens on the Christmas story (showcase spec §5)", () => {
+    const page = pageById("ai-christmas-video");
+    expect(page?.kind).toBe("landing");
+    expect(page?.locales.en).toMatchObject({
+      slug: "ai-christmas-video",
+      status: "live",
+      h1: "AI Christmas Video",
+    });
+    expect(page?.preset).toEqual({ story: "christmas" });
+    expect(page?.related).toEqual(["home", "zombie-love-story-ai"]);
+    expect(pagePath(page as PageConfig)).toBe("/ai-christmas-video");
+  });
+
+  it("leave the zombie pages' rows as they were", () => {
+    expect(pageById("home")?.related).toEqual(["zombie-love-story-ai", "pet-zombie-video"]);
+    expect(pageById("zombie-love-story-ai")?.preset).toBeUndefined();
+    expect(pageById("zombie-love-story-ai")?.related).toEqual([
+      "home",
+      "zombie-love-story-prompts",
+    ]);
   });
 });
